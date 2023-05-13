@@ -13,8 +13,7 @@ Le code source est complètement ouvert et sans restriction : [The Unlicense](LI
 Motivation : Contribuer à la réduction des dépenses de santé.
 
 _Pour en savoir plus, visitez_ [francesap.org ](https://francesap.org )
-
-_Contact :_ contact@francesap.org
+_ou contactez_ contact@francesap.org
 
 ## Comment contribuer ?
 
