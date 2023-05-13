@@ -12,7 +12,7 @@ Le code source est complètement ouvert et sans restriction : [The Unlicense](LI
 
 Motivation : Contribuer à la réduction des dépenses de santé.
 
-Organisation : Afin d'assurer la pérennité et le succès du projet, Création d'une fondation ou cession à une fondation existante.
+Gestion : Pour assurer la pérennité et le succès du projet, il est prévu de créer une fondation ou de céder le projet à une fondation existante.
 
 _Pour en savoir plus, visitez_ [francesap.org ](https://francesap.org )
 _ou contactez_ contact@francesap.org
