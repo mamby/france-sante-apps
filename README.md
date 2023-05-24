@@ -21,7 +21,7 @@ _ou contactez_ contact@francesap.org
 
 Si le projet vous parle, partagez-le autour de vous !
 
-Conception, Idées, Suggestions, Questions, Feedback, Roadmap :  [Discussions](../../discussions) 
+Conception, Idées, Suggestions, Questions, Feedback, Roadmap, News :  [Discussions](../../discussions) 
 
 Développement et traduction des applications : [CONTRIBUTING](CONTRIBUTING.md)
 
