@@ -14,8 +14,7 @@ Motivation : Contribuer à la réduction des dépenses de santé.
 
 Gestion : Afin d'assurer la pérennité et la réussite du projet, il est envisagé de créer une fondation ou de transférer le projet à une fondation déjà établie.
 
-_Pour en savoir plus, visitez_ [francesap.org ](https://francesap.org )
-_ou contactez_ contact@francesap.org
+_Pour en savoir plus, visitez_ [francesap.org ](https://francesap.org)
 
 ## Comment contribuer ?
 
