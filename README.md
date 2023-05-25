@@ -18,16 +18,15 @@ _Pour en savoir plus, visitez_ [francesap.org ](https://francesap.org)
 
 ## Comment contribuer ?
 
+Votre contribution est essentielle pour fournir des applications de santé gratuites et ouvertes à tous.
+
 Si le projet vous parle, partagez-le autour de vous !
 
 Conception, Idées, Suggestions, Questions, Feedback, Roadmap, News :  [Discussions](../../discussions) 
 
 Développement et traduction des applications : [CONTRIBUTING](CONTRIBUTING.md)
 
-Votre contribution permet de fournir des applications de santé gratuites et ouvertes à tous.
-
-## Donation
-
-Votre soutien financier est essentiel pour couvrir les frais d'hébergement et d'assurer la disponibilité continue des applications.
-
 Faire un don : [francesap.org/donation](https://francesap.org/donation)
+
+
+
