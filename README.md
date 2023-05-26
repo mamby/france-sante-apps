@@ -26,7 +26,7 @@ Conception, Idées, Suggestions, Questions, Feedback, Roadmap, News :  [Discussi
 
 Développement et traduction des applications : [CONTRIBUTING](CONTRIBUTING.md)
 
-Faire un don : [francesap.org/donation](https://francesap.org/donation)
+Faire un don : [francesap.org/don](https://francesap.org/don)
 
 
 
