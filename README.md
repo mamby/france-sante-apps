@@ -1,5 +1,3 @@
-![France](francesap.png?raw=true) France Santé Apps 
-
 # France Santé Apps 
 
 Applications médicales modernes, sécurisées et gratuites pour la France.
