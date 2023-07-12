@@ -1,12 +1,199 @@
-﻿<!DOCTYPE html>
-
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+﻿<!doctype html>
+<html lang="fr">
 <head>
-    <meta charset="utf-8" />
-    <title>France Santé Apps</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>France Santé Apps - VOLTA, NAPOL</title>
+    <link rel="shortcut icon" href="/assets/img/favicon.ico?v=1" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <link href="/assets/css/francesap.css?v=1" rel="stylesheet" />
 </head>
 <body>
-    <p>Hello world!!</p>
-    <p>Hello world!!</p>
+    <header class="container">
+        <nav class="d-flex justify-content-between align-items-center">
+            <a href="/" class="d-flex align-items-center"><img alt="Santé Apps" src="/assets/img/francesap.png"> <span class="fsa-brand">Santé Apps</span></a>
+            <a href="/don" class="btn btn-primary"><i class="bi-heart"></i> Faire un don</a>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <div class="row flex-column-reverse flex-md-row">
+                <div class="col-md-6 fsa-intro">
+                    <h1>Applications médicales</h1>
+                    <div>Conçues avec un amour infini par tous les contributeurs.</div>
+                    <ul>
+                        <li>100% Gratuit, Open Source et Libre</li>
+                        <li>Niveau maximum de sécurité et de confidentialité</li>
+                        <li>Aucune action commerciale : Publicité ou autres</li>
+                        <li>Conformité aux normes et réglementations</li>
+                    </ul>
+                    <div>
+                        <a class="me-5" target="_blank" href="https://github.com/mamby/france-sante-apps#comment-contribuer-">Contribuer</a>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#contactModal">Contact</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <img class="img-fluid rounded" src="/assets/img/health.png" alt="Santé Apps">
+                </div>
+            </div>
+            <div class="fsa-apps">
+                <h2>Apps</h2>
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h3 class="volta-color">VOLTA <i class="bi-heart-fill"></i></h3>
+                            <p class="app-desc">
+                                Gérez vos données de santé en toute sécurité où que vous soyez.
+                                Prenez le contrôle total de votre santé !
+                            </p>
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#voltaModal"><i class="bi-app"></i> Installer</a>
+                        </div>
+                        <div class="col-md-3 mt-4 mt-md-0">
+                            <ul>
+                                <li>
+                                    <span class="fsa-hash-tag">#Stockez</span> de manière fiable
+                                    toutes vos informations de santé :
+                                    <span class="fst-italic">Traitements, Résultats d'analyse, Vaccinations, Rendez-vous, Notes, etc.</span>
+                                </li>
+                                <li>
+                                    <span class="fsa-hash-tag">#Échangez</span>
+                                    des données, en toute confidentialité, avec vos soignants.
+                                </li>
+                                <li>
+                                    Prenez soin de vos <span class="fsa-hash-tag">#proches</span> en gérant les informations relatives à vos enfants, parents ou autres personnes qui vous sont chères.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <ul>
+                                <li>
+                                    Évitez les oublis ou erreurs de dosage grâce au <span class="fsa-hash-tag">#rappel</span> des prises de médicaments
+                                </li>
+                                <li>
+                                    Beaucoup d'autres <span class="fsa-hash-tag">#services</span> pour votre bien-être !
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <img class="img-fluid rounded" src="/assets/img/health-patient.jpg" alt="Volta">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h3 class="napol-color">NAPOL <i class="bi-heart-fill"></i></h3>
+                            <p class="app-desc">
+                                Pro de la Santé,
+                                Soyez au cœur de la médecine de demain
+                                avec une expérience de soins optimale !
+                            </p>
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#napolModal"><i class="bi-app"></i> Installer</a>
+                        </div>
+                        <div class="col-md-3 mt-4 mt-md-0">
+                            <ul>
+                                <li>
+                                    Améliorez la qualité des soins par un
+                                    <span class="fsa-hash-tag">#dossier</span> patient moderne.
+                                </li>
+                                <li>
+                                    L'<span class="fsa-hash-tag">#agenda</span> intelligent révolutionne la planification de votre emploi du temps en optimisant la gestion et l'organisation de vos rendez-vous.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <ul>
+                                <li>
+                                    Une <span class="fsa-hash-tag">#facturation</span> précise et un suivi facile des paiements.
+                                </li>
+                                <li>
+                                    Une pléthore de <span class="fsa-hash-tag">#fonctionnalités</span> essentielles qui permettent aux médecins de se concentrer davantage sur leur pratique médicale.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <img class="img-fluid rounded" src="/assets/img/health-pro.jpg" alt="Napol">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="voltaModal" tabindex="-1" aria-labelledby="voltaModalLabel" aria-hidden="true" aria-modal="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title volta-color fs-5" id="voltaModalLabel">VOLTA <i class="bi-heart-fill"></i></h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body fs-6">
+                            <p><i>B-i-e-n-t-ô-t !</i></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="napolModal" tabindex="-1" aria-labelledby="napolModalLabel" aria-hidden="true" aria-modal="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title napol-color fs-5" id="napolModalLabel">NAPOL <i class="bi-heart-fill"></i></h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body fs-6">
+                            <p><i>B-i-e-n-t-ô-t !</i></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <ul class="d-flex flex-wrap">
+                <li>
+                    <a href="/don">
+                        <i class="bi-heart"></i>
+                        Faire un don
+                    </a>
+                </li>
+                <li>
+                    <a target="_blank" href="https://github.com/mamby/france-sante-apps#comment-contribuer-">
+                        <i class="bi-github"></i>
+                        Contribuer
+                    </a>
+                </li>
+                <li>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#contactModal">
+                        <i class="bi-chat"></i>
+                        Contact
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="contactModalLabel">Contact</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body fs-6">
+                    <ul>
+                        <li class="mb-3">
+                            Email : <a href="mailto:contact@francesap.org">contact@francesap.org</a>
+                        </li>
+                        <li>
+                            Téléphone : <a href="tel:+33646204634">+33 6 46 20 46 34</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    <script src="/assets/js/francesap.js?v=1"></script>
 </body>
 </html>

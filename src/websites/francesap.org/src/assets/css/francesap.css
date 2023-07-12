@@ -1,0 +1,141 @@
+﻿body {
+    background-color: #fff;
+    color: #000;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 400;
+    margin: 0;
+}
+
+ul, ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    list-style-position: outside;
+}
+
+a:link,
+a:visited,
+a:active {
+    text-decoration: none;
+}
+
+.btn-primary {
+    --bs-btn-bg: #4044ee;
+    --bs-btn-hover-bg: #6d48e5;
+}
+
+header {
+    padding: 18px 0;
+}
+
+main {
+    background-color: #f7f7f7;
+    padding: 24px 0;
+}
+
+footer {
+    padding: 22px 0 6px 0;
+}
+
+footer a {
+    color: #000;
+    display: block;
+    margin: 0 24px 16px 0;
+}
+    footer a:hover,
+    footer a:focus {
+        color: #0d6efd;
+    }
+
+.fsa-brand {
+    color: #000;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Home */
+
+.fsa-intro h1 {
+    font-size: 40px;
+}
+.fsa-intro div:first-of-type {
+    font-size: 20px;
+    font-style: italic;
+}
+.fsa-intro ul {
+    margin: 18px 0 32px 14px !important;
+}
+.fsa-intro li {
+    font-size: 16px;
+    margin-bottom: 6px;
+    padding-left: 6px;
+}
+    .fsa-intro li::marker {
+        content: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' viewBox='0 -3 16 16'> <path d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/></svg>");
+    }
+
+.fsa-apps {
+    margin: 48px 0;
+}
+    .fsa-apps h2 {
+        margin-bottom: 18px;
+    }
+    .fsa-apps h3 {
+        font-size: 22px;
+    }
+        .fsa-apps h3 i {
+            font-size: 18px;
+        }
+    .fsa-apps .row {
+        background-color: #fff;
+        border-radius: 4px;
+        box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+        margin-bottom: 24px;
+        padding: 12px 0;
+    }
+    .fsa-apps .app-desc {
+        color: #444;
+        font-style: italic;
+        margin: 10px 0 16px 0;
+    }
+    .fsa-apps li {
+        margin-bottom: 18px;
+    }
+
+.volta-color {
+    color: #0d6efd;
+}
+.napol-color {
+    color: #f00;
+}
+
+.modal-title i {
+    font-size: 17px;
+}
+
+.fsa-hash-tag {
+    font-weight: 600;
+}
+
+/*Don*/
+.fsa-don ul {
+    margin: 22px 0 32px 0 !important;
+}
+
+.fsa-don li {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.fsa-don .don-desc {
+    font-size: 17px;
+    font-style: italic;
+}
+
+.fsa-don .don-receipt {
+    margin-top: 12px;
+    font-size: 15px;
+}
