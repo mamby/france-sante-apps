@@ -16,7 +16,7 @@ Gestion : Afin d'assurer la pérennité et la réussite du projet, il est envisa
 
 _Pour en savoir plus, visitez_ [francesap.org ](https://francesap.org)
 
-_Email_ : contact@francesap.org
+_Contact_ : contact@francesap.org
 
 ## Comment contribuer ?
 
