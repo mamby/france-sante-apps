@@ -43,6 +43,7 @@ footer a {
     color: #000;
     display: block;
     margin: 0 24px 16px 0;
+    white-space: nowrap;
 }
     footer a:hover,
     footer a:focus {
