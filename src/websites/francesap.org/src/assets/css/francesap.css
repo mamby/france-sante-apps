@@ -21,10 +21,16 @@ a:active {
     text-decoration: none;
 }
 
-.btn-primary {
-    --bs-btn-bg: #4044ee;
-    --bs-btn-hover-bg: #6d48e5;
+.btn {
+    padding: 6px 12px;
 }
+
+.btn-primary {
+    background-color: #4044ee;
+}
+    .btn-primary:hover {
+        background-color: #6d48e5;
+    }
 
 header {
     padding: 18px 0;
@@ -77,6 +83,10 @@ footer a {
     .fsa-intro li::marker {
         content: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' viewBox='0 -3 16 16'> <path d='M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z'/></svg>");
     }
+.fsa-intro a {
+    font-size: 17px;
+    margin-bottom: 16px;
+}
 
 .fsa-apps {
     margin: 48px 0;
