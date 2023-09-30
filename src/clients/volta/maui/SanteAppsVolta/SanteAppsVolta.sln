@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34004.107
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SanteAppsVolta", "SanteAppsVolta\SanteAppsVolta.csproj", "{D04A1CEB-DC4B-4F26-A963-3F6531926D42}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D04A1CEB-DC4B-4F26-A963-3F6531926D42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D04A1CEB-DC4B-4F26-A963-3F6531926D42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D04A1CEB-DC4B-4F26-A963-3F6531926D42}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{D04A1CEB-DC4B-4F26-A963-3F6531926D42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D04A1CEB-DC4B-4F26-A963-3F6531926D42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D04A1CEB-DC4B-4F26-A963-3F6531926D42}.Release|Any CPU.Deploy.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8A9FF18C-5D05-4A98-BBE0-102B0BBBA302}
+	EndGlobalSection
+EndGlobal

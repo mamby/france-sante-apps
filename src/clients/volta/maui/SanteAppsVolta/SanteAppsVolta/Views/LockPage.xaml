@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Volta.Views.LockPage"
+             Title="NewPage1"
+             Shell.TabBarIsVisible="False"
+             Shell.NavBarIsVisible="False">
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior IsVisible="False" IsEnabled="False" />
+    </Shell.BackButtonBehavior>
+    
+    <VerticalStackLayout>
+        <Label 
+            Text="Locked !"
+            VerticalOptions="Center" 
+            HorizontalOptions="Center" />
+        <Button
+            x:Name="EnterBtn"
+            Text="Show Prompt"
+            Clicked="EnterBtn_Clicked"
+            HorizontalOptions="Center" />
+        <Button
+            x:Name="GoBtn"
+            Text="Enter"
+            Clicked="GoBtn_Clicked"
+            HorizontalOptions="Center" />   
+    </VerticalStackLayout>
+</ContentPage>

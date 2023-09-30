@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Volta.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Volta.Views"  
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    Shell.FlyoutBehavior="Disabled"
+    Title="Volta">
+    <!--<Shell.Behaviors>
+        <toolkit:StatusBarBehavior 
+            StatusBarColor="{ AppThemeBinding Light=White, Dark=Black }"
+            StatusBarStyle="{ AppThemeBinding Light=DarkContent, Dark=LightContent }" />
+    </Shell.Behaviors>-->
+    <Shell.TitleView>
+        <Image Source="dotnet_bot.svg"
+               HorizontalOptions="Center"
+               VerticalOptions="Center" />
+    </Shell.TitleView>
+    <TabBar>
+        <ShellContent Icon="home2.svg" Route="MainPage"
+                      ContentTemplate="{DataTemplate views:MainPage}" />
+        <ShellContent Icon="dotnet_bot.svg"
+                      ContentTemplate="{DataTemplate views:MainPage}" />
+        <ShellContent Icon="dotnet_bot.svg"
+                      ContentTemplate="{DataTemplate views:MainPage}" />
+        <ShellContent Icon="dotnet_bot.svg"
+                      ContentTemplate="{DataTemplate views:MainPage}" />
+        <ShellContent Icon="dotnet_bot.svg"
+                      ContentTemplate="{DataTemplate views:MainPage}" />
+    </TabBar>
+</Shell>
