@@ -5,7 +5,6 @@
     <StackLayout>
         <SearchBar x:Name="SearchBar"
                    TextChanged="OnSearchTextChanged" />
-
         <ListView x:Name="LangListView"
                   SelectionMode="Single"
                   ItemTapped="OnLangItemTapped">

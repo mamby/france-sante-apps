@@ -55,7 +55,7 @@ public partial class LanguagePage : ContentPage
     private async void OnOkButtonClicked(object sender, EventArgs e)
     {
         var name = (LangListView.SelectedItem as Language).Name;
-        // todo : Preferences.Set(nameof(Language), name);
+        // todo : Preferences.Set(SettingKeys.Language, name);
         Localization.SetLanguage(name);
 
         if (!_isStartPage)

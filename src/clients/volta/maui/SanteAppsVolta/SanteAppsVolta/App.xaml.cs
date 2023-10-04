@@ -1,17 +1,23 @@
-﻿using Volta.Core.L10n;
+﻿using Volta.Core.Config;
+using Volta.Core.L10n;
 using Volta.Views;
 
 namespace Volta;
 
 public partial class App : Application
 {
+    DateTime _sleepTime;
+    public double LockAfter { get; set; }
+
     public App()
     {
         InitializeComponent();
 
-        if (Preferences.ContainsKey(nameof(Language)))
+        LockAfter = Preferences.Get(SettingKeys.LockAfter, 15); // todo : default to 0 (Secure by default)
+
+        if (Preferences.ContainsKey(SettingKeys.Language))
         {
-            var name = Preferences.Get(nameof(Language), "en-US");
+            var name = Preferences.Get(SettingKeys.Language, "en-US");
 
             if (Localization.LanguageExist(name))
             {
@@ -29,20 +35,24 @@ public partial class App : Application
         }
     }
 
-    private static async Task<bool> CanLockAsync() => true; // todo: await SecureStorage.Default.GetAsync("is_locked") == "1";
+    private static async Task<bool> LockEnabledAsync() => true; // todo: await SecureStorage.Default.GetAsync(SettingKeys.AppLock) == "1";
 
     public static async Task InitAppLockAsync() 
-        => Current.MainPage = await CanLockAsync() ? new LockPage() : new AppShell();
+        => Current.MainPage = await LockEnabledAsync() ? new LockPage() : new AppShell();
 
     protected override Window CreateWindow(IActivationState activationState)
     {
         Window window = base.CreateWindow(activationState);
 
+        window.Deactivated += (s, e) => _sleepTime = DateTime.UtcNow;
+
         window.Activated += async (s, e) =>
         {
-            if (await CanLockAsync() && Current.MainPage is AppShell && Shell.Current.CurrentPage is not LockPage)
+            if (await LockEnabledAsync() 
+                && Current.MainPage is AppShell 
+                && Shell.Current.CurrentPage is not LockPage
+                && (DateTime.UtcNow - _sleepTime).TotalSeconds > LockAfter)
             {
-                // todo : add a timer !? lock after xx sec ??
                 await Shell.Current.GoToAsync("LockPage");
             }
         };
