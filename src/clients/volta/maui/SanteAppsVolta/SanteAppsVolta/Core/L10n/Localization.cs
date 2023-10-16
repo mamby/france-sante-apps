@@ -11,8 +11,6 @@ public static class Localization
         { "ar-SA", new Language { Name = "ar-SA", NativeName = "المملكة العربية السعودية - العربية", FlowDirection = FlowDirection.RightToLeft } }
     };
 
-    public static bool LanguageExist(string name) => _languages.ContainsKey(name);
-
     public static List<Language> Languages()
     {
         var languages = _languages.Values.OrderBy(l => l.NativeName).ToList();
@@ -28,8 +26,11 @@ public static class Localization
 
     public static void SetLanguage(string name)
     {
-        CultureInfo ci = new(name);
-        CultureInfo.CurrentCulture = ci;
-        CultureInfo.CurrentUICulture = ci;
+        if (_languages.ContainsKey(name))
+        {
+            CultureInfo ci = new(name);
+            CultureInfo.CurrentCulture = ci;
+            CultureInfo.CurrentUICulture = ci;
+        }
     }
 }

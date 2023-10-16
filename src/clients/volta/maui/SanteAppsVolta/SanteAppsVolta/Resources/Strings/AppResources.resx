@@ -120,9 +120,6 @@
   <data name="LangPageDone" xml:space="preserve">
     <value>Done</value>
   </data>
-  <data name="LangPageNext" xml:space="preserve">
-    <value>Next</value>
-  </data>
   <data name="LangPageSearch" xml:space="preserve">
     <value>Search</value>
   </data>

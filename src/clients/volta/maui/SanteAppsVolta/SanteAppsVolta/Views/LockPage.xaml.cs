@@ -1,5 +1,3 @@
-using CommunityToolkit.Maui.Behaviors;
-using CommunityToolkit.Maui.Core;
 using Volta.Core.Platforms;
 
 namespace Volta.Views;

@@ -2,8 +2,8 @@
 {
     public class Language
     {
-        public string Name { get; set; }
-        public string NativeName { get; set; }
+        public required string Name { get; set; }
+        public required string NativeName { get; set; }
         public FlowDirection FlowDirection { get; set; }
     }
 }

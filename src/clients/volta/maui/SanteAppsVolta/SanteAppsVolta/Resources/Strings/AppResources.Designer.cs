@@ -70,15 +70,6 @@ namespace Volta.Resources.Strings {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Next.
-        /// </summary>
-        internal static string LangPageNext {
-            get {
-                return ResourceManager.GetString("LangPageNext", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Search.
         /// </summary>
         internal static string LangPageSearch {

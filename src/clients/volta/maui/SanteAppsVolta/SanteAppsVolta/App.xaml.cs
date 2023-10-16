@@ -6,52 +6,36 @@ namespace Volta;
 
 public partial class App : Application
 {
-    DateTime _sleepTime;
-    public double LockAfter { get; set; }
+    DateTime _pauseTime;
 
     public App()
     {
         InitializeComponent();
-
-        LockAfter = Preferences.Get(SettingKeys.LockAfter, 15); // todo : default to 0 (Secure by default)
-
-        if (Preferences.ContainsKey(SettingKeys.Language))
-        {
-            var name = Preferences.Get(SettingKeys.Language, "en-US");
-
-            if (Localization.LanguageExist(name))
-            {
-                Localization.SetLanguage(name);
-                InitAppLockAsync().GetAwaiter().GetResult();
-            }
-            else
-            {
-                Current.MainPage = new LanguagePage();
-            }
-        }
-        else
-        {
-            Current.MainPage = new LanguagePage();
-        }
+        InitializeLanguage();
+        MainPage = new AppShell();
     }
 
-    private static async Task<bool> LockEnabledAsync() => true; // todo: await SecureStorage.Default.GetAsync(SettingKeys.AppLock) == "1";
+    private void InitializeLanguage()
+    {
+        if (!Preferences.ContainsKey(SettingKeys.Language))
+        {
+           return; // use default mechanism.
+        }
 
-    public static async Task InitAppLockAsync() 
-        => Current.MainPage = await LockEnabledAsync() ? new LockPage() : new AppShell();
+        Localization.SetLanguage(Preferences.Get(SettingKeys.Language, SettingDefaults.Language));
+    }
 
-    protected override Window CreateWindow(IActivationState activationState)
+    protected override Window CreateWindow(IActivationState? activationState)
     {
         Window window = base.CreateWindow(activationState);
 
-        window.Deactivated += (s, e) => _sleepTime = DateTime.UtcNow;
+        window.Deactivated += (s, e) => _pauseTime = DateTime.UtcNow;
 
         window.Activated += async (s, e) =>
         {
-            if (await LockEnabledAsync() 
-                && Current.MainPage is AppShell 
+            if (await SecureStorage.Default.GetAsync(SettingKeys.AppLock) != "1" // todo : change to ==
                 && Shell.Current.CurrentPage is not LockPage
-                && (DateTime.UtcNow - _sleepTime).TotalSeconds > LockAfter)
+                && (DateTime.UtcNow - _pauseTime).TotalSeconds > Preferences.Get(SettingKeys.LockAfter, 0))
             {
                 await Shell.Current.GoToAsync("LockPage");
             }
