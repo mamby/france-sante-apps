@@ -61,6 +61,33 @@ namespace Volta.Resources.Strings {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Please authenticate to proceed..
+        /// </summary>
+        internal static string AndroidBiometricDescription {
+            get {
+                return ResourceManager.GetString("AndroidBiometricDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        internal static string AndroidBiometricNegativeText {
+            get {
+                return ResourceManager.GetString("AndroidBiometricNegativeText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification.
+        /// </summary>
+        internal static string AndroidBiometricTitle {
+            get {
+                return ResourceManager.GetString("AndroidBiometricTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Done.
         /// </summary>
         internal static string LangPageDone {
@@ -84,6 +111,24 @@ namespace Volta.Resources.Strings {
         internal static string LangPageTitle {
             get {
                 return ResourceManager.GetString("LangPageTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Logout.
+        /// </summary>
+        internal static string LockPageLogout {
+            get {
+                return ResourceManager.GetString("LockPageLogout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unlock.
+        /// </summary>
+        internal static string LockPageUnlock {
+            get {
+                return ResourceManager.GetString("LockPageUnlock", resourceCulture);
             }
         }
     }

@@ -4,24 +4,52 @@
              x:Class="Volta.Views.LockPage"
              Shell.TabBarIsVisible="False"
              Shell.NavBarIsVisible="False">
+
     <Shell.BackButtonBehavior>
         <BackButtonBehavior IsVisible="False" IsEnabled="False" />
     </Shell.BackButtonBehavior>
-    
-    <VerticalStackLayout>
-        <Label 
-            Text="Locked !"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-        <Button
-            x:Name="EnterBtn"
-            Text="Show Prompt"
-            Clicked="EnterBtn_Clicked"
-            HorizontalOptions="Center" />
-        <Button
-            x:Name="GoBtn"
-            Text="Enter"
-            Clicked="GoBtn_Clicked"
-            HorizontalOptions="Center" />   
-    </VerticalStackLayout>
+
+    <ScrollView>
+        <VerticalStackLayout Margin="20" 
+                             VerticalOptions="Center">
+
+            <Border BackgroundColor="#EEEEEE" 
+                    StrokeThickness="0"
+                    StrokeShape="Ellipse 80, 80"
+                    HeightRequest="80"
+                    WidthRequest="80"
+                    HorizontalOptions="Center">
+                <Image x:Name="ProfileImage" Aspect="AspectFill" Source="profile.png" />
+            </Border>
+
+            <Label x:Name="FullNameLabel" 
+                   Margin="0,0,0,0"
+                   FontSize="Large" 
+                   FontAttributes="Bold"
+                   HorizontalOptions="CenterAndExpand"
+                   HorizontalTextAlignment="Center" />
+            
+            <Label x:Name="EmailLabel"
+                   Margin="0,0,0,0"
+                   HorizontalOptions="CenterAndExpand"
+                   HorizontalTextAlignment="Center" />
+
+            <Button x:Name="LogoutButton"
+                    Clicked="OnLogoutButtonClicked"
+                    Style="{StaticResource LinkButton}"
+                    FontSize="Medium"
+                    HorizontalOptions="Center" />
+
+            <Label x:Name="ErrorLabel"
+                   Margin="0,36,0,10"         
+                   TextColor="#FF0000"
+                   HorizontalOptions="CenterAndExpand"
+                   HorizontalTextAlignment="Center" />
+            
+            <Button x:Name="UnlockButton"
+                    Clicked="OnUnlockButtonClicked"
+                    HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

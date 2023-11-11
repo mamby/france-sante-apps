@@ -6,24 +6,24 @@ namespace Volta.Core.Platforms
     {
         protected override void OnAttachedTo(ContentPage page)
         {
-            page.Appearing += OnAppearing;
+            page.Appearing += OnAppearing!;
             base.OnAttachedTo(page);
         }
 
         private void OnAppearing(object sender, EventArgs e)
         {
-            App.Current.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize);
+            App.Current!.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Resize);
         }
 
         protected override void OnDetachingFrom(ContentPage page)
         {
-            page.Disappearing -= OnDisappearing;
+            page.Disappearing -= OnDisappearing!;
             base.OnDetachingFrom(page);
         }
 
         private void OnDisappearing(object sender, EventArgs e)
         {
-            App.Current.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Pan);
+            App.Current!.On<Microsoft.Maui.Controls.PlatformConfiguration.Android>().UseWindowSoftInputModeAdjust(WindowSoftInputModeAdjust.Pan);
         }
     }
 }

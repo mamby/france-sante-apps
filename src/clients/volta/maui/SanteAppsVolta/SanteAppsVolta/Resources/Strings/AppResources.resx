@@ -117,6 +117,15 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AndroidBiometricDescription" xml:space="preserve">
+    <value>Please authenticate to proceed.</value>
+  </data>
+  <data name="AndroidBiometricNegativeText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AndroidBiometricTitle" xml:space="preserve">
+    <value>Identity verification</value>
+  </data>
   <data name="LangPageDone" xml:space="preserve">
     <value>Done</value>
   </data>
@@ -125,5 +134,11 @@
   </data>
   <data name="LangPageTitle" xml:space="preserve">
     <value>Languages</value>
+  </data>
+  <data name="LockPageLogout" xml:space="preserve">
+    <value>Logout</value>
+  </data>
+  <data name="LockPageUnlock" xml:space="preserve">
+    <value>Unlock</value>
   </data>
 </root>

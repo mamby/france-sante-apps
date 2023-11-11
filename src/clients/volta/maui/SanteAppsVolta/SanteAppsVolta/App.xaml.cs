@@ -15,7 +15,7 @@ public partial class App : Application
         MainPage = new AppShell();
     }
 
-    private void InitializeLanguage()
+    private static void InitializeLanguage()
     {
         if (!Preferences.ContainsKey(SettingKeys.Language))
         {
@@ -34,10 +34,16 @@ public partial class App : Application
         window.Activated += async (s, e) =>
         {
             if (await SecureStorage.Default.GetAsync(SettingKeys.AppLock) != "1" // todo : change to ==
-                && Shell.Current.CurrentPage is not LockPage
                 && (DateTime.UtcNow - _pauseTime).TotalSeconds > Preferences.Get(SettingKeys.LockAfter, 0))
             {
-                await Shell.Current.GoToAsync("LockPage");
+                if (Shell.Current.CurrentPage is not LockPage)
+                {
+                    await Shell.Current.GoToAsync("LockPage");
+                }
+                else
+                {
+                    (Shell.Current.CurrentPage as LockPage)?.StartUnlock();
+                }
             }
         };
 

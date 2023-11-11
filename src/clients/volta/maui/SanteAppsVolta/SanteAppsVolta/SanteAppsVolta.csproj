@@ -51,6 +51,9 @@
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
+		<MauiImage Update="Resources\Images\profile.svg">
+		  <BaseSize>168,208</BaseSize>
+		</MauiImage>
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -64,16 +67,22 @@
 	  <None Remove="Platforms\Android\Resources\values-night\styles.xml" />
 	  <None Remove="Platforms\Android\Resources\values\styles.xml" />
 	  <None Remove="Resources\Icons\home2.svg" />
+	  <None Remove="Resources\Icons\person.svg" />
+	  <None Remove="Resources\Icons\unlock.svg" />
+	  <None Remove="Resources\Images\marianne.png" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <MauiImage Include="Resources\Icons\unlock.svg">
+	    <BaseSize>168,208</BaseSize>
+	  </MauiImage>
 	  <MauiImage Include="Resources\Icons\home2.svg">
 	    <BaseSize>168,208</BaseSize>
 	  </MauiImage>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Maui" Version="6.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="6.1.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0-rc.2.23479.6" />
