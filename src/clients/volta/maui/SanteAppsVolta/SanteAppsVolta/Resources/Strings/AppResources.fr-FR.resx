@@ -117,14 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AndroidBiometricDescription" xml:space="preserve">
-    <value>Veuillez vous authentifier pour continuer.</value>
-  </data>
-  <data name="AndroidBiometricNegativeText" xml:space="preserve">
+  <data name="AndroidBiometricPromptNegativeText" xml:space="preserve">
     <value>Annuler</value>
   </data>
-  <data name="AndroidBiometricTitle" xml:space="preserve">
+  <data name="AndroidBiometricPromptTitle" xml:space="preserve">
     <value>Vérification d'identité</value>
+  </data>
+  <data name="BiometricPromptMessage" xml:space="preserve">
+    <value>Veuillez vous authentifier pour continuer.</value>
   </data>
   <data name="LangPageDone" xml:space="preserve">
     <value>Terminer</value>
@@ -140,5 +140,23 @@
   </data>
   <data name="LockPageUnlock" xml:space="preserve">
     <value>Déverrouiller</value>
+  </data>
+  <data name="UnexpectedError" xml:space="preserve">
+    <value>Erreur inattendue. Veuillez réessayer.</value>
+  </data>
+  <data name="WinBiometricBusy" xml:space="preserve">
+    <value>Le périphérique d'identité est occupé.</value>
+  </data>
+  <data name="WinBiometricDisabled" xml:space="preserve">
+    <value>La vérification d'identité est désactivée.</value>
+  </data>
+  <data name="WinBiometricNotAvailable" xml:space="preserve">
+    <value>La vérification d'identité n'est pas disponible.</value>
+  </data>
+  <data name="WinBiometricNotPresent" xml:space="preserve">
+    <value>Le périphérique d'identité est introuvable.</value>
+  </data>
+  <data name="WinBiometricNotRegistered" xml:space="preserve">
+    <value>L'identité n'est pas enregistrée.</value>
   </data>
 </root>

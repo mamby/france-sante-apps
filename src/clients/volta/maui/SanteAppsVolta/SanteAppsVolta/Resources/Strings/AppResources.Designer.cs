@@ -61,29 +61,29 @@ namespace Volta.Resources.Strings {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Please authenticate to proceed..
-        /// </summary>
-        internal static string AndroidBiometricDescription {
-            get {
-                return ResourceManager.GetString("AndroidBiometricDescription", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Cancel.
         /// </summary>
-        internal static string AndroidBiometricNegativeText {
+        internal static string AndroidBiometricPromptNegativeText {
             get {
-                return ResourceManager.GetString("AndroidBiometricNegativeText", resourceCulture);
+                return ResourceManager.GetString("AndroidBiometricPromptNegativeText", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Looks up a localized string similar to Identity verification.
         /// </summary>
-        internal static string AndroidBiometricTitle {
+        internal static string AndroidBiometricPromptTitle {
             get {
-                return ResourceManager.GetString("AndroidBiometricTitle", resourceCulture);
+                return ResourceManager.GetString("AndroidBiometricPromptTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Please authenticate to proceed..
+        /// </summary>
+        internal static string BiometricPromptMessage {
+            get {
+                return ResourceManager.GetString("BiometricPromptMessage", resourceCulture);
             }
         }
         
@@ -129,6 +129,60 @@ namespace Volta.Resources.Strings {
         internal static string LockPageUnlock {
             get {
                 return ResourceManager.GetString("LockPageUnlock", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unexpected error. Please try again..
+        /// </summary>
+        internal static string UnexpectedError {
+            get {
+                return ResourceManager.GetString("UnexpectedError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identity device is busy..
+        /// </summary>
+        internal static string WinBiometricBusy {
+            get {
+                return ResourceManager.GetString("WinBiometricBusy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification is disabled..
+        /// </summary>
+        internal static string WinBiometricDisabled {
+            get {
+                return ResourceManager.GetString("WinBiometricDisabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification is not available..
+        /// </summary>
+        internal static string WinBiometricNotAvailable {
+            get {
+                return ResourceManager.GetString("WinBiometricNotAvailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identity device is not found..
+        /// </summary>
+        internal static string WinBiometricNotPresent {
+            get {
+                return ResourceManager.GetString("WinBiometricNotPresent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identity is not registered..
+        /// </summary>
+        internal static string WinBiometricNotRegistered {
+            get {
+                return ResourceManager.GetString("WinBiometricNotRegistered", resourceCulture);
             }
         }
     }

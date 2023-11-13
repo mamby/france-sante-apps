@@ -15,9 +15,9 @@ public class AndroidBiometricUnlock
     public void Start()
     {
         var promptInfo = new PromptInfo.Builder()
-            .SetTitle(AppResources.AndroidBiometricTitle)
-            .SetDescription(AppResources.AndroidBiometricDescription)
-            .SetNegativeButtonText(AppResources.AndroidBiometricNegativeText)
+            .SetTitle(AppResources.AndroidBiometricPromptTitle)
+            .SetDescription(AppResources.BiometricPromptMessage)
+            .SetNegativeButtonText(AppResources.AndroidBiometricPromptNegativeText)
             .SetConfirmationRequired(true)
             .SetAllowedAuthenticators(Authenticators.BiometricStrong)
             .Build();
@@ -43,7 +43,6 @@ public class AuthCallback : AuthenticationCallback
 
     public override void OnAuthenticationError(int errorCode, ICharSequence errString)
     {
-        if (errorCode != 10 && errorCode != 13) // Canceled by user.
-            Failed?.Invoke(this, errString.ToString());
+        Failed?.Invoke(this, (errorCode != 10 && errorCode != 13) ? errString.ToString() : "");
     }
 }

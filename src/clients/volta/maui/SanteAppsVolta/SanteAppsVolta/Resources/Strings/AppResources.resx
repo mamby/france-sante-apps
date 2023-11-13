@@ -117,14 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AndroidBiometricDescription" xml:space="preserve">
-    <value>Please authenticate to proceed.</value>
-  </data>
-  <data name="AndroidBiometricNegativeText" xml:space="preserve">
+  <data name="AndroidBiometricPromptNegativeText" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="AndroidBiometricTitle" xml:space="preserve">
+  <data name="AndroidBiometricPromptTitle" xml:space="preserve">
     <value>Identity verification</value>
+  </data>
+  <data name="BiometricPromptMessage" xml:space="preserve">
+    <value>Please authenticate to proceed.</value>
   </data>
   <data name="LangPageDone" xml:space="preserve">
     <value>Done</value>
@@ -140,5 +140,23 @@
   </data>
   <data name="LockPageUnlock" xml:space="preserve">
     <value>Unlock</value>
+  </data>
+  <data name="UnexpectedError" xml:space="preserve">
+    <value>Unexpected error. Please try again.</value>
+  </data>
+  <data name="WinBiometricBusy" xml:space="preserve">
+    <value>Identity device is busy.</value>
+  </data>
+  <data name="WinBiometricDisabled" xml:space="preserve">
+    <value>Identity verification is disabled.</value>
+  </data>
+  <data name="WinBiometricNotAvailable" xml:space="preserve">
+    <value>Identity verification is not available.</value>
+  </data>
+  <data name="WinBiometricNotPresent" xml:space="preserve">
+    <value>Identity device is not found.</value>
+  </data>
+  <data name="WinBiometricNotRegistered" xml:space="preserve">
+    <value>Identity is not registered.</value>
   </data>
 </root>

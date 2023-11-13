@@ -11,8 +11,8 @@ public partial class LockPage : ContentPage
 	{
         InitializeComponent();
         _biometricUnlock = new BiometricUnlock();
-        _biometricUnlock.Failed += (s, e) => ErrorLabel.Text = e;
-        _biometricUnlock.Succeeded += (s, e) => Shell.Current.Navigation.PopAsync();
+        _biometricUnlock.Failed += BiometricUnlockFailed;
+        _biometricUnlock.Succeeded += BiometricUnlockSucceeded;
 
         LogoutButton.Text = AppResources.LockPageLogout;
         UnlockButton.Text = AppResources.LockPageUnlock;
@@ -25,25 +25,25 @@ public partial class LockPage : ContentPage
 
     protected override bool OnBackButtonPressed() => false;
 
-    protected override void OnAppearing()
+    private async void BiometricUnlockSucceeded(object? sender, EventArgs e) => await Shell.Current.Navigation.PopAsync();
+
+    private void BiometricUnlockFailed(object? sender, string e)
     {
-        base.OnAppearing();
-        StartUnlock();
+        ErrorLabel.Text = e;
+        UnlockButton.IsEnabled = true;
     }
 
-    private void OnUnlockButtonClicked(object sender, EventArgs e)
-    {
-        StartUnlock();
-    }
+    private async void OnUnlockButtonClicked(object sender, EventArgs e) => await StartUnlockAsync();
 
     private void OnLogoutButtonClicked(object sender, EventArgs e)
     {
        // todo: init logout
     }
 
-    public void StartUnlock()
+    public async Task StartUnlockAsync()
     {
         ErrorLabel.Text = "";
-        _biometricUnlock.Start();
+        UnlockButton.IsEnabled = false;
+        await _biometricUnlock.StartAsync();
     }
 }

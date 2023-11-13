@@ -37,13 +37,12 @@ public partial class App : Application
                 && (DateTime.UtcNow - _pauseTime).TotalSeconds > Preferences.Get(SettingKeys.LockAfter, 0))
             {
                 if (Shell.Current.CurrentPage is not LockPage)
-                {
                     await Shell.Current.GoToAsync("LockPage");
-                }
-                else
-                {
-                    (Shell.Current.CurrentPage as LockPage)?.StartUnlock();
-                }
+
+                // WINDOWS : The login prompt deactivate the current Window (Never ending prompts).
+#if ANDROID
+                await (Shell.Current.CurrentPage as LockPage)?.StartUnlockAsync();
+#endif
             }
         };
 
