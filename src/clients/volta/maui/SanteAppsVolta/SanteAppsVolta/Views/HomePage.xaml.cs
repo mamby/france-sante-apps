@@ -15,7 +15,6 @@ public partial class HomePage : ContentPage
 
     private void OnCounterClicked(object sender, EventArgs e)
     {
-        CounterBtn.Text = Shell.Current.CurrentItem.Icon.ToString();
-        Shell.Current.CurrentItem.Icon = "unlock.png";
+        CounterBtn.Text = "hello";
     }
 }
