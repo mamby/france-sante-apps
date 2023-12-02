@@ -6,15 +6,16 @@ using Volta.Resources.Strings;
 
 namespace Volta.Views;
 
-public partial class MainPage : ContentPage
+public partial class HomePage : ContentPage
 {
-    public MainPage()
+    public HomePage()
     {
         InitializeComponent();
     }
 
     private void OnCounterClicked(object sender, EventArgs e)
     {
-        CounterBtn.Text = DateTime.UtcNow.ToLongDateString();
+        CounterBtn.Text = Shell.Current.CurrentItem.Icon.ToString();
+        Shell.Current.CurrentItem.Icon = "unlock.png";
     }
 }

@@ -43,10 +43,10 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
-
+		<MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android' AND $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'ios'" Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.8" Color="#FFFFFF" />
+		
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF" BaseSize="128,128" />
+		<MauiSplashScreen Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android' AND $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'ios'" Include="Resources\Splash\splash.svg" Color="#FFFFFF" BaseSize="128,128" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -63,35 +63,46 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="Platforms\Android\Resources\drawable\splash_icon.xml" />
 	  <None Remove="Platforms\Android\Resources\values-night\colors.xml" />
 	  <None Remove="Platforms\Android\Resources\values-night\styles.xml" />
 	  <None Remove="Platforms\Android\Resources\values\styles.xml" />
-	  <None Remove="Resources\Icons\home2.svg" />
+	  <None Remove="Resources\Icons\alert.svg" />
+	  <None Remove="Resources\Icons\home.svg" />
+	  <None Remove="Resources\Icons\more.svg" />
+	  <None Remove="Resources\Icons\people.svg" />
 	  <None Remove="Resources\Icons\person.svg" />
+	  <None Remove="Resources\Icons\search.svg" />
 	  <None Remove="Resources\Icons\unlock.svg" />
 	  <None Remove="Resources\Images\marianne.png" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <MauiImage Include="Resources\Icons\alert.svg" />
+	  <MauiImage Include="Resources\Icons\home.svg" />
+	  <MauiImage Include="Resources\Icons\more.svg" />
+	  <MauiImage Include="Resources\Icons\people.svg" />
+	  <MauiImage Include="Resources\Icons\person.svg" />
+	  <MauiImage Include="Resources\Icons\search.svg" />
 	  <MauiImage Include="Resources\Icons\unlock.svg">
-	    <BaseSize>168,208</BaseSize>
-	  </MauiImage>
-	  <MauiImage Include="Resources\Icons\home2.svg">
 	    <BaseSize>168,208</BaseSize>
 	  </MauiImage>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Maui" Version="6.1.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0-rc.2.23479.6" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.141-beta" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android'">
 	  <PackageReference Include="Xamarin.AndroidX.Biometric">
 	    <Version>1.1.0.16</Version>
+	  </PackageReference>
+	  <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen">
+	    <Version>1.0.1.5</Version>
 	  </PackageReference>
 	</ItemGroup>
 
@@ -109,6 +120,9 @@
 	  </Compile>
 	  <Compile Update="Views\LockPage.xaml.cs">
 	    <DependentUpon>LockPage.xaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="Views\HomePage.xaml.cs">
+	    <DependentUpon>HomePage.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
 

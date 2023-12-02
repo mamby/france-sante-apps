@@ -3,24 +3,30 @@
     x:Class="Volta.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:behaviors="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     xmlns:views="clr-namespace:Volta.Views"  
     Shell.FlyoutBehavior="Disabled"
     Title="Volta">
+    <Shell.Behaviors>
+        <behaviors:StatusBarBehavior 
+            StatusBarColor="{AppThemeBinding Light=White, Dark=Black}" 
+            StatusBarStyle="{AppThemeBinding Light=DarkContent, Dark=LightContent}"/>
+    </Shell.Behaviors>
     <Shell.TitleView>
         <Image Source="dotnet_bot.png"
                HorizontalOptions="Center"
                VerticalOptions="Center" />
     </Shell.TitleView>
     <TabBar>
-        <ShellContent Icon="home2.png" Route="MainPage"
-                      ContentTemplate="{DataTemplate views:MainPage}" />
-        <ShellContent Icon="dotnet_bot.png"
-                      ContentTemplate="{DataTemplate views:MainPage}" />
-        <ShellContent Icon="dotnet_bot.png"
-                      ContentTemplate="{DataTemplate views:MainPage}" />
-        <ShellContent Icon="dotnet_bot.png"
-                      ContentTemplate="{DataTemplate views:MainPage}" />
-        <ShellContent Icon="dotnet_bot.png"
-                      ContentTemplate="{DataTemplate views:MainPage}" />
+        <ShellContent Icon="home.png" Route="home" 
+                      ContentTemplate="{DataTemplate views:HomePage}" />
+        <ShellContent Icon="search.png" Route="LanguagePage"
+                      ContentTemplate="{DataTemplate views:LanguagePage}" />
+        <ShellContent Icon="alert.png"
+                      ContentTemplate="{DataTemplate views:HomePage}" />
+        <ShellContent Icon="person.png"
+                      ContentTemplate="{DataTemplate views:HomePage}" />
+        <ShellContent Icon="more.png"
+                      ContentTemplate="{DataTemplate views:HomePage}" />
     </TabBar>
 </Shell>

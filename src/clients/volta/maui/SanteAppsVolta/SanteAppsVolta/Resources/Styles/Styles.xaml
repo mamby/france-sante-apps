@@ -26,6 +26,8 @@
     <Style TargetType="Button" x:Key="LinkButton">
         <Setter Property="TextColor" Value="{AppThemeBinding Light=#0D6EFD, Dark=#6EA8FE}" />
         <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="BorderColor" Value="Transparent" />
+        <Setter Property="BorderWidth" Value="0" />
     </Style>
 
     <Style TargetType="Button">

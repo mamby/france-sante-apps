@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
-	<style name="VoltaSplashTheme" parent="Maui.SplashTheme">
-		<item name="android:windowSplashScreenBackground">@color/colorPrimaryDark</item>
+	<style name="VoltaSplashTheme" parent="Theme.SplashScreen">
 		<item name="android:windowLightStatusBar">false</item>
+		<item name="windowSplashScreenAnimatedIcon">@drawable/splash</item>
+		<item name="postSplashScreenTheme">@style/Maui.SplashTheme</item>
 	</style>
 </resources>
