@@ -22,11 +22,11 @@
                       ContentTemplate="{DataTemplate views:HomePage}" />
         <ShellContent Icon="search.png" Route="LanguagePage"
                       ContentTemplate="{DataTemplate views:LanguagePage}" />
-        <ShellContent Icon="alert.png"
+        <ShellContent Icon="alert.png" Route="notifications" 
                       ContentTemplate="{DataTemplate views:HomePage}" />
-        <ShellContent Icon="person.png"
+        <ShellContent Icon="person.png" Route="person" 
                       ContentTemplate="{DataTemplate views:HomePage}" />
-        <ShellContent Icon="more.png"
+        <ShellContent Icon="more.png" Route="more" 
                       ContentTemplate="{DataTemplate views:HomePage}" />
     </TabBar>
 </Shell>
