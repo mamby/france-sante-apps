@@ -12,7 +12,6 @@ public partial class App : Application
     {
         InitializeComponent();
         InitializeLanguage();
-        MainPage = new AppShell();
     }
 
     private static void InitializeLanguage()
@@ -27,7 +26,7 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        var window = base.CreateWindow(activationState);
+        var window = new Window(new AppShell());
 
         window.Deactivated += (s, e) => _pauseTime = DateTime.UtcNow;
 

@@ -3,15 +3,14 @@
     x:Class="Volta.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:behaviors="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     xmlns:views="clr-namespace:Volta.Views"  
     Shell.FlyoutBehavior="Disabled"
     Title="Volta">
-    <Shell.Behaviors>
-        <behaviors:StatusBarBehavior 
+    <!--<Shell.Behaviors>
+        <toolkit:StatusBarBehavior
             StatusBarColor="{AppThemeBinding Light=White, Dark=Black}" 
             StatusBarStyle="{AppThemeBinding Light=DarkContent, Dark=LightContent}"/>
-    </Shell.Behaviors>
+    </Shell.Behaviors>-->
     <Shell.TitleView>
         <Image Source="dotnet_bot.png"
                HorizontalOptions="Center"
