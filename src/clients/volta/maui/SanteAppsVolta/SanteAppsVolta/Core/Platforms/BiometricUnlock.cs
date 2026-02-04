@@ -17,8 +17,12 @@ public class BiometricUnlock
         winBiometricUnlock.Failed += (s, e) => Failed?.Invoke(this, e);
         winBiometricUnlock.Succeeded += (s, e) => Succeeded?.Invoke(this, e);
         await winBiometricUnlock.StartAsync();
+#elif IOS || MACCATALYST
+        AppleBiometricUnlock appleBiometricUnlock = new();
+        appleBiometricUnlock.Failed += (s, e) => Failed?.Invoke(this, e);
+        appleBiometricUnlock.Succeeded += (s, e) => Succeeded?.Invoke(this, e);
+        await appleBiometricUnlock.StartAsync();
 #else
-        // iOS, Mac
         Succeeded?.Invoke(this, EventArgs.Empty);
 #endif
     }

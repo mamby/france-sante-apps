@@ -37,8 +37,10 @@ public class WinBiometricUnlock
                         errorMessage = AppResources.WinBiometricBusy;
                         break;
                     case UserConsentVerificationResult.RetriesExhausted:
+                        errorMessage = AppResources.WinBiometricFailed;
                         break;
                     case UserConsentVerificationResult.Canceled:
+                        errorMessage = AppResources.WinBiometricCanceled;
                         break;
                     default:
                         errorMessage = AppResources.WinBiometricNotAvailable;

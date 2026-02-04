@@ -77,6 +77,123 @@ namespace Volta.Resources.Strings {
                 return ResourceManager.GetString("AndroidBiometricPromptTitle", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification was canceled..
+        /// </summary>
+        internal static string AndroidBiometricCanceled {
+            get {
+                return ResourceManager.GetString("AndroidBiometricCanceled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification failed..
+        /// </summary>
+        internal static string AndroidBiometricFailed {
+            get {
+                return ResourceManager.GetString("AndroidBiometricFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity hardware is unavailable..
+        /// </summary>
+        internal static string AndroidBiometricHardwareUnavailable {
+            get {
+                return ResourceManager.GetString("AndroidBiometricHardwareUnavailable", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Too many attempts. Try again later..
+        /// </summary>
+        internal static string AndroidBiometricLockout {
+            get {
+                return ResourceManager.GetString("AndroidBiometricLockout", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification is not available..
+        /// </summary>
+        internal static string AndroidBiometricNotAvailable {
+            get {
+                return ResourceManager.GetString("AndroidBiometricNotAvailable", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No identity credentials are enrolled..
+        /// </summary>
+        internal static string AndroidBiometricNotEnrolled {
+            get {
+                return ResourceManager.GetString("AndroidBiometricNotEnrolled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Security update required to use identity verification..
+        /// </summary>
+        internal static string AndroidBiometricSecurityUpdateRequired {
+            get {
+                return ResourceManager.GetString("AndroidBiometricSecurityUpdateRequired", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification is not supported on this device..
+        /// </summary>
+        internal static string AndroidBiometricUnsupported {
+            get {
+                return ResourceManager.GetString("AndroidBiometricUnsupported", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification was canceled..
+        /// </summary>
+        internal static string AppleBiometricCanceled {
+            get {
+                return ResourceManager.GetString("AppleBiometricCanceled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification failed..
+        /// </summary>
+        internal static string AppleBiometricFailed {
+            get {
+                return ResourceManager.GetString("AppleBiometricFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification is locked. Try again later..
+        /// </summary>
+        internal static string AppleBiometricLockout {
+            get {
+                return ResourceManager.GetString("AppleBiometricLockout", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification is not available..
+        /// </summary>
+        internal static string AppleBiometricNotAvailable {
+            get {
+                return ResourceManager.GetString("AppleBiometricNotAvailable", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No identity credentials are enrolled..
+        /// </summary>
+        internal static string AppleBiometricNotEnrolled {
+            get {
+                return ResourceManager.GetString("AppleBiometricNotEnrolled", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Please authenticate to proceed..
@@ -149,6 +266,15 @@ namespace Volta.Resources.Strings {
                 return ResourceManager.GetString("WinBiometricBusy", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification was canceled..
+        /// </summary>
+        internal static string WinBiometricCanceled {
+            get {
+                return ResourceManager.GetString("WinBiometricCanceled", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Identity verification is disabled..
@@ -156,6 +282,15 @@ namespace Volta.Resources.Strings {
         internal static string WinBiometricDisabled {
             get {
                 return ResourceManager.GetString("WinBiometricDisabled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Identity verification failed..
+        /// </summary>
+        internal static string WinBiometricFailed {
+            get {
+                return ResourceManager.GetString("WinBiometricFailed", resourceCulture);
             }
         }
         
