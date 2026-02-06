@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Volta.Views.PersonalHealthRecordPage"
+             Title="Personal Health Record">
+    <ContentPage.Resources>
+        <Style TargetType="Frame" x:Key="SectionCard">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="HasShadow" Value="False" />
+            <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}" />
+        </Style>
+        <Style TargetType="Label" x:Key="SectionTitle">
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+        <Style TargetType="Label" x:Key="SectionSubtitle">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="20,16">
+            <Label Text="Personal Health Record"
+                   FontSize="24"
+                   FontAttributes="Bold" />
+            <Label Text="Keep an at-a-glance view of important health details and share them when needed."
+                   FontSize="14"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Conditions" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Track ongoing diagnoses and active conditions." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Allergies" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Record medication, food, and environmental allergies." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Medications" Style="{StaticResource SectionTitle}" />
+                    <Label Text="List current prescriptions, doses, and schedules." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Vaccinations" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Keep immunization dates and booster reminders." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Lab results" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Store recent lab values and provider notes." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Imaging" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Track imaging summaries and follow-up needs." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Procedures" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Document surgeries and significant procedures." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Family history" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Capture hereditary conditions and risk factors." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Emergency contacts" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Store trusted contacts and preferred hospitals." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Style="{StaticResource SectionCard}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Doctors" Style="{StaticResource SectionTitle}" />
+                    <Label Text="List primary care and specialist care teams." Style="{StaticResource SectionSubtitle}" />
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
