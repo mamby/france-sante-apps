@@ -114,6 +114,9 @@
 	    <AutoGen>True</AutoGen>
 	    <DependentUpon>AppResources.resx</DependentUpon>
 	  </Compile>
+	  <Compile Update="Views\PersonalHealthRecordPage.xaml.cs">
+	    <DependentUpon>PersonalHealthRecordPage.xaml</DependentUpon>
+	  </Compile>
 	  <Compile Update="Views\LanguagePage.xaml.cs">
 	    <DependentUpon>LanguagePage.xaml</DependentUpon>
 	  </Compile>
@@ -136,6 +139,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <MauiXaml Update="Views\PersonalHealthRecordPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\LanguagePage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>

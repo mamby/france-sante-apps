@@ -19,8 +19,8 @@
     <TabBar>
         <ShellContent Icon="home.png" Route="home" 
                       ContentTemplate="{DataTemplate views:HomePage}" />
-        <ShellContent Icon="search.png" Route="LanguagePage"
-                      ContentTemplate="{DataTemplate views:LanguagePage}" />
+        <ShellContent Icon="people.png" Route="personal-health-record"
+                      ContentTemplate="{DataTemplate views:PersonalHealthRecordPage}" />
         <ShellContent Icon="alert.png" Route="notifications" 
                       ContentTemplate="{DataTemplate views:HomePage}" />
         <ShellContent Icon="person.png" Route="person" 
