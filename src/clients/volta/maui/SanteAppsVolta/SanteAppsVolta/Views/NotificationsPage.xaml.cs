@@ -3,16 +3,16 @@ using Volta.Core.Data.Services;
 
 namespace Volta.Views;
 
-public partial class PersonalHealthRecordPage : ContentPage
+public partial class NotificationsPage : ContentPage
 {
     private readonly IAppDataService _dataService;
 
-    public PersonalHealthRecordPage()
+    public NotificationsPage()
         : this(MauiProgram.Services.GetRequiredService<IAppDataService>())
     {
     }
 
-    public PersonalHealthRecordPage(IAppDataService dataService)
+    public NotificationsPage(IAppDataService dataService)
     {
         InitializeComponent();
         _dataService = dataService;
@@ -21,7 +21,7 @@ public partial class PersonalHealthRecordPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        var sections = await _dataService.GetHealthRecordSectionsAsync();
-        BindableLayout.SetItemsSource(SectionsLayout, sections);
+        var notifications = await _dataService.GetNotificationsAsync();
+        BindableLayout.SetItemsSource(NotificationsLayout, notifications);
     }
 }

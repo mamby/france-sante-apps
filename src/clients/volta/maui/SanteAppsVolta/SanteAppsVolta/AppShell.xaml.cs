@@ -1,4 +1,4 @@
-﻿using Volta.Views;
+using Volta.Views;
 
 namespace Volta;
 
@@ -8,6 +8,7 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        Routing.RegisterRoute("LockPage", typeof(LockPage));
+        Routing.RegisterRoute(nameof(LockPage), typeof(LockPage));
+        Routing.RegisterRoute(nameof(LanguagePage), typeof(LanguagePage));
     }
 }

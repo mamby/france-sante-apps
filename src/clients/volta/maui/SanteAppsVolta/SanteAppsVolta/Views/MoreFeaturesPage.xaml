@@ -1,13 +1,87 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Volta.Views.MoreFeaturesPage">
-    
+             x:Class="Volta.Views.MoreFeaturesPage"
+             Title="More">
+
     <ScrollView>
-        <StackLayout>
-            <Label Text="Welcome to .NET MAUI!"
-                VerticalOptions="Center" 
-                HorizontalOptions="Center" />
-        </StackLayout>
+        <VerticalStackLayout Padding="20,16,20,24" Spacing="16">
+            <Label Text="More"
+                   FontSize="24"
+                   FontAttributes="Bold" />
+            <Label Text="Manage language, security, and additional app modules."
+                   FontSize="14"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <Frame Padding="14" CornerRadius="12">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="App lock"
+                               FontAttributes="Bold" />
+                        <Label Text="Require biometric verification when reopening the app."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                    </VerticalStackLayout>
+                    <Switch x:Name="AppLockSwitch"
+                            Grid.Column="1"
+                            VerticalOptions="Center"
+                            Toggled="OnAppLockSwitchToggled" />
+                </Grid>
+            </Frame>
+
+            <Frame Padding="14" CornerRadius="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Auto-lock delay"
+                           FontAttributes="Bold" />
+                    <Label Text="Time spent in background before lock screen appears."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                    <Picker x:Name="LockAfterPicker"
+                            SelectedIndexChanged="OnLockAfterPickerSelectedIndexChanged" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Language"
+                    Clicked="OnLanguageButtonClicked" />
+
+            <Button Text="Lock now"
+                    Clicked="OnLockNowButtonClicked" />
+
+            <Button Text="Sign out (mock)"
+                    Clicked="OnSignOutButtonClicked"
+                    Style="{StaticResource LinkButton}"
+                    HorizontalOptions="Center" />
+
+            <Label Text="Feature readiness"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+
+            <VerticalStackLayout x:Name="FeatureItemsLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <Label Text="{Binding Title}"
+                                           FontAttributes="Bold" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Value}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                </Grid>
+                                <Label Text="{Binding Description}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                <Label Text="Available"
+                                       FontSize="11"
+                                       TextColor="{StaticResource Primary}"
+                                       IsVisible="{Binding IsEnabled}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
     </ScrollView>
+
 </ContentPage>

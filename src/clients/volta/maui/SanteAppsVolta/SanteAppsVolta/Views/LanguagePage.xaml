@@ -12,22 +12,23 @@
                ClearButtonVisibility="WhileEditing"
                ReturnType="Search"
                TextChanged="OnSearchEntryTextChanged" />
-        <ListView x:Name="LangListView"
-                  SelectionMode="Single"
-                  ItemTapped="OnLangItemTapped">
-            <ListView.ItemTemplate>
+
+        <CollectionView x:Name="LangCollectionView"
+                        SelectionMode="Single"
+                        SelectionChanged="OnLangSelectionChanged">
+            <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <ViewCell>
+                    <Grid Padding="12,10">
                         <Label Text="{Binding NativeName}"
                                FontSize="16"
                                FlowDirection="{Binding FlowDirection}"
-                               Padding="12,0"
                                VerticalOptions="Center" />
-                    </ViewCell>
+                    </Grid>
                 </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-        <Button x:Name="DoneButton" 
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button x:Name="DoneButton"
                 IsEnabled="False"
                 Text="{x:Static strings:AppResources.LangPageDone}"
                 Clicked="OnDoneButtonClicked"

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Volta.Views.NotificationsPage"
+             Title="Notifications">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,24" Spacing="16">
+            <Label Text="Notifications"
+                   FontSize="24"
+                   FontAttributes="Bold" />
+            <Label Text="Latest updates from appointments, medications, and results."
+                   FontSize="14"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <VerticalStackLayout x:Name="NotificationsLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <Label Text="NEW"
+                                           TextColor="{StaticResource White}"
+                                           BackgroundColor="{StaticResource Primary}"
+                                           FontSize="10"
+                                           Padding="6,2"
+                                           IsVisible="{Binding IsUnread}" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           FontAttributes="Bold" />
+                                    <Label Grid.Column="2"
+                                           Text="{Binding TimestampLabel}"
+                                           FontSize="11"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                </Grid>
+                                <Label Text="{Binding Message}"
+                                       FontSize="13" />
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="{Binding Category}"
+                                           FontSize="11"
+                                           TextColor="{StaticResource Primary}" />
+                                    <Label Text="Requires action"
+                                           FontSize="11"
+                                           TextColor="{StaticResource Primary}"
+                                           IsVisible="{Binding RequiresAction}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

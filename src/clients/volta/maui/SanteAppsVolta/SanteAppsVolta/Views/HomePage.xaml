@@ -1,40 +1,98 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Volta.Views.HomePage">
+             x:Class="Volta.Views.HomePage"
+             Title="Home">
 
     <ScrollView>
-        <VerticalStackLayout
-            Spacing="25"
-            Padding="30,0"
-            VerticalOptions="Center">
+        <VerticalStackLayout Padding="20,16,20,24" Spacing="16">
+            <Label x:Name="GreetingLabel"
+                   FontSize="28"
+                   FontAttributes="Bold" />
 
-            <Image
-                Source="dotnet_bot.png"
-                SemanticProperties.Description="Cute dot net bot waving hi to you!"
-                HeightRequest="200"
-                HorizontalOptions="Center" />
+            <Label x:Name="SummaryLabel"
+                   FontSize="14"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
 
-            <Label
-                Text="Hello, World!"
-                SemanticProperties.HeadingLevel="Level1"
-                FontSize="32"
-                HorizontalOptions="Center" />
+            <Label Text="Overview"
+                   FontSize="18"
+                   FontAttributes="Bold" />
 
-            <Label
-                Text="Welcome to Volta"
-                SemanticProperties.HeadingLevel="Level2"
-                SemanticProperties.Description="Cool !"
-                FontSize="18"
-                HorizontalOptions="Center" />
+            <VerticalStackLayout x:Name="MetricsLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Value}"
+                                       FontSize="24"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding Label}"
+                                       FontSize="13" />
+                                <Label Text="{Binding Hint}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
 
-            <Button
-                x:Name="CounterBtn"
-                Text="Cliquez moi"
-                SemanticProperties.Hint="Counts the number of times you click"
-                Clicked="OnCounterClicked"
-                HorizontalOptions="Center" />
+            <Label Text="Upcoming appointments"
+                   FontSize="18"
+                   FontAttributes="Bold" />
 
+            <VerticalStackLayout x:Name="AppointmentsLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding DayLabel}"
+                                           FontAttributes="Bold"
+                                           FontSize="13" />
+                                    <Label Text="{Binding TimeLabel}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                    <Label Text="{Binding Title}"
+                                           FontAttributes="Bold" />
+                                    <Label Text="{Binding Practitioner}"
+                                           FontSize="13" />
+                                    <Label Text="{Binding Location}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <Label Text="Medication reminders"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+
+            <VerticalStackLayout x:Name="MedicationsLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Medication}"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding Dose}"
+                                       FontSize="13" />
+                                <Label Text="{Binding NextIntake}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                <Label Text="{Binding Instruction}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>
 

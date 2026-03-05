@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Volta.Views.ProfilePage"
+             Title="Profile">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,24" Spacing="16">
+            <Label Text="Profile"
+                   FontSize="24"
+                   FontAttributes="Bold" />
+
+            <HorizontalStackLayout Spacing="12">
+                <Border BackgroundColor="#EEEEEE"
+                        StrokeThickness="0"
+                        StrokeShape="Ellipse 36, 36"
+                        HeightRequest="72"
+                        WidthRequest="72"
+                        HorizontalOptions="Start">
+                    <Image x:Name="ProfileImage"
+                           Aspect="AspectFill" />
+                </Border>
+                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                    <Label x:Name="FullNameLabel"
+                           FontSize="20"
+                           FontAttributes="Bold" />
+                    <Label x:Name="EmailLabel"
+                           FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <Frame Padding="14" CornerRadius="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Health identity"
+                           FontSize="16"
+                           FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+                        <Label Text="NHI" FontAttributes="Bold" />
+                        <Label x:Name="NationalHealthIdLabel" Grid.Column="1" />
+
+                        <Label Text="Date of birth" Grid.Row="1" FontAttributes="Bold" />
+                        <Label x:Name="DateOfBirthLabel" Grid.Row="1" Grid.Column="1" />
+
+                        <Label Text="Blood type" Grid.Row="2" FontAttributes="Bold" />
+                        <Label x:Name="BloodTypeLabel" Grid.Row="2" Grid.Column="1" />
+
+                        <Label Text="Address" Grid.Row="3" FontAttributes="Bold" />
+                        <Label x:Name="AddressLabel" Grid.Row="3" Grid.Column="1" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="Emergency contacts"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+
+            <VerticalStackLayout x:Name="EmergencyContactsLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                <Label Text="{Binding Relationship}" FontSize="13" />
+                                <Label Text="{Binding Phone}" FontSize="13" />
+                                <Label Text="{Binding PreferredHospital}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <Label Text="Care team"
+                   FontSize="18"
+                   FontAttributes="Bold" />
+
+            <VerticalStackLayout x:Name="CareTeamLayout" Spacing="10">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Padding="14" CornerRadius="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                <Label Text="{Binding Specialty}" FontSize="13" />
+                                <Label Text="{Binding Facility}" FontSize="13" />
+                                <Label Text="{Binding Phone}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
