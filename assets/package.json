@@ -7,6 +7,6 @@
     "check": "node ./tools/validate-assets.mjs"
   },
   "devDependencies": {
-    "sharp": "0.34.5"
+    "sharp": "0.35.0"
   }
 }
