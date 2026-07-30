@@ -1,0 +1,263 @@
+package net.mamby.health.feature.medications
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.UUID
+import net.mamby.health.R
+import net.mamby.health.core.model.Medication
+import net.mamby.health.core.model.MedicationSchedule
+import net.mamby.health.core.model.ReminderRecurrence
+import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.DateField
+import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.SampleWorkspaceBanner
+import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.SwitchField
+import net.mamby.health.ui.components.TimeField
+import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.format.labelResource
+import net.mamby.health.ui.format.localizedTime
+import net.mamby.health.ui.theme.UiTokens
+
+@Composable
+fun MedicationsScreen(
+    medications: List<Medication>,
+    isDemo: Boolean,
+    today: LocalDate,
+    onStartVault: () -> Unit,
+    onSettings: () -> Unit,
+    onUpsert: (Medication) -> Unit,
+    onSelected: (String) -> Unit,
+) {
+    var editorVisible by remember { mutableStateOf(false) }
+    AppScreenScaffold(
+        title = stringResource(R.string.medications_title),
+        onSettings = onSettings,
+        floatingActionButton = {
+            FloatingActionButton(onClick = {
+                if (isDemo) onStartVault() else editorVisible = true
+            }) {
+                Icon(Icons.Outlined.Add, stringResource(R.string.add_medication))
+            }
+        },
+    ) { innerPadding ->
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(UiTokens.CardMinWidth),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = innerPadding.withScreenPadding(),
+            horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+        ) {
+            if (isDemo) {
+                item(span = { GridItemSpan(maxLineSpan) }) { SampleWorkspaceBanner(onStartVault) }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.medications_intro)) }
+            if (medications.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyState(
+                        stringResource(R.string.no_medications_title),
+                        stringResource(R.string.no_medications_body),
+                    )
+                }
+            } else {
+                items(
+                    items = medications.sortedWith(compareByDescending<Medication> { it.isActive }.thenBy { it.name }),
+                    key = { it.id },
+                ) { medication ->
+                    SectionCard(medication.name) {
+                        Text(medication.dose)
+                        Text(stringResource(if (medication.isActive) R.string.status_active else R.string.status_inactive))
+                        Text(medication.instructions)
+                        Button(onClick = { onSelected(medication.id.toString()) }) {
+                            Text(stringResource(R.string.common_open))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (editorVisible) {
+        MedicationDialog(
+            existing = null,
+            today = today,
+            onDismiss = { editorVisible = false },
+            onSave = {
+                onUpsert(it)
+                editorVisible = false
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MedicationDialog(
+    existing: Medication?,
+    today: LocalDate,
+    onDismiss: () -> Unit,
+    onSave: (Medication) -> Unit,
+) {
+    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
+    var dose by remember { mutableStateOf(existing?.dose.orEmpty()) }
+    var instructions by remember { mutableStateOf(existing?.instructions.orEmpty()) }
+    var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
+    var active by remember { mutableStateOf(existing?.isActive ?: true) }
+    var remindersEnabled by remember { mutableStateOf(existing?.remindersEnabled ?: false) }
+    var recurrence by remember { mutableStateOf(existing?.schedule?.recurrence ?: ReminderRecurrence.NONE) }
+    var recurrenceExpanded by remember { mutableStateOf(false) }
+    var reminderTimes by remember { mutableStateOf(existing?.schedule?.reminderTimes ?: emptyList()) }
+    var pendingTime by remember { mutableStateOf(LocalTime.of(8, 0)) }
+    var days by remember { mutableStateOf(existing?.schedule?.daysOfWeek ?: emptySet()) }
+    var hasStart by remember { mutableStateOf(existing?.schedule?.startsOn != null) }
+    var start by remember { mutableStateOf(existing?.schedule?.startsOn ?: today) }
+    var hasEnd by remember { mutableStateOf(existing?.schedule?.endsOn != null) }
+    var end by remember { mutableStateOf(existing?.schedule?.endsOn ?: today.plusMonths(1)) }
+
+    FormDialog(
+        title = stringResource(if (existing == null) R.string.add_medication else R.string.edit_medication),
+        saveEnabled = name.isNotBlank() && dose.isNotBlank() && instructions.isNotBlank() &&
+            (!remindersEnabled || reminderTimes.isNotEmpty()),
+        onDismiss = onDismiss,
+        onSave = {
+            onSave(
+                Medication(
+                    id = existing?.id ?: UUID.randomUUID(),
+                    name = name.trim(),
+                    dose = dose.trim(),
+                    instructions = instructions.trim(),
+                    schedule = MedicationSchedule(
+                        recurrence = recurrence,
+                        reminderTimes = reminderTimes.sorted(),
+                        daysOfWeek = days,
+                        startsOn = start.takeIf { hasStart },
+                        endsOn = end.takeIf { hasEnd },
+                    ),
+                    isActive = active,
+                    remindersEnabled = remindersEnabled,
+                    notes = notes.trim().ifBlank { null },
+                    updatedAt = existing?.updatedAt ?: Instant.EPOCH,
+                ),
+            )
+        },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_name)) })
+            OutlinedTextField(dose, { dose = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_dose)) })
+            OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_instructions)) }, minLines = 2)
+            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_notes)) }, minLines = 2)
+            SwitchField(stringResource(R.string.medication_active), active, { active = it })
+            SwitchField(stringResource(R.string.medication_reminders), remindersEnabled, { remindersEnabled = it })
+            if (remindersEnabled) {
+                ExposedDropdownMenuBox(recurrenceExpanded, { recurrenceExpanded = it }) {
+                    OutlinedTextField(
+                        value = stringResource(recurrence.labelResource()),
+                        onValueChange = {},
+                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.medication_recurrence)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(recurrenceExpanded) },
+                    )
+                    ExposedDropdownMenu(recurrenceExpanded, { recurrenceExpanded = false }) {
+                        ReminderRecurrence.entries.forEach { candidate ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(candidate.labelResource())) },
+                                onClick = {
+                                    recurrence = candidate
+                                    recurrenceExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Text(stringResource(R.string.medication_times))
+                reminderTimes.forEach { time ->
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(time.localizedTime()) },
+                        trailingIcon = {
+                            IconButton(onClick = { reminderTimes = reminderTimes - time }) {
+                                Icon(Icons.Outlined.Close, stringResource(R.string.remove_item))
+                            }
+                        },
+                    )
+                }
+                TimeField(stringResource(R.string.add_reminder_time), pendingTime, { pendingTime = it })
+                Button(
+                    onClick = {
+                        if (pendingTime !in reminderTimes) reminderTimes = reminderTimes + pendingTime
+                    },
+                ) { Text(stringResource(R.string.add_reminder_time)) }
+                if (recurrence == ReminderRecurrence.WEEKLY) {
+                    WeekdaySelector(days) { days = it }
+                }
+                SwitchField(stringResource(R.string.medication_start_date), hasStart, { hasStart = it })
+                if (hasStart) DateField(stringResource(R.string.medication_start_date), start, { start = it })
+                SwitchField(stringResource(R.string.medication_end_date), hasEnd, { hasEnd = it })
+                if (hasEnd) DateField(stringResource(R.string.medication_end_date), end, { end = it })
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeekdaySelector(
+    selected: Set<DayOfWeek>,
+    onSelectedChange: (Set<DayOfWeek>) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+        DayOfWeek.entries.forEach { day ->
+            FilterChip(
+                selected = day in selected,
+                onClick = {
+                    onSelectedChange(if (day in selected) selected - day else selected + day)
+                },
+                label = { Text(stringResource(day.labelResource())) },
+            )
+        }
+    }
+}
+
+private fun DayOfWeek.labelResource(): Int = when (this) {
+    DayOfWeek.MONDAY -> R.string.day_monday
+    DayOfWeek.TUESDAY -> R.string.day_tuesday
+    DayOfWeek.WEDNESDAY -> R.string.day_wednesday
+    DayOfWeek.THURSDAY -> R.string.day_thursday
+    DayOfWeek.FRIDAY -> R.string.day_friday
+    DayOfWeek.SATURDAY -> R.string.day_saturday
+    DayOfWeek.SUNDAY -> R.string.day_sunday
+}

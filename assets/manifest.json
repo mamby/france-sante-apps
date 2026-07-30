@@ -1,0 +1,467 @@
+{
+  "brand": "Personal Health Vault",
+  "mark": "Folded square",
+  "colors": {
+    "teal": "#0E7C73",
+    "softWhite": "#F2F6F4",
+    "black": "#000000"
+  },
+  "generatedPngs": [
+    {
+      "path": "brand/personal-health-vault/preview/app-icon-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "alpha": false
+    },
+    {
+      "path": "platform/android/preview/adaptive-icon-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": false
+    },
+    {
+      "path": "platform/ios/AppIcon.appiconset/AppIcon-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-128.png",
+      "width": 128,
+      "height": 128,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-16.png",
+      "width": 16,
+      "height": 16,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-256.png",
+      "width": 256,
+      "height": 256,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-32.png",
+      "width": 32,
+      "height": 32,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-512.png",
+      "width": 512,
+      "height": 512,
+      "alpha": false
+    },
+    {
+      "path": "platform/macos/AppIcon.appiconset/AppIcon-64.png",
+      "width": 64,
+      "height": 64,
+      "alpha": false
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-100.png",
+      "width": 150,
+      "height": 150,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-125.png",
+      "width": 188,
+      "height": 188,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-150.png",
+      "width": 225,
+      "height": 225,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-200.png",
+      "width": 300,
+      "height": 300,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-250.png",
+      "width": 375,
+      "height": 375,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-300.png",
+      "width": 450,
+      "height": 450,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square150x150Logo.scale-400.png",
+      "width": 600,
+      "height": 600,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-100.png",
+      "width": 44,
+      "height": 44,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-125.png",
+      "width": 55,
+      "height": 55,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-150.png",
+      "width": 66,
+      "height": 66,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-200.png",
+      "width": 88,
+      "height": 88,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-250.png",
+      "width": 110,
+      "height": 110,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-300.png",
+      "width": 132,
+      "height": 132,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.scale-400.png",
+      "width": 176,
+      "height": 176,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-16_altform-lightunplated.png",
+      "width": 16,
+      "height": 16,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-16_altform-unplated.png",
+      "width": 16,
+      "height": 16,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-16.png",
+      "width": 16,
+      "height": 16,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-20_altform-lightunplated.png",
+      "width": 20,
+      "height": 20,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-20_altform-unplated.png",
+      "width": 20,
+      "height": 20,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-20.png",
+      "width": 20,
+      "height": 20,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-24_altform-lightunplated.png",
+      "width": 24,
+      "height": 24,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-24_altform-unplated.png",
+      "width": 24,
+      "height": 24,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-24.png",
+      "width": 24,
+      "height": 24,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-256_altform-lightunplated.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-256_altform-unplated.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-256.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-30_altform-lightunplated.png",
+      "width": 30,
+      "height": 30,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-30_altform-unplated.png",
+      "width": 30,
+      "height": 30,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-30.png",
+      "width": 30,
+      "height": 30,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-32_altform-lightunplated.png",
+      "width": 32,
+      "height": 32,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-32_altform-unplated.png",
+      "width": 32,
+      "height": 32,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-32.png",
+      "width": 32,
+      "height": 32,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-36_altform-lightunplated.png",
+      "width": 36,
+      "height": 36,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-36_altform-unplated.png",
+      "width": 36,
+      "height": 36,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-36.png",
+      "width": 36,
+      "height": 36,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-40_altform-lightunplated.png",
+      "width": 40,
+      "height": 40,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-40_altform-unplated.png",
+      "width": 40,
+      "height": 40,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-40.png",
+      "width": 40,
+      "height": 40,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png",
+      "width": 48,
+      "height": 48,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-48_altform-unplated.png",
+      "width": 48,
+      "height": 48,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-48.png",
+      "width": 48,
+      "height": 48,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-60_altform-lightunplated.png",
+      "width": 60,
+      "height": 60,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-60_altform-unplated.png",
+      "width": 60,
+      "height": 60,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-60.png",
+      "width": 60,
+      "height": 60,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-64_altform-lightunplated.png",
+      "width": 64,
+      "height": 64,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-64_altform-unplated.png",
+      "width": 64,
+      "height": 64,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-64.png",
+      "width": 64,
+      "height": 64,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-72_altform-lightunplated.png",
+      "width": 72,
+      "height": 72,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-72_altform-unplated.png",
+      "width": 72,
+      "height": 72,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-72.png",
+      "width": 72,
+      "height": 72,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-80_altform-lightunplated.png",
+      "width": 80,
+      "height": 80,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-80_altform-unplated.png",
+      "width": 80,
+      "height": 80,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-80.png",
+      "width": 80,
+      "height": 80,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-96_altform-lightunplated.png",
+      "width": 96,
+      "height": 96,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-96_altform-unplated.png",
+      "width": 96,
+      "height": 96,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/Square44x44Logo.targetsize-96.png",
+      "width": 96,
+      "height": 96,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/StoreLogo.scale-100.png",
+      "width": 50,
+      "height": 50,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/StoreLogo.scale-125.png",
+      "width": 63,
+      "height": 63,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/StoreLogo.scale-150.png",
+      "width": 75,
+      "height": 75,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/StoreLogo.scale-200.png",
+      "width": 100,
+      "height": 100,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/Assets/StoreLogo.scale-400.png",
+      "width": 200,
+      "height": 200,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/ico/AppIcon-16.png",
+      "width": 16,
+      "height": 16,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/ico/AppIcon-24.png",
+      "width": 24,
+      "height": 24,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/ico/AppIcon-256.png",
+      "width": 256,
+      "height": 256,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/ico/AppIcon-32.png",
+      "width": 32,
+      "height": 32,
+      "alpha": true
+    },
+    {
+      "path": "platform/windows/ico/AppIcon-48.png",
+      "width": 48,
+      "height": 48,
+      "alpha": true
+    }
+  ]
+}

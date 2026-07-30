@@ -1,26 +1,22 @@
-# Roadmap
+# Native Product Roadmap
 
-## Current Foundation
+## Android hardening
 
-- Single-project .NET MAUI app
-- Dashboard, Vault, Health Summary, Medications, Appointments, and Settings
-- Encrypted local vault store
-- Demo data before a user vault exists
-- Biometric/device app lock for Android, iOS, Windows, and Mac Catalyst
-- Local AI and backup contracts without cloud implementations
+- Exercise encrypted import, backup, restore, and app-lock behavior across supported Android versions and device security configurations.
+- Expand accessibility testing for screen readers, large text, keyboard use, right-to-left layout, tablets, and foldables.
+- Add automated compatibility tests for older portable backup schema versions.
+- Improve recovery diagnostics without exposing sensitive record content.
+- Complete independent security review and dependency review before a production release.
 
-## Next
+## Future native applications
 
-- Real document import into the encrypted vault
-- User-created and editable health summary
-- Medication and appointment editing
-- Local notification scheduling for reminders
-- Export flow controlled by the user
+- Add an iOS application under `src/ios` using official Apple frameworks.
+- Add a Windows application under `src/windows` using the current Windows application platform.
+- Add a macOS application under `src/macos` using official Apple frameworks.
+- Keep each application native while sharing the documented portable backup schema, privacy guarantees, and user-confirmed restore behavior.
 
-## Later
+## Cross-platform format hardening
 
-- User-controlled encrypted backup
-- Optional sync providers that never receive plaintext health data
-- Local OCR and document classification
-- User-verified local summaries
-- Accessibility and localization expansion
+- Publish test vectors for authenticated portable backups that contain synthetic data only.
+- Define explicit schema-support windows and upgrade tests for every native application.
+- Verify that no provider receives plaintext during export or restore on any supported platform.

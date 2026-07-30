@@ -1,27 +1,49 @@
-# Contributing to Self-Custody Health
+# Contributing to Personal Health Vault
 
-Thank you for contributing.
+## Set up
 
-## Getting Started
+1. Install Android Studio, JDK 21, and Android SDK 37.
+2. Clone the repository.
+3. Open `src/android` in Android Studio, or run the committed Gradle wrapper from that directory.
 
-- Fork the repository
-- Clone your fork
-- Install the current supported .NET SDK
-- Install MAUI workloads if needed
-- Run `dotnet restore PersonalHealthVault.sln`
+## Development workflow
 
-## Workflow
+- Keep production code in the single `src/android/app` module.
+- Create state-driven Compose UI and follow official Android architecture guidance.
+- Use the existing domain, repository, encryption, backup, security, and notification boundaries.
+- Add every user-facing string to English, French, and Arabic resources with matching positional placeholders.
+- Use the central Material theme; do not place raw colors in feature code.
+- Keep machine paths, signing material, credentials, personal documents, and real health information out of version control.
 
-- Create a branch for your change
-- Keep production code inside `src/maui`
-- Keep tests under `test`
-- Run `dotnet test`
-- Commit with a clear message
-- Open a pull request
+Before opening a change, run from `src/android`:
 
-## Privacy and Safety
+```powershell
+.\gradlew.bat :app:assembleDevDebug
+.\gradlew.bat :app:testDevDebugUnitTest
+.\gradlew.bat :app:lintDevDebug
+```
 
-- Do not add backend health-data storage.
-- Do not add cloud AI.
-- Do not commit sample private keys, passwords, tokens, credentials, or real health data.
-- Do not add medical advice, diagnostic guidance, triage, prescription, emergency, or regulatory claims.
+Run `:app:connectedDevDebugAndroidTest` when the change affects Android Keystore, document providers, notifications, lifecycle behavior, or Compose interaction.
+
+## Product boundaries
+
+- Keep the application fully useful offline.
+- Do not add a backend, account system, cloud processing, artificial intelligence, ads, telemetry, or tracking.
+- Do not add broad storage, media-library, network, or exact-alarm permissions.
+- Do not persist health data, imported documents, keys, or backup passphrases in plaintext.
+- Do not weaken authenticated encryption, atomic replacement, corruption handling, or the app-lock gate.
+- Do not make medical, diagnostic, emergency, prescription, regulatory, or clinical claims.
+
+## Tests
+
+Write tests that protect meaningful behavior:
+
+- Recurrence, time-zone, and date-boundary calculations
+- Immutable vault mutations and search/filter behavior
+- Encryption round trips, associated data, tamper detection, and interrupted writes
+- Backup passphrase handling, full validation before replacement, and failure recovery
+- App-lock lifecycle and device-authentication outcomes
+- Permission-denied and provider-unavailable states
+- Compact, expanded, right-to-left, accessibility, and navigation behavior
+
+Avoid snapshot-only coverage, arbitrary delays, and assertions that merely restate implementation details.

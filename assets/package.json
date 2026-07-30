@@ -1,0 +1,12 @@
+{
+  "name": "personal-health-vault-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node ./tools/generate-assets.mjs --integrate-android",
+    "check": "node ./tools/validate-assets.mjs"
+  },
+  "devDependencies": {
+    "sharp": "0.34.5"
+  }
+}

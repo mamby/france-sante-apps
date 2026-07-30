@@ -1,12 +1,30 @@
-*.cs text eol=crlf
-*.xaml text eol=crlf
+* text=auto
+
+*.kt text eol=crlf
+*.kts text eol=crlf
+*.gradle text eol=crlf
+*.properties text eol=crlf
+*.toml text eol=crlf
 *.xml text eol=crlf
-*.csproj text eol=crlf
-*.props text eol=crlf
-*.targets text eol=crlf
-*.resx text eol=crlf
-*.plist text eol=crlf
-*.xcprivacy text eol=crlf
-*.svg text eol=crlf
+*.pro text eol=crlf
 *.md text eol=crlf
-*.sln text eol=crlf
+*.yml text eol=crlf
+*.yaml text eol=crlf
+*.json text eol=crlf
+*.svg text eol=crlf
+
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.jar binary
+*.aar binary
+*.apk binary
+*.aab binary
+*.zip binary
+*.pdf binary
+*.phvbackup binary
+*.png binary
+*.webp binary
+*.jpg binary
+*.jpeg binary
+*.keystore binary
+*.jks binary
