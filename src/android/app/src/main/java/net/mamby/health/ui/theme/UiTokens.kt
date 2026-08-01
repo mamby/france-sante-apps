@@ -10,4 +10,5 @@ object UiTokens {
     val SectionSpacing = 24.dp
     val CardMinWidth = 280.dp
     val FormMaxWidth = 640.dp
+    val DialogTonalElevation = 0.dp
 }

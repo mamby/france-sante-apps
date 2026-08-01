@@ -11,10 +11,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -63,8 +65,13 @@ fun DateField(
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = value.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
         )
+        val dialogColors = DatePickerDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
         DatePickerDialog(
             onDismissRequest = { pickerVisible = false },
+            tonalElevation = UiTokens.DialogTonalElevation,
+            colors = dialogColors,
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -83,7 +90,11 @@ fun DateField(
                 }
             },
         ) {
-            DatePicker(state = pickerState, title = { Text(stringResource(R.string.date_picker_title)) })
+            DatePicker(
+                state = pickerState,
+                colors = dialogColors,
+                title = { Text(stringResource(R.string.date_picker_title)) },
+            )
         }
     }
 }
@@ -110,6 +121,8 @@ fun TimeField(
         val pickerState = rememberTimePickerState(value.hour, value.minute)
         AlertDialog(
             onDismissRequest = { pickerVisible = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = UiTokens.DialogTonalElevation,
             title = { Text(stringResource(R.string.time_picker_title)) },
             text = { TimePicker(state = pickerState) },
             confirmButton = {

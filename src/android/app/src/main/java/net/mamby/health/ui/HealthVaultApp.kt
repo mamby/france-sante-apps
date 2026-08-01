@@ -10,6 +10,9 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,8 +54,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -68,6 +78,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import java.util.UUID
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthSearchResult
@@ -133,6 +144,19 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     var startDialog by rememberSaveable { mutableStateOf(false) }
     var resetUnreadableDialog by rememberSaveable { mutableStateOf(false) }
     var recoverySettingsVisible by rememberSaveable { mutableStateOf(false) }
+    var nextLocaleRequestId by remember { mutableLongStateOf(0L) }
+    var localeRequest by remember { mutableStateOf<LocaleTransitionRequest?>(null) }
+    val localeOverlayAlpha = remember { Animatable(1f) }
+    val outgoingContentLayer = rememberGraphicsLayer()
+    val localeOverlayFrames = remember { Channel<Long>(Channel.CONFLATED) }
+    val localizedContentFrames = remember { Channel<LocalizedContentFrame>(Channel.CONFLATED) }
+    val currentLocaleTag = LocalConfiguration.current.locales[0].language
+    val requestLocaleChange: (String) -> Unit = { localeTag ->
+        if (localeRequest == null && localeTag != currentLocaleTag) {
+            nextLocaleRequestId += 1
+            localeRequest = LocaleTransitionRequest(nextLocaleRequestId, localeTag)
+        }
+    }
 
     LaunchedEffect(notice) {
         if (notice != null) {
@@ -142,12 +166,31 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     }
     LaunchedEffect(lockState) {
         if (lockState == AppLockState.Locked || lockState == AppLockState.Authenticating) {
+            localeRequest = null
             viewModel.resetPreview()
         }
     }
     LaunchedEffect(vaultState) {
         if (vaultState !is VaultState.Unreadable && vaultState !is VaultState.Missing) {
             recoverySettingsVisible = false
+        }
+    }
+    LaunchedEffect(localeRequest, currentLocaleTag) {
+        val request = localeRequest ?: return@LaunchedEffect
+        if (currentLocaleTag != request.localeTag) {
+            localeOverlayAlpha.snapTo(1f)
+            while (localeOverlayFrames.receive() != request.id) {
+                // Ignore frames from an earlier transition.
+            }
+            withFrameNanos { }
+            viewModel.setLocaleTag(request.localeTag)
+        } else {
+            while (localizedContentFrames.receive() != LocalizedContentFrame(request.id, request.localeTag)) {
+                // Keep the outgoing frame visible until the localized content has drawn.
+            }
+            withFrameNanos { }
+            localeOverlayAlpha.animateTo(0f, animationSpec = tween())
+            localeRequest = null
         }
     }
 
@@ -157,57 +200,98 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
         ThemeMode.DARK -> true
     }
     HealthVaultTheme(darkTheme = darkTheme) {
-        Surface(Modifier.fillMaxSize()) {
-            when (lockState) {
-                AppLockState.Initializing -> VaultLoadingScreen()
-                AppLockState.Locked, AppLockState.Authenticating -> LockScreen(
-                    state = lockState,
-                    message = notice?.let { stringResource(it.resourceId) },
-                    onUnlock = { activity?.let(viewModel::unlock) },
-                )
-                AppLockState.Disabled, AppLockState.Unlocked -> when (val state = vaultState) {
-                    VaultState.Loading -> VaultLoadingScreen()
-                    VaultState.Missing -> if (recoverySettingsVisible) {
-                        RecoverySettings(
-                            settings = settings,
-                            viewModel = viewModel,
-                            restorePreview = restorePreview,
-                            notice = notice,
-                            activity = activity,
-                            onBack = { recoverySettingsVisible = false },
-                        )
-                    } else {
-                        MissingVaultScreen(
-                            onStart = { startDialog = true },
-                            onRestore = { recoverySettingsVisible = true },
-                        )
-                    }
-                    is VaultState.Unreadable -> if (recoverySettingsVisible) {
-                        RecoverySettings(
-                            settings = settings,
-                            viewModel = viewModel,
-                            restorePreview = restorePreview,
-                            notice = notice,
-                            activity = activity,
-                            onBack = { recoverySettingsVisible = false },
-                        )
-                    } else {
-                        VaultUnreadableScreen(
-                            reason = state.reason,
-                            onRestore = { recoverySettingsVisible = true },
-                            onReset = { resetUnreadableDialog = true },
-                        )
-                    }
-                    is VaultState.Ready -> VaultNavigation(
-                        vault = state.vault,
-                        selectedProfileId = state.selectedProfileId,
-                        settings = settings,
-                        preview = preview,
-                        restorePreview = restorePreview,
-                        notice = notice,
-                        viewModel = viewModel,
-                        activity = activity,
+        Box(Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawWithContent {
+                        val request = localeRequest
+                        if (request == null) {
+                            outgoingContentLayer.record {
+                                this@drawWithContent.drawContent()
+                            }
+                            drawLayer(outgoingContentLayer)
+                        } else {
+                            drawContent()
+                            localizedContentFrames.trySend(
+                                LocalizedContentFrame(request.id, currentLocaleTag),
+                            )
+                        }
+                    },
+            ) {
+                when (lockState) {
+                    AppLockState.Initializing -> VaultLoadingScreen()
+                    AppLockState.Locked, AppLockState.Authenticating -> LockScreen(
+                        state = lockState,
+                        message = notice?.let { stringResource(it.resourceId) },
+                        onUnlock = { activity?.let(viewModel::unlock) },
                     )
+                    AppLockState.Disabled, AppLockState.Unlocked -> when (val state = vaultState) {
+                        VaultState.Loading -> VaultLoadingScreen()
+                        VaultState.Missing -> if (recoverySettingsVisible) {
+                            RecoverySettings(
+                                settings = settings,
+                                viewModel = viewModel,
+                                restorePreview = restorePreview,
+                                notice = notice,
+                                activity = activity,
+                                onLocaleChanged = requestLocaleChange,
+                                onBack = { recoverySettingsVisible = false },
+                            )
+                        } else {
+                            MissingVaultScreen(
+                                onStart = { startDialog = true },
+                                onRestore = { recoverySettingsVisible = true },
+                            )
+                        }
+                        is VaultState.Unreadable -> if (recoverySettingsVisible) {
+                            RecoverySettings(
+                                settings = settings,
+                                viewModel = viewModel,
+                                restorePreview = restorePreview,
+                                notice = notice,
+                                activity = activity,
+                                onLocaleChanged = requestLocaleChange,
+                                onBack = { recoverySettingsVisible = false },
+                            )
+                        } else {
+                            VaultUnreadableScreen(
+                                reason = state.reason,
+                                onRestore = { recoverySettingsVisible = true },
+                                onReset = { resetUnreadableDialog = true },
+                            )
+                        }
+                        is VaultState.Ready -> VaultNavigation(
+                            vault = state.vault,
+                            selectedProfileId = state.selectedProfileId,
+                            settings = settings,
+                            preview = preview,
+                            restorePreview = restorePreview,
+                            notice = notice,
+                            viewModel = viewModel,
+                            activity = activity,
+                            onLocaleChanged = requestLocaleChange,
+                        )
+                    }
+                }
+            }
+            localeRequest?.let { request ->
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent().changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                        .graphicsLayer { alpha = localeOverlayAlpha.value },
+                ) {
+                    drawLayer(outgoingContentLayer)
+                    if (localeOverlayAlpha.value == 1f) {
+                        localeOverlayFrames.trySend(request.id)
+                    }
                 }
             }
         }
@@ -242,6 +326,7 @@ private fun RecoverySettings(
     restorePreview: net.mamby.health.backup.RestorePreview?,
     notice: UiNotice?,
     activity: FragmentActivity?,
+    onLocaleChanged: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -252,7 +337,7 @@ private fun RecoverySettings(
         message = notice?.let { stringResource(it.resourceId) },
         onBack = onBack,
         onThemeChanged = viewModel::setThemeMode,
-        onLocaleChanged = viewModel::setLocaleTag,
+        onLocaleChanged = onLocaleChanged,
         onAppLockChanged = { enabled -> activity?.let { viewModel.setAppLockEnabled(it, enabled) } },
         onAppLockTimeoutChanged = viewModel::setAppLockTimeout,
         onLockNow = viewModel::lockNow,
@@ -277,6 +362,7 @@ private fun VaultNavigation(
     notice: UiNotice?,
     viewModel: AppViewModel,
     activity: FragmentActivity?,
+    onLocaleChanged: (String) -> Unit,
 ) {
     val navigation = rememberAppNavigationState()
     val record = vault.profileRecord(selectedProfileId)
@@ -645,7 +731,7 @@ private fun VaultNavigation(
                             message = null,
                             onBack = navigation::goBack,
                             onThemeChanged = viewModel::setThemeMode,
-                            onLocaleChanged = viewModel::setLocaleTag,
+                            onLocaleChanged = onLocaleChanged,
                             onAppLockChanged = { enabled ->
                                 activity?.let { viewModel.setAppLockEnabled(it, enabled) }
                             },
@@ -868,6 +954,8 @@ private fun ResetUnreadableDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) 
     var confirmation by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = UiTokens.DialogTonalElevation,
         title = { Text(stringResource(R.string.vault_reset_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
@@ -901,5 +989,9 @@ private fun Context.openNotificationSettings() {
             .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
     )
 }
+
+private data class LocaleTransitionRequest(val id: Long, val localeTag: String)
+
+private data class LocalizedContentFrame(val requestId: Long, val localeTag: String)
 
 private const val NOTICE_DURATION_MILLIS = 4_000L

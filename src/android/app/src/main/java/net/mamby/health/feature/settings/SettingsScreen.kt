@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -201,6 +202,8 @@ fun SettingsScreen(
     restorePreview?.let { preview ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { onDiscardRestore(preview) },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = UiTokens.DialogTonalElevation,
             title = {
                 Text(stringResource(if (preview.requiresCrossFlavorConfirmation) R.string.cross_flavor_title else R.string.restore_backup))
             },

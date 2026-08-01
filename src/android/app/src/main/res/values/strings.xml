@@ -80,10 +80,10 @@
     <string name="record_unavailable">This item is unavailable for the selected profile.</string>
     <string name="getting_started_title">Get started</string>
     <string name="getting_started_health">Add health information</string>
-    <string name="start_new">Create a profile</string>
-    <string name="start_new_title">Profile name</string>
+    <string name="start_new">Add a person</string>
+    <string name="start_new_title">Who are you adding?</string>
     <string name="no_vault_title">Welcome</string>
-    <string name="no_vault_body">Create a profile to start saving your health information. Or restore your information from a backup.</string>
+    <string name="no_vault_body">Add yourself or someone you care for. No account is needed. Health information stays on this device.</string>
     <string name="notification_generic_title">Health reminder</string>
     <string name="notification_generic_body">Open Personal Health Vault to view the reminder.</string>
     <string name="settings_title">Settings</string>
@@ -154,7 +154,7 @@
     <string name="summary_title">Health summary</string>
     <string name="summary_intro">Keep a concise summary for your own reference and verify every detail.</string>
     <string name="edit_profile">Edit profile</string>
-    <string name="display_name">Display name</string>
+    <string name="display_name">Name</string>
     <string name="chronic_conditions">Chronic conditions</string>
     <string name="surgeries">Surgeries</string>
     <string name="emergency_contacts">Emergency contacts</string>

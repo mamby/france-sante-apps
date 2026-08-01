@@ -31,7 +31,7 @@ private val LightColors = lightColorScheme(
     surfaceContainerLowest = White,
     surfaceContainerLow = White,
     surfaceContainer = White,
-    surfaceContainerHigh = Neutral50,
+    surfaceContainerHigh = White,
     surfaceContainerHighest = Neutral100,
 )
 
