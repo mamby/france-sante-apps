@@ -21,3 +21,6 @@ signing.properties
 .externalNativeBuild/
 .cxx/
 app/release/
+
+# Local package-manager caches
+.pnpm-store/
