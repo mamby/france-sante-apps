@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -25,11 +24,13 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,11 +39,11 @@ import net.mamby.health.R
 import net.mamby.health.core.model.DocumentCategory
 import net.mamby.health.core.model.DocumentSearch
 import net.mamby.health.core.model.MedicalDocument
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.SampleWorkspaceBanner
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.withScreenPadding
@@ -63,31 +64,39 @@ data class DocumentImportDraft(
 @Composable
 fun VaultScreen(
     documents: List<MedicalDocument>,
-    isDemo: Boolean,
+    profile: HealthProfile,
     today: LocalDate,
-    onStartVault: () -> Unit,
+    onProfileClick: () -> Unit,
     onSettings: () -> Unit,
     onImport: (DocumentImportDraft) -> Unit,
     onDocumentSelected: (String) -> Unit,
+    creationRequest: Long = 0,
+    selectedTab: Int = 1,
+    onTabSelected: (Int) -> Unit = {},
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var category by rememberSaveable { mutableStateOf(DocumentCategory.ALL) }
-    var pendingUri by remember { mutableStateOf<Uri?>(null) }
-    val filtered = remember(documents, query, category) {
-        DocumentSearch.search(documents, query, category)
+    var category by remember(profile.id) { mutableStateOf(DocumentCategory.ALL) }
+    var pendingUri by remember(profile.id) { mutableStateOf<Uri?>(null) }
+    val filtered = remember(documents, category) {
+        DocumentSearch.search(documents, "", category)
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         pendingUri = uri
     }
+    LaunchedEffect(creationRequest) {
+        if (creationRequest > 0) {
+            picker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp"))
+        }
+    }
 
     AppScreenScaffold(
-        title = stringResource(R.string.vault_title),
+        title = stringResource(R.string.health_records_title),
         onSettings = onSettings,
+        profile = profile,
+        onProfileClick = onProfileClick,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    if (isDemo) onStartVault()
-                    else picker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp"))
+                    picker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp"))
                 },
             ) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.import_document))
@@ -101,20 +110,19 @@ fun VaultScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (isDemo) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    SampleWorkspaceBanner(onStartVault)
-                }
-            }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                    label = { Text(stringResource(R.string.vault_search_hint)) },
-                )
+                SecondaryTabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { onTabSelected(0) },
+                        text = { Text(stringResource(R.string.health_info_tab)) },
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { onTabSelected(1) },
+                        text = { Text(stringResource(R.string.documents_tab)) },
+                    )
+                }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {

@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,13 +40,13 @@ import java.time.LocalTime
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.Medication
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicationSchedule
 import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.SampleWorkspaceBanner
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -57,21 +58,25 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun MedicationsScreen(
     medications: List<Medication>,
-    isDemo: Boolean,
+    profile: HealthProfile,
     today: LocalDate,
-    onStartVault: () -> Unit,
+    onProfileClick: () -> Unit,
     onSettings: () -> Unit,
     onUpsert: (Medication) -> Unit,
     onSelected: (String) -> Unit,
+    creationRequest: Long = 0,
 ) {
-    var editorVisible by remember { mutableStateOf(false) }
+    var editorVisible by remember(profile.id) { mutableStateOf(false) }
+    LaunchedEffect(creationRequest) {
+        if (creationRequest > 0) editorVisible = true
+    }
     AppScreenScaffold(
         title = stringResource(R.string.medications_title),
         onSettings = onSettings,
+        profile = profile,
+        onProfileClick = onProfileClick,
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                if (isDemo) onStartVault() else editorVisible = true
-            }) {
+            FloatingActionButton(onClick = { editorVisible = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_medication))
             }
         },
@@ -83,9 +88,6 @@ fun MedicationsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (isDemo) {
-                item(span = { GridItemSpan(maxLineSpan) }) { SampleWorkspaceBanner(onStartVault) }
-            }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.medications_intro)) }
             if (medications.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {

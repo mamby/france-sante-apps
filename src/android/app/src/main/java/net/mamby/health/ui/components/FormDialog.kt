@@ -22,6 +22,7 @@ fun FormDialog(
     saveEnabled: Boolean,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
+    saveLabel: String = stringResource(R.string.common_save),
     content: @Composable () -> Unit,
 ) {
     AlertDialog(
@@ -40,7 +41,7 @@ fun FormDialog(
         },
         confirmButton = {
             Button(onClick = onSave, enabled = saveEnabled) {
-                Text(stringResource(R.string.common_save))
+                Text(saveLabel)
             }
         },
         dismissButton = {

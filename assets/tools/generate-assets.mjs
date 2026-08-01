@@ -192,7 +192,7 @@ const adaptiveIconXml = `<?xml version="1.0" encoding="utf-8"?>
 const androidColorsXml = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="launcher_background">${colors.teal}</color>
-    <color name="splash_background">${colors.softWhite}</color>
+    <color name="splash_background">#FFFFFF</color>
 </resources>
 `;
 

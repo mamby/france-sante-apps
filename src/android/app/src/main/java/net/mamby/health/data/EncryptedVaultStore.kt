@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.UnsupportedVaultVersionException
+import net.mamby.health.core.model.allDocuments
 import net.mamby.health.core.model.requireValid
 import net.mamby.health.crypto.VaultCipher
 import net.mamby.health.crypto.VaultCiphertextException
@@ -45,7 +46,7 @@ class EncryptedVaultStore @Inject constructor(
                 val key = keyProvider.requireVaultKey()
                 val plaintext = cipher.decrypt(envelope, key, METADATA_ASSOCIATED_DATA)
                 try {
-                    VaultJson.decode(plaintext).requireValid().also {
+                    VaultCodec.decode(plaintext).vault.requireValid().also {
                         runCatching { layout.cleanupInactive(generation.id) }
                     }
                 } finally {
@@ -135,7 +136,7 @@ class EncryptedVaultStore @Inject constructor(
     }
 
     private suspend fun encryptMetadata(vault: HealthVault): ByteArray {
-        val plaintext = VaultJson.encode(vault)
+        val plaintext = VaultCodec.encode(vault)
         return try {
             cipher.encrypt(plaintext, keyProvider.requireVaultKey(), METADATA_ASSOCIATED_DATA)
         } finally {
@@ -144,7 +145,7 @@ class EncryptedVaultStore @Inject constructor(
     }
 
     private fun validateRestoreSources(vault: HealthVault, sources: List<RestoreDocumentBlob>) {
-        val expected = vault.documents.associateBy { it.blobId }
+        val expected = vault.allDocuments().associateBy { it.blobId }
         if (sources.map(RestoreDocumentBlob::blobId).toSet().size != sources.size) {
             throw VaultValidationRestoreException("Restore contains duplicate document blobs.")
         }

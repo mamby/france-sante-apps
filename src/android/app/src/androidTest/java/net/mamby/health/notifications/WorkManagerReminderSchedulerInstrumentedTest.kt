@@ -37,6 +37,7 @@ import net.mamby.health.data.MedicalDocumentDraft
 import net.mamby.health.data.RestoreDocumentBlob
 import net.mamby.health.data.VaultRepository
 import net.mamby.health.data.VaultState
+import net.mamby.health.testing.StubVaultRepository
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -176,14 +177,14 @@ class WorkManagerReminderSchedulerInstrumentedTest {
         val request = reminderRequest("reminder:vault-observer", FIXED_NOW.plus(Duration.ofHours(1)))
         reminderSource.requests = listOf(request)
 
-        vaultRepository.mutableState.value = VaultState.Ready(healthVault(revision = 1))
+        vaultRepository.mutableState.value = VaultState.Ready(healthVault(revision = 1), PROFILE_ID)
 
         assertEquals(listOf(WorkInfo.State.ENQUEUED), workFor(request.id).map(WorkInfo::state))
 
-        vaultRepository.mutableState.value = VaultState.Demo(healthVault(revision = 0))
+        vaultRepository.mutableState.value = VaultState.Missing
 
         assertTrue(workFor(request.id).all { it.state == WorkInfo.State.CANCELLED })
-        assertEquals(1, notificationPublisher.cancelAllCalls)
+        assertEquals(2, notificationPublisher.cancelAllCalls)
     }
 
     private fun workFor(reminderId: String): List<WorkInfo> =
@@ -201,6 +202,7 @@ class WorkManagerReminderSchedulerInstrumentedTest {
         enabled: Boolean = true,
     ) = ReminderRequest(
         id = id,
+        profileId = PROFILE_ID.toString(),
         type = ReminderType.GENERAL,
         title = "Reminder",
         message = "Message",
@@ -210,7 +212,8 @@ class WorkManagerReminderSchedulerInstrumentedTest {
 
     private fun healthVault(revision: Long): HealthVault = HealthVault.empty(
         now = FIXED_NOW,
-        profileId = UUID.fromString("e10c32dc-0a48-41ab-a8ed-bc1420650e31"),
+        profileId = PROFILE_ID,
+        displayName = "Owner",
     ).copy(revision = revision)
 
     private object FixedZoneIdProvider : ZoneIdProvider {
@@ -240,46 +243,14 @@ class WorkManagerReminderSchedulerInstrumentedTest {
         }
     }
 
-    private class SchedulerVaultRepository : VaultRepository {
+    private class SchedulerVaultRepository : StubVaultRepository() {
         val mutableState = MutableStateFlow<VaultState>(VaultState.Loading)
         override val state: StateFlow<VaultState> = mutableState
-
-        override fun searchDocuments(query: String, category: DocumentCategory): Flow<List<MedicalDocument>> =
-            emptyFlow()
-
-        override suspend fun initialize(): Unit = unused()
-        override suspend fun createEmpty(displayName: String): Unit = unused()
-        override suspend fun updateProfile(profile: HealthProfile): Unit = unused()
-        override suspend fun upsertEmergencyContact(contact: EmergencyContact): Unit = unused()
-        override suspend fun deleteEmergencyContact(contactId: UUID): Unit = unused()
-        override suspend fun importDocument(
-            draft: MedicalDocumentDraft,
-            imported: ImportedDocumentData,
-        ): MedicalDocument = unused()
-        override suspend fun updateDocument(document: MedicalDocument): Unit = unused()
-        override suspend fun deleteDocument(documentId: UUID): Unit = unused()
-        override suspend fun upsertMedication(medication: Medication): Unit = unused()
-        override suspend fun deleteMedication(medicationId: UUID): Unit = unused()
-        override suspend fun upsertAppointment(appointment: Appointment): Unit = unused()
-        override suspend fun deleteAppointment(appointmentId: UUID): Unit = unused()
-        override suspend fun upsertVaccination(vaccination: Vaccination): Unit = unused()
-        override suspend fun deleteVaccination(vaccinationId: UUID): Unit = unused()
-        override suspend fun upsertReminder(reminder: Reminder): Unit = unused()
-        override suspend fun deleteReminder(reminderId: UUID): Unit = unused()
-        override suspend fun exportSnapshot(): HealthVault = unused()
-        override suspend fun readDocumentBlob(blobId: UUID): ByteArray? = unused()
-        override suspend fun copyDocumentBlob(blobId: UUID, output: OutputStream): Long = unused()
-        override suspend fun restore(
-            vault: HealthVault,
-            documentBlobs: List<RestoreDocumentBlob>,
-        ): Unit = unused()
-        override suspend fun deleteVault(): Unit = unused()
-
-        private fun <T> unused(): T = error("Not used by reminder scheduling tests")
     }
 
     private companion object {
         val FIXED_NOW: Instant = Instant.parse("2026-07-30T08:00:00Z")
         val FIXED_CLOCK: Clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC)
+        val PROFILE_ID: UUID = UUID.fromString("e10c32dc-0a48-41ab-a8ed-bc1420650e31")
     }
 }

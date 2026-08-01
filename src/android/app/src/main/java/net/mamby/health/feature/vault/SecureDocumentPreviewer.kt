@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.createBitmap
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -32,9 +33,13 @@ class SecureDocumentPreviewer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val vaultRepository: VaultRepository,
 ) {
-    suspend fun render(document: MedicalDocument, requestedPage: Int): RenderedDocumentPage =
+    suspend fun render(
+        profileId: UUID,
+        document: MedicalDocument,
+        requestedPage: Int,
+    ): RenderedDocumentPage =
         withContext(Dispatchers.IO) {
-            val bytes = vaultRepository.readDocumentBlob(document.blobId)
+            val bytes = vaultRepository.readDocumentBlob(profileId, document.blobId)
                 ?: throw IOException("Encrypted document content is unavailable.")
             try {
                 when (document.mimeType) {

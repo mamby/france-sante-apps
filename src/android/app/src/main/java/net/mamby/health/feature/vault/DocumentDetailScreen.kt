@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import android.text.format.Formatter
 import net.mamby.health.R
 import net.mamby.health.core.model.MedicalDocument
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
@@ -52,16 +53,23 @@ sealed interface DocumentPreviewState {
 @Composable
 fun DocumentDetailScreen(
     document: MedicalDocument,
+    profile: HealthProfile,
     preview: DocumentPreviewState,
     onBack: () -> Unit,
     onLoadPreview: (Int) -> Unit,
     onEdit: (MedicalDocument) -> Unit,
     onDelete: () -> Unit,
+    onProfileClick: () -> Unit,
 ) {
-    var deleteVisible by remember { mutableStateOf(false) }
-    var editorVisible by remember { mutableStateOf(false) }
+    var deleteVisible by remember(profile.id) { mutableStateOf(false) }
+    var editorVisible by remember(profile.id) { mutableStateOf(false) }
     val context = LocalContext.current
-    AppScreenScaffold(title = document.title, onBack = onBack) { innerPadding ->
+    AppScreenScaffold(
+        title = document.title,
+        onBack = onBack,
+        profile = profile,
+        onProfileClick = onProfileClick,
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

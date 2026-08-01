@@ -156,30 +156,39 @@ data class VaultItem(
 )
 
 @Serializable
-data class HealthVault(
-    val version: Int = CURRENT_VERSION,
-    val revision: Long,
+data class ProfileRecord(
     val profile: HealthProfile,
     val documents: List<MedicalDocument> = emptyList(),
     val medications: List<Medication> = emptyList(),
     val appointments: List<Appointment> = emptyList(),
     val vaccinations: List<Vaccination> = emptyList(),
     val reminders: List<Reminder> = emptyList(),
+)
+
+@Serializable
+data class HealthVault(
+    val version: Int = CURRENT_VERSION,
+    val revision: Long,
+    val profiles: List<ProfileRecord>,
     val updatedAt: Instant,
 ) {
     companion object {
-        const val CURRENT_VERSION: Int = 1
+        const val CURRENT_VERSION: Int = 2
 
         fun empty(
             now: Instant,
             profileId: UUID = UUID.randomUUID(),
-            displayName: String = "",
+            displayName: String,
         ): HealthVault = HealthVault(
             revision = 0,
-            profile = HealthProfile(
-                id = profileId,
-                displayName = displayName,
-                lastUpdatedAt = now,
+            profiles = listOf(
+                ProfileRecord(
+                    profile = HealthProfile(
+                        id = profileId,
+                        displayName = displayName,
+                        lastUpdatedAt = now,
+                    ),
+                ),
             ),
             updatedAt = now,
         )

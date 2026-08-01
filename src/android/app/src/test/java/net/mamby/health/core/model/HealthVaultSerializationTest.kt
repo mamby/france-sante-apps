@@ -1,104 +1,181 @@
 package net.mamby.health.core.model
 
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.util.UUID
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import net.mamby.health.data.VaultCodec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class HealthVaultSerializationTest {
-    private val json = Json { encodeDefaults = true }
+    private val now = Instant.parse("2026-07-30T08:15:30Z")
+    private val firstId = UUID.fromString("2361588e-ee3f-466b-b054-6d8f4f132c60")
+    private val secondId = UUID.fromString("5b49ac57-8a98-41c4-b66b-b6f69cfd9b04")
+    private val documentId = UUID.fromString("9eb4c6cb-7a77-4c2f-891b-d437fe7a7d98")
+    private val blobId = UUID.fromString("27d14e33-91aa-47d5-bf19-fd7beb082d96")
 
     @Test
-    fun versionedVaultRoundTripsAllJavaTypesWithoutPersistingDerivedViews() {
-        val now = Instant.parse("2026-07-30T08:15:30Z")
-        val contactId = UUID.fromString("3768e039-aa59-48f0-99c0-7b4a2e4af7a2")
-        val documentId = UUID.fromString("9eb4c6cb-7a77-4c2f-891b-d437fe7a7d98")
-        val blobId = UUID.fromString("27d14e33-91aa-47d5-bf19-fd7beb082d96")
+    fun schemaV2RoundTripsMultipleProfilesWithoutDerivedViews() {
+        val document = MedicalDocument(
+            id = documentId,
+            title = "Lab result",
+            category = DocumentCategory.LAB_RESULTS,
+            documentDate = LocalDate.of(2026, 7, 28),
+            source = "Laboratory",
+            blobId = blobId,
+            mimeType = "application/pdf",
+            sizeBytes = 1_024,
+            updatedAt = now,
+        )
         val vault = HealthVault(
             revision = 7,
-            profile = HealthProfile(
-                id = UUID.fromString("2361588e-ee3f-466b-b054-6d8f4f132c60"),
-                displayName = "Amina",
-                bloodType = "O+",
-                allergies = listOf("Penicillin"),
-                emergencyContacts = listOf(
-                    EmergencyContact(contactId, "Alex", "Partner", "+33 1 23 45 67 89"),
+            profiles = listOf(
+                ProfileRecord(
+                    profile = HealthProfile(firstId, "Amina", bloodType = "O+", lastUpdatedAt = now),
+                    documents = listOf(document),
                 ),
-                lastUpdatedAt = now,
-            ),
-            documents = listOf(
-                MedicalDocument(
-                    id = documentId,
-                    title = "Lab result",
-                    category = DocumentCategory.LAB_RESULTS,
-                    documentDate = LocalDate.of(2026, 7, 28),
-                    source = "Laboratory",
-                    blobId = blobId,
-                    mimeType = "application/pdf",
-                    sizeBytes = 1_024,
-                    originalFileName = "result.pdf",
-                    updatedAt = now,
-                ),
-            ),
-            medications = listOf(
-                Medication(
-                    id = UUID.fromString("4f74943a-2fac-41ad-a45d-08e3886d0c9c"),
-                    name = "Example medication",
-                    dose = "1 tablet",
-                    instructions = "With food",
-                    schedule = MedicationSchedule(
-                        recurrence = ReminderRecurrence.WEEKLY,
-                        reminderTimes = listOf(LocalTime.of(8, 30), LocalTime.of(20, 30)),
-                        daysOfWeek = setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY),
-                        startsOn = LocalDate.of(2026, 7, 1),
-                    ),
-                    remindersEnabled = true,
-                    updatedAt = now,
-                ),
+                ProfileRecord(HealthProfile(secondId, "Sam", lastUpdatedAt = now)),
             ),
             updatedAt = now,
         ).requireValid()
 
-        val encoded = json.encodeToString(vault)
-        val decoded = json.decodeFromString<HealthVault>(encoded)
+        val encoded = VaultCodec.encode(vault)
+        val decoded = VaultCodec.decode(encoded)
 
-        assertEquals(vault, decoded)
-        assertEquals("O+", decoded.summary().bloodType)
-        assertEquals(listOf(documentId), decoded.index().filter { it.kind == VaultItemKind.DOCUMENT }.map { it.id })
-        assertFalse(encoded.contains("\"summary\""))
-        assertFalse(encoded.contains("\"vaultItems\""))
+        assertEquals(2, decoded.sourceVersion)
+        assertEquals(vault, decoded.vault)
+        assertEquals("O+", decoded.vault.profiles.first().summary().bloodType)
+        assertEquals(listOf(documentId), decoded.vault.profiles.first().index().map(VaultItem::id))
+        val text = encoded.decodeToString()
+        assertFalse(text.contains("\"summary\""))
+        assertFalse(text.contains("\"vaultItems\""))
     }
 
     @Test
-    fun versionOnePayloadWithoutLaterOptionalCollectionsKeepsItsDefaults() {
+    fun exactV1PayloadMigratesToOneProfilePreservingIdsOrderAndRevision() {
         val payload = """
             {
               "version": 1,
               "revision": 3,
               "profile": {
-                "id": "2361588e-ee3f-466b-b054-6d8f4f132c60",
+                "id": "$firstId",
                 "displayName": "Amina",
-                "lastUpdatedAt": "2026-07-30T08:15:30Z"
+                "lastUpdatedAt": "$now"
               },
-              "updatedAt": "2026-07-30T08:15:30Z"
+              "documents": [{
+                "id": "$documentId",
+                "title": "Lab",
+                "category": "LAB_RESULTS",
+                "documentDate": "2026-07-28",
+                "source": "Clinic",
+                "blobId": "$blobId",
+                "mimeType": "application/pdf",
+                "sizeBytes": 10,
+                "updatedAt": "$now"
+              }],
+              "updatedAt": "$now"
             }
-        """.trimIndent()
+        """.trimIndent().encodeToByteArray()
 
-        val decoded = json.decodeFromString<HealthVault>(payload).requireValid()
+        val decoded = VaultCodec.decode(payload)
 
-        assertEquals(3L, decoded.revision)
-        assertEquals("Amina", decoded.profile.displayName)
-        assertEquals(emptyList<MedicalDocument>(), decoded.documents)
-        assertEquals(emptyList<Medication>(), decoded.medications)
-        assertEquals(emptyList<Appointment>(), decoded.appointments)
-        assertEquals(emptyList<Vaccination>(), decoded.vaccinations)
-        assertEquals(emptyList<Reminder>(), decoded.reminders)
+        assertEquals(1, decoded.sourceVersion)
+        assertEquals(2, decoded.vault.version)
+        assertEquals(3L, decoded.vault.revision)
+        assertEquals(firstId, decoded.vault.profiles.single().profile.id)
+        assertEquals(documentId, decoded.vault.profiles.single().documents.single().id)
+        assertEquals(blobId, decoded.vault.profiles.single().documents.single().blobId)
     }
+
+    @Test
+    fun futureVersionIsRejected() {
+        assertThrows(UnsupportedVaultVersionException::class.java) {
+            VaultCodec.decode("""{"version":99}""".encodeToByteArray())
+        }
+        assertThrows(UnsupportedVaultVersionException::class.java) {
+            VaultCodec.encode(
+                HealthVault.empty(now, firstId, "Amina").copy(version = 1),
+            )
+        }
+    }
+
+    @Test
+    fun validationRejectsGlobalIdCollisionsAndCrossProfileDocumentLinks() {
+        val sharedId = UUID.randomUUID()
+        val document = MedicalDocument(
+            sharedId,
+            "Report",
+            DocumentCategory.REPORTS,
+            LocalDate.of(2026, 7, 1),
+            "Clinic",
+            blobId = UUID.randomUUID(),
+            mimeType = "application/pdf",
+            sizeBytes = 5,
+            updatedAt = now,
+        )
+        val invalid = HealthVault(
+            revision = 0,
+            profiles = listOf(
+                ProfileRecord(HealthProfile(firstId, "Amina", lastUpdatedAt = now), documents = listOf(document)),
+                ProfileRecord(
+                    HealthProfile(secondId, "Sam", lastUpdatedAt = now),
+                    appointments = listOf(
+                        Appointment(
+                            UUID.randomUUID(),
+                            "Visit",
+                            "Clinician",
+                            "Clinic",
+                            now,
+                            relatedDocumentIds = listOf(sharedId),
+                            updatedAt = now,
+                        ),
+                    ),
+                ),
+            ),
+            updatedAt = now,
+        )
+
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValid() }
+    }
+
+    @Test
+    fun backupDocumentFlatteningPreservesProfileThenListOrder() {
+        val firstDocument = document(UUID.randomUUID(), UUID.randomUUID(), "First")
+        val secondDocument = document(UUID.randomUUID(), UUID.randomUUID(), "Second")
+        val thirdDocument = document(UUID.randomUUID(), UUID.randomUUID(), "Third")
+        val vault = HealthVault(
+            revision = 1,
+            profiles = listOf(
+                ProfileRecord(
+                    HealthProfile(firstId, "Amina", lastUpdatedAt = now),
+                    documents = listOf(firstDocument, secondDocument),
+                ),
+                ProfileRecord(
+                    HealthProfile(secondId, "Sam", lastUpdatedAt = now),
+                    documents = listOf(thirdDocument),
+                ),
+            ),
+            updatedAt = now,
+        ).requireValid()
+
+        assertEquals(
+            listOf(firstDocument.id, secondDocument.id, thirdDocument.id),
+            vault.allDocuments().map(MedicalDocument::id),
+        )
+        assertEquals(2, vault.profiles.size)
+    }
+
+    private fun document(id: UUID, blobId: UUID, title: String) = MedicalDocument(
+        id = id,
+        title = title,
+        category = DocumentCategory.REPORTS,
+        documentDate = LocalDate.of(2026, 7, 1),
+        source = "Clinic",
+        blobId = blobId,
+        mimeType = "application/pdf",
+        sizeBytes = 1,
+        updatedAt = now,
+    )
 }

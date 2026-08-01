@@ -51,11 +51,8 @@ class AndroidNotificationPublisher @Inject constructor(
         ensureChannel()
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(request.title.ifBlank {
-                context.getString(R.string.notification_fallback_title)
-            })
-            .setContentText(request.message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(request.message))
+            .setContentTitle(context.getString(R.string.notification_generic_title))
+            .setContentText(context.getString(R.string.notification_generic_body))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
@@ -101,6 +98,7 @@ class AndroidNotificationPublisher @Inject constructor(
                     ReminderType.GENERAL -> DeepLinkKind.Reminder
                 }.name,
             )
+            .putExtra(DeepLinkCoordinator.EXTRA_PROFILE_ID, request.profileId)
             .putExtra(DeepLinkCoordinator.EXTRA_RECORD_ID, request.targetId)
         return PendingIntent.getActivity(
             context,

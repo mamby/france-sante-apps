@@ -15,8 +15,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +39,6 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
-import net.mamby.health.ui.components.SampleWorkspaceBanner
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.SwitchField
@@ -48,27 +50,32 @@ import net.mamby.health.ui.theme.UiTokens
 fun SummaryScreen(
     profile: HealthProfile,
     vaccinations: List<Vaccination>,
-    isDemo: Boolean,
     today: LocalDate,
-    onStartVault: () -> Unit,
+    onProfileClick: () -> Unit,
     onSettings: () -> Unit,
     onUpdateProfile: (HealthProfile) -> Unit,
     onUpsertVaccination: (Vaccination) -> Unit,
     onDeleteVaccination: (UUID) -> Unit,
+    creationRequest: Long = 0,
+    selectedTab: Int = 0,
+    onTabSelected: (Int) -> Unit = {},
 ) {
-    var profileEditorVisible by remember { mutableStateOf(false) }
-    var contactEditor by remember { mutableStateOf<EmergencyContact?>(null) }
-    var addingContact by remember { mutableStateOf(false) }
-    var vaccinationEditor by remember { mutableStateOf<Vaccination?>(null) }
-    var addingVaccination by remember { mutableStateOf(false) }
+    var profileEditorVisible by remember(profile.id) { mutableStateOf(false) }
+    var contactEditor by remember(profile.id) { mutableStateOf<EmergencyContact?>(null) }
+    var addingContact by remember(profile.id) { mutableStateOf(false) }
+    var vaccinationEditor by remember(profile.id) { mutableStateOf<Vaccination?>(null) }
+    var addingVaccination by remember(profile.id) { mutableStateOf(false) }
+    LaunchedEffect(creationRequest) {
+        if (creationRequest > 0) profileEditorVisible = true
+    }
 
     AppScreenScaffold(
-        title = stringResource(R.string.summary_title),
+        title = stringResource(R.string.health_records_title),
         onSettings = onSettings,
+        profile = profile,
+        onProfileClick = onProfileClick,
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                if (isDemo) onStartVault() else addingVaccination = true
-            }) {
+            FloatingActionButton(onClick = { addingVaccination = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_vaccination))
             }
         },
@@ -80,9 +87,18 @@ fun SummaryScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (isDemo) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    SampleWorkspaceBanner(onStartVault)
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SecondaryTabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { onTabSelected(0) },
+                        text = { Text(stringResource(R.string.health_info_tab)) },
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { onTabSelected(1) },
+                        text = { Text(stringResource(R.string.documents_tab)) },
+                    )
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -92,9 +108,9 @@ fun SummaryScreen(
                     LabeledValue(stringResource(R.string.allergies), profile.allergies.joinToString())
                     LabeledValue(stringResource(R.string.chronic_conditions), profile.chronicConditions.joinToString())
                     LabeledValue(stringResource(R.string.surgeries), profile.surgeries.joinToString())
-                    Button(onClick = {
-                        if (isDemo) onStartVault() else profileEditorVisible = true
-                    }) { Text(stringResource(R.string.edit_profile)) }
+                    Button(onClick = { profileEditorVisible = true }) {
+                        Text(stringResource(R.string.edit_profile))
+                    }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -113,16 +129,16 @@ fun SummaryScreen(
                         Text(contact.relationship)
                         Text(contact.phoneNumber)
                         contact.notes?.let { Text(it) }
-                        Button(onClick = {
-                            if (isDemo) onStartVault() else contactEditor = contact
-                        }) { Text(stringResource(R.string.common_edit)) }
+                        Button(onClick = { contactEditor = contact }) {
+                            Text(stringResource(R.string.common_edit))
+                        }
                     }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                OutlinedButton(onClick = {
-                    if (isDemo) onStartVault() else addingContact = true
-                }) { Text(stringResource(R.string.add_emergency_contact)) }
+                OutlinedButton(onClick = { addingContact = true }) {
+                    Text(stringResource(R.string.add_emergency_contact))
+                }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(stringResource(R.string.vaccinations))
@@ -137,9 +153,9 @@ fun SummaryScreen(
                         Text(vaccination.dateAdministered.localizedDate())
                         vaccination.provider?.let { Text(it) }
                         vaccination.nextDueOn?.let { Text(it.localizedDate()) }
-                        Button(onClick = {
-                            if (isDemo) onStartVault() else vaccinationEditor = vaccination
-                        }) { Text(stringResource(R.string.common_edit)) }
+                        Button(onClick = { vaccinationEditor = vaccination }) {
+                            Text(stringResource(R.string.common_edit))
+                        }
                     }
                 }
             }

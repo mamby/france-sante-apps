@@ -18,17 +18,23 @@ class VaultReminderSource @Inject constructor(
         if (vaultRepository.state.value is VaultState.Loading) vaultRepository.initialize()
         val vault = (vaultRepository.state.value as? VaultState.Ready)?.vault ?: return emptyList()
         return buildList {
-            vault.medications
-                .asSequence()
-                .filter { it.isActive && it.remindersEnabled }
-                .flatMap(::medicationRequests)
-                .forEach(::add)
-            vault.appointments.mapNotNull(::appointmentRequest).forEach(::add)
-            vault.reminders.filter(Reminder::isEnabled).mapNotNull(::generalRequest).forEach(::add)
+            vault.profiles.forEach { record ->
+                val profileId = record.profile.id.toString()
+                record.medications
+                    .asSequence()
+                    .filter { it.isActive && it.remindersEnabled }
+                    .flatMap { medicationRequests(profileId, it) }
+                    .forEach(::add)
+                record.appointments.mapNotNull { appointmentRequest(profileId, it) }.forEach(::add)
+                record.reminders
+                    .filter(Reminder::isEnabled)
+                    .mapNotNull { generalRequest(profileId, it) }
+                    .forEach(::add)
+            }
         }
     }
 
-    private fun medicationRequests(medication: Medication): Sequence<ReminderRequest> =
+    private fun medicationRequests(profileId: String, medication: Medication): Sequence<ReminderRequest> =
         medication.schedule.reminderTimes.asSequence().mapNotNull { localTime ->
             val recurrence = when (medication.schedule.recurrence) {
                 VaultRecurrence.NONE -> medication.schedule.startsOn?.let { startsOn ->
@@ -66,7 +72,8 @@ class VaultReminderSource @Inject constructor(
                 }
             } ?: return@mapNotNull null
             ReminderRequest(
-                id = "medication:${medication.id}:$localTime",
+                id = "profile:$profileId:medication:${medication.id}:$localTime",
+                profileId = profileId,
                 type = ReminderType.MEDICATION,
                 targetId = medication.id.toString(),
                 title = medication.name,
@@ -77,11 +84,12 @@ class VaultReminderSource @Inject constructor(
             )
         }
 
-    private fun appointmentRequest(appointment: Appointment): ReminderRequest? {
+    private fun appointmentRequest(profileId: String, appointment: Appointment): ReminderRequest? {
         val leadMinutes = appointment.reminderLeadMinutes ?: return null
         if (leadMinutes < 0) return null
         return ReminderRequest(
-            id = "appointment:${appointment.id}",
+            id = "profile:$profileId:appointment:${appointment.id}",
+            profileId = profileId,
             type = ReminderType.APPOINTMENT,
             targetId = appointment.id.toString(),
             title = appointment.title,
@@ -94,7 +102,7 @@ class VaultReminderSource @Inject constructor(
         )
     }
 
-    private fun generalRequest(reminder: Reminder): ReminderRequest? {
+    private fun generalRequest(profileId: String, reminder: Reminder): ReminderRequest? {
         val recurrence = when (reminder.recurrence) {
             VaultRecurrence.NONE -> ReminderRecurrence.Once(
                 reminder.startsOn
@@ -124,7 +132,8 @@ class VaultReminderSource @Inject constructor(
             )
         }
         return ReminderRequest(
-            id = "reminder:${reminder.id}",
+            id = "profile:$profileId:reminder:${reminder.id}",
+            profileId = profileId,
             type = ReminderType.GENERAL,
             targetId = reminder.id.toString(),
             title = reminder.title,

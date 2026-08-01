@@ -41,6 +41,7 @@ data class RestorePreview(
     val currentEnvironment: String,
     val revision: Long,
     val updatedAt: Instant,
+    val profileCount: Int,
     val documentCount: Int,
 ) {
     val requiresCrossFlavorConfirmation: Boolean

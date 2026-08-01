@@ -9,7 +9,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Locale
 
-fun HealthVault.summary(): HealthSummary = HealthSummary(
+fun ProfileRecord.summary(): HealthSummary = HealthSummary(
     bloodType = profile.bloodType,
     allergies = profile.allergies,
     chronicConditions = profile.chronicConditions,
@@ -18,7 +18,7 @@ fun HealthVault.summary(): HealthSummary = HealthSummary(
     lastUpdatedAt = profile.lastUpdatedAt,
 )
 
-fun HealthVault.index(): List<VaultItem> = buildList {
+fun ProfileRecord.index(): List<VaultItem> = buildList {
     documents.mapTo(this) { VaultItem(it.id, VaultItemKind.DOCUMENT, it.title, it.updatedAt) }
     medications.mapTo(this) { VaultItem(it.id, VaultItemKind.MEDICATION, it.name, it.updatedAt) }
     appointments.mapTo(this) { VaultItem(it.id, VaultItemKind.APPOINTMENT, it.title, it.updatedAt) }
@@ -26,43 +26,70 @@ fun HealthVault.index(): List<VaultItem> = buildList {
     reminders.mapTo(this) { VaultItem(it.id, VaultItemKind.REMINDER, it.title, it.updatedAt) }
 }.sortedByDescending(VaultItem::updatedAt)
 
+fun HealthVault.profileRecord(profileId: java.util.UUID): ProfileRecord =
+    profiles.singleOrNull { it.profile.id == profileId }
+        ?: throw NoSuchElementException("Profile not found: $profileId")
+
+fun HealthVault.allDocuments(): List<MedicalDocument> = profiles.flatMap(ProfileRecord::documents)
+
 fun HealthVault.requireValid(): HealthVault = apply {
     if (version != HealthVault.CURRENT_VERSION) {
         throw UnsupportedVaultVersionException(version)
     }
     requireVault(revision >= 0) { "Vault revision cannot be negative." }
-    requireDistinct("emergency contact", profile.emergencyContacts.map(EmergencyContact::id))
-    requireDistinct("document", documents.map(MedicalDocument::id))
-    requireDistinct("document blob", documents.map(MedicalDocument::blobId))
-    requireDistinct("medication", medications.map(Medication::id))
-    requireDistinct("appointment", appointments.map(Appointment::id))
-    requireDistinct("vaccination", vaccinations.map(Vaccination::id))
-    requireDistinct("reminder", reminders.map(Reminder::id))
+    requireVault(profiles.isNotEmpty()) { "A vault must contain at least one profile." }
+    requireDistinct("profile", profiles.map { it.profile.id })
+    requireDistinct("emergency contact", profiles.flatMap { it.profile.emergencyContacts }.map(EmergencyContact::id))
+    requireDistinct("document", profiles.flatMap(ProfileRecord::documents).map(MedicalDocument::id))
+    requireDistinct("document blob", profiles.flatMap(ProfileRecord::documents).map(MedicalDocument::blobId))
+    requireDistinct("medication", profiles.flatMap(ProfileRecord::medications).map(Medication::id))
+    requireDistinct("appointment", profiles.flatMap(ProfileRecord::appointments).map(Appointment::id))
+    requireDistinct("vaccination", profiles.flatMap(ProfileRecord::vaccinations).map(Vaccination::id))
+    requireDistinct("reminder", profiles.flatMap(ProfileRecord::reminders).map(Reminder::id))
+    requireDistinct(
+        "vault object",
+        buildList {
+            profiles.forEach { record ->
+                add(record.profile.id)
+                addAll(record.profile.emergencyContacts.map(EmergencyContact::id))
+                addAll(record.documents.map(MedicalDocument::id))
+                addAll(record.documents.map(MedicalDocument::blobId))
+                addAll(record.medications.map(Medication::id))
+                addAll(record.appointments.map(Appointment::id))
+                addAll(record.vaccinations.map(Vaccination::id))
+                addAll(record.reminders.map(Reminder::id))
+            }
+        },
+    )
 
-    documents.forEach { document ->
-        requireVault(document.category != DocumentCategory.ALL) {
-            "ALL is a filter and cannot be stored as a document category."
+    profiles.forEach { record ->
+        requireVault(record.profile.displayName.isNotBlank()) { "Profile name is required." }
+        record.documents.forEach { document ->
+            requireVault(document.category != DocumentCategory.ALL) {
+                "ALL is a filter and cannot be stored as a document category."
+            }
+            requireVault(document.sizeBytes >= 0) { "Document size cannot be negative." }
+            requireVault(document.mimeType.isNotBlank()) { "Document MIME type is required." }
         }
-        requireVault(document.sizeBytes >= 0) { "Document size cannot be negative." }
-        requireVault(document.mimeType.isNotBlank()) { "Document MIME type is required." }
-    }
-    medications.forEach { medication ->
-        val schedule = medication.schedule
-        requireVault(schedule.reminderTimes.distinct().size == schedule.reminderTimes.size) {
-            "Medication reminder times must be unique."
+        record.medications.forEach { medication ->
+            val schedule = medication.schedule
+            requireVault(schedule.reminderTimes.distinct().size == schedule.reminderTimes.size) {
+                "Medication reminder times must be unique."
+            }
+            requireDateRange(schedule.startsOn, schedule.endsOn, "medication")
         }
-        requireDateRange(schedule.startsOn, schedule.endsOn, "medication")
-    }
-    appointments.forEach { appointment ->
-        requireVault(appointment.reminderLeadMinutes == null || appointment.reminderLeadMinutes >= 0) {
-            "Appointment reminder lead cannot be negative."
+        val documentIds = record.documents.mapTo(mutableSetOf(), MedicalDocument::id)
+        record.appointments.forEach { appointment ->
+            requireVault(appointment.reminderLeadMinutes == null || appointment.reminderLeadMinutes >= 0) {
+                "Appointment reminder lead cannot be negative."
+            }
+            requireVault(appointment.relatedDocumentIds.all(documentIds::contains)) {
+                "Appointment references a document outside its profile."
+            }
         }
-        requireVault(appointment.relatedDocumentIds.all(documents.map(MedicalDocument::id).toSet()::contains)) {
-            "Appointment references an unknown document."
+        record.reminders.forEach { reminder ->
+            requireDateRange(reminder.startsOn, reminder.endsOn, "reminder")
         }
-    }
-    reminders.forEach { reminder ->
-        requireDateRange(reminder.startsOn, reminder.endsOn, "reminder")
     }
 }
 

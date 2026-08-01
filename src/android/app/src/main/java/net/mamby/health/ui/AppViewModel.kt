@@ -98,20 +98,35 @@ class AppViewModel @Inject constructor(
         mutableNotice.value = null
     }
 
+    fun showUnavailable() {
+        mutableNotice.value = UiNotice(R.string.record_unavailable)
+    }
+
     fun createVault(displayName: String) = launchOperation {
-        vaultRepository.createEmpty(displayName)
+        vaultRepository.createVault(displayName)
         reconcileReminders()
     }
 
-    fun refreshDemo() = launchOperation(reportFailure = false) {
-        if (vaultState.value is VaultState.Demo) vaultRepository.initialize()
+    fun addProfile(displayName: String) = launchOperation {
+        vaultRepository.addProfile(displayName)
     }
 
-    fun updateProfile(profile: HealthProfile) = launchOperation {
-        vaultRepository.updateProfile(profile)
+    fun selectProfile(profileId: UUID) = launchOperation {
+        vaultRepository.selectProfile(profileId)
+        mutablePreview.value = DocumentPreviewState.Idle
     }
 
-    fun importDocument(draft: DocumentImportDraft) = launchOperation(
+    fun deleteProfile(profileId: UUID) = launchOperation {
+        vaultRepository.deleteProfile(profileId)
+        mutablePreview.value = DocumentPreviewState.Idle
+        reconcileReminders()
+    }
+
+    fun updateProfile(profileId: UUID, profile: HealthProfile) = launchOperation {
+        vaultRepository.updateProfile(profileId, profile)
+    }
+
+    fun importDocument(profileId: UUID, draft: DocumentImportDraft) = launchOperation(
         failureNotice = { error ->
             when ((error as? DocumentImportException)?.reason) {
                 DocumentImportFailure.FILE_TOO_LARGE -> R.string.import_error_too_large
@@ -126,6 +141,7 @@ class AppViewModel @Inject constructor(
     ) {
         val imported = documentImporter.import(draft.uri)
         vaultRepository.importDocument(
+            profileId,
             MedicalDocumentDraft(
                 title = draft.title,
                 category = draft.category,
@@ -139,21 +155,21 @@ class AppViewModel @Inject constructor(
         mutableNotice.value = UiNotice(R.string.import_success)
     }
 
-    fun updateDocument(document: MedicalDocument) = launchOperation {
-        vaultRepository.updateDocument(document)
+    fun updateDocument(profileId: UUID, document: MedicalDocument) = launchOperation {
+        vaultRepository.updateDocument(profileId, document)
     }
 
-    fun deleteDocument(id: UUID) = launchOperation {
-        vaultRepository.deleteDocument(id)
+    fun deleteDocument(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteDocument(profileId, id)
         mutablePreview.value = DocumentPreviewState.Idle
         mutableNotice.value = UiNotice(R.string.document_deleted)
     }
 
-    fun loadPreview(document: MedicalDocument, page: Int) {
+    fun loadPreview(profileId: UUID, document: MedicalDocument, page: Int) {
         viewModelScope.launch {
             mutablePreview.value = DocumentPreviewState.Loading
             mutablePreview.value = try {
-                val rendered = documentPreviewer.render(document, page)
+                val rendered = documentPreviewer.render(profileId, document, page)
                 DocumentPreviewState.Ready(rendered.image, rendered.page, rendered.pageCount)
             } catch (error: CancellationException) {
                 throw error
@@ -167,41 +183,41 @@ class AppViewModel @Inject constructor(
         mutablePreview.value = DocumentPreviewState.Idle
     }
 
-    fun upsertMedication(medication: Medication) = launchOperation {
-        vaultRepository.upsertMedication(medication)
+    fun upsertMedication(profileId: UUID, medication: Medication) = launchOperation {
+        vaultRepository.upsertMedication(profileId, medication)
         reconcileReminders()
     }
 
-    fun deleteMedication(id: UUID) = launchOperation {
-        vaultRepository.deleteMedication(id)
+    fun deleteMedication(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteMedication(profileId, id)
         reconcileReminders()
     }
 
-    fun upsertAppointment(appointment: Appointment) = launchOperation {
-        vaultRepository.upsertAppointment(appointment)
+    fun upsertAppointment(profileId: UUID, appointment: Appointment) = launchOperation {
+        vaultRepository.upsertAppointment(profileId, appointment)
         reconcileReminders()
     }
 
-    fun deleteAppointment(id: UUID) = launchOperation {
-        vaultRepository.deleteAppointment(id)
+    fun deleteAppointment(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteAppointment(profileId, id)
         reconcileReminders()
     }
 
-    fun upsertVaccination(vaccination: Vaccination) = launchOperation {
-        vaultRepository.upsertVaccination(vaccination)
+    fun upsertVaccination(profileId: UUID, vaccination: Vaccination) = launchOperation {
+        vaultRepository.upsertVaccination(profileId, vaccination)
     }
 
-    fun deleteVaccination(id: UUID) = launchOperation {
-        vaultRepository.deleteVaccination(id)
+    fun deleteVaccination(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteVaccination(profileId, id)
     }
 
-    fun upsertReminder(reminder: Reminder) = launchOperation {
-        vaultRepository.upsertReminder(reminder)
+    fun upsertReminder(profileId: UUID, reminder: Reminder) = launchOperation {
+        vaultRepository.upsertReminder(profileId, reminder)
         reconcileReminders()
     }
 
-    fun deleteReminder(id: UUID) = launchOperation {
-        vaultRepository.deleteReminder(id)
+    fun deleteReminder(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteReminder(profileId, id)
         reconcileReminders()
     }
 
@@ -234,7 +250,10 @@ class AppViewModel @Inject constructor(
         settingsRepository.setAppLockTimeout(timeout)
     }
 
-    fun lockNow() = appLockManager.lock()
+    fun lockNow() {
+        mutablePreview.value = DocumentPreviewState.Idle
+        appLockManager.lock()
+    }
 
     fun unlock(activity: FragmentActivity) {
         viewModelScope.launch {
@@ -278,6 +297,7 @@ class AppViewModel @Inject constructor(
         when (backupRepository.commitRestore(preview.token, crossFlavorConfirmed)) {
             RestoreCommitResult.Success -> {
                 mutableRestorePreview.value = null
+                mutablePreview.value = DocumentPreviewState.Idle
                 reconcileReminders()
                 mutableNotice.value = UiNotice(R.string.restore_success)
             }

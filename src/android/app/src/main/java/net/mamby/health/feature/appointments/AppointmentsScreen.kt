@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,12 +33,12 @@ import java.time.ZoneId
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.SampleWorkspaceBanner
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -49,24 +50,28 @@ import net.mamby.health.ui.theme.UiTokens
 fun AppointmentsScreen(
     appointments: List<Appointment>,
     documents: List<MedicalDocument>,
-    isDemo: Boolean,
+    profile: HealthProfile,
     zoneId: ZoneId,
     now: Instant,
-    onStartVault: () -> Unit,
+    onProfileClick: () -> Unit,
     onSettings: () -> Unit,
     onUpsert: (Appointment) -> Unit,
     onSelected: (String) -> Unit,
+    creationRequest: Long = 0,
 ) {
-    var editorVisible by remember { mutableStateOf(false) }
+    var editorVisible by remember(profile.id) { mutableStateOf(false) }
+    LaunchedEffect(creationRequest) {
+        if (creationRequest > 0) editorVisible = true
+    }
     val upcoming = appointments.filter { it.startsAt.isAfter(now) }.sortedBy { it.startsAt }
     val past = appointments.filterNot { it.startsAt.isAfter(now) }.sortedByDescending { it.startsAt }
     AppScreenScaffold(
         title = stringResource(R.string.appointments_title),
         onSettings = onSettings,
+        profile = profile,
+        onProfileClick = onProfileClick,
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                if (isDemo) onStartVault() else editorVisible = true
-            }) {
+            FloatingActionButton(onClick = { editorVisible = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_appointment))
             }
         },
@@ -78,7 +83,6 @@ fun AppointmentsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (isDemo) item(span = { GridItemSpan(maxLineSpan) }) { SampleWorkspaceBanner(onStartVault) }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.appointments_intro)) }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.upcoming)) }
             if (upcoming.isEmpty()) {

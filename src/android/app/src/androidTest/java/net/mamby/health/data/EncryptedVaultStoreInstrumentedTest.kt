@@ -230,7 +230,9 @@ class EncryptedVaultStoreInstrumentedTest {
         displayName = displayName,
     ).copy(
         revision = revision,
-        documents = documents,
+        profiles = listOf(
+            HealthVault.empty(NOW, PROFILE_ID, displayName).profiles.single().copy(documents = documents),
+        ),
         updatedAt = NOW,
     )
 

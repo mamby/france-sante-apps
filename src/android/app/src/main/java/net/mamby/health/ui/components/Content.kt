@@ -2,22 +2,22 @@ package net.mamby.health.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import net.mamby.health.R
 import net.mamby.health.ui.theme.UiTokens
 
@@ -27,7 +27,11 @@ fun MetricCard(
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
         Column(
             modifier = Modifier.padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
@@ -44,7 +48,11 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
         Column(
             modifier = Modifier.padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
@@ -71,34 +79,6 @@ fun EmptyState(
         Icon(Icons.Outlined.Info, contentDescription = null)
         Text(title, style = MaterialTheme.typography.titleMedium)
         Text(body, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-fun SampleWorkspaceBanner(
-    onStartVault: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-    ) {
-        Row(
-            modifier = Modifier.padding(UiTokens.ScreenPadding),
-            horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
-            ) {
-                Text(stringResource(R.string.sample_banner_title), fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.sample_banner_body), style = MaterialTheme.typography.bodyMedium)
-            }
-            OutlinedButton(onClick = onStartVault) {
-                Text(stringResource(R.string.start_vault))
-            }
-        }
     }
 }
 

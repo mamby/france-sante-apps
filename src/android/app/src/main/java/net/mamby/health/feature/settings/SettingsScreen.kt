@@ -63,6 +63,7 @@ fun SettingsScreen(
     onCommitRestore: (RestorePreview, Boolean) -> Unit,
     onDiscardRestore: (RestorePreview) -> Unit,
     onDeleteVault: () -> Unit,
+    onManageProfiles: (() -> Unit)? = null,
 ) {
     var backupDialog by remember { mutableStateOf(false) }
     var pendingBackupPassphrase by remember { mutableStateOf<CharArray?>(null) }
@@ -91,6 +92,14 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             message?.let { Text(it) }
+            if (onManageProfiles != null) {
+                SectionCard(stringResource(R.string.profiles_title)) {
+                    Text(stringResource(R.string.profiles_settings_body))
+                    Button(onClick = onManageProfiles) {
+                        Text(stringResource(R.string.manage_profiles))
+                    }
+                }
+            }
             SectionCard(stringResource(R.string.appearance_title)) {
                 Text(stringResource(R.string.theme_system))
                 ThemeMode.entries.forEach { mode ->
@@ -191,6 +200,7 @@ fun SettingsScreen(
                         stringResource(
                             R.string.restore_ready_summary,
                             preview.revision,
+                            preview.profileCount,
                             preview.documentCount,
                             preview.updatedAt.localizedDateTime(zoneId),
                         ),

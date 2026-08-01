@@ -4,11 +4,13 @@ Personal Health Vault is an offline personal record organizer. It does not requi
 
 ## Data kept by the application
 
-The vault may contain profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medication schedules, appointments, reminder schedules, document metadata, and imported PDF or image contents.
+The vault may contain multiple profiles, each with profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medication schedules, appointments, reminder schedules, document metadata, and imported PDF or image contents.
 
-User health information is persisted only as authenticated ciphertext in app-private storage that is excluded from Android platform backup. Theme, language, app-lock preference, timeout, and backup-destination state are non-health preferences stored separately.
+User health information is persisted only as authenticated ciphertext in app-private storage that is excluded from Android platform backup. The selected profile ID is also authenticated ciphertext in separate non-backed-up storage. Theme, language, app-lock preference, timeout, and backup-destination state are non-health preferences stored separately.
 
-The fresh-install sample workspace is generated in memory, clearly labelled, and never saved as user data. Starting a real vault creates an empty user-owned snapshot.
+Fresh install contains no sample health data. Starting new asks who the first profile is for and creates an empty encrypted profile.
+
+Global search examines only the selected profile. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms.
 
 ## Network and third parties
 
@@ -27,11 +29,11 @@ Import uses Android's system picker. Supported source content is copied into enc
 
 App lock uses the device's biometric or credential prompt when the user enables it. It controls access to the user interface and is separate from encryption at rest.
 
-Reminder calculation and notification creation happen on the device. Android notification settings control whether content is visible on the lock screen. Users who do not want notifications can keep reminders saved while disabling notification delivery.
+Reminder calculation and notification creation happen on the device for every profile. Notification text is always generic and contains no profile name, medication, dose, appointment, location, or other health detail. Tapping a reminder unlocks the app before selecting its owning profile and opening the target.
 
 ## Backup and restore
 
-Portable backups are encrypted before they are written to the chosen provider. The passphrase is not stored. Scheduled backup retains only a locally wrapped backup key.
+Portable backups contain every profile and are encrypted before they are written to the chosen provider. The passphrase is not stored. Scheduled backup retains only a locally wrapped backup key.
 
 Restore validates the entire selected backup before replacing local data. It does not combine records with the current vault. A failed restore leaves current data unchanged.
 

@@ -15,7 +15,9 @@ import net.mamby.health.crypto.VaultKeyProvider
 import net.mamby.health.data.DefaultVaultRepository
 import net.mamby.health.data.DocumentBlobStore
 import net.mamby.health.data.EncryptedDocumentBlobStore
+import net.mamby.health.data.EncryptedSelectedProfileStore
 import net.mamby.health.data.EncryptedVaultStore
+import net.mamby.health.data.SelectedProfileStore
 import net.mamby.health.data.UuidGenerator
 import net.mamby.health.data.VaultRepository
 import net.mamby.health.data.VaultStore
@@ -42,6 +44,12 @@ abstract class CoreDataBindings {
     abstract fun bindDocumentBlobStore(
         implementation: EncryptedDocumentBlobStore,
     ): DocumentBlobStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSelectedProfileStore(
+        implementation: EncryptedSelectedProfileStore,
+    ): SelectedProfileStore
 
     @Binds
     @Singleton

@@ -2,6 +2,7 @@ package net.mamby.health.notifications
 
 import android.Manifest
 import android.app.NotificationManager
+import android.app.Notification
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
@@ -9,14 +10,21 @@ import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
+import androidx.test.rule.GrantPermissionRule
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 @RunWith(AndroidJUnit4::class)
 class AndroidNotificationPublisherInstrumentedTest {
+    @get:Rule
+    val notificationPermission: GrantPermissionRule =
+        GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
+
     @Test
     fun deniedRuntimePermission_blocksPublishingBeforeNotificationManagerMutation() {
         val applicationContext = ApplicationProvider.getApplicationContext<Context>()
@@ -34,6 +42,25 @@ class AndroidNotificationPublisherInstrumentedTest {
         assertEquals(notificationsBefore, notificationManager.activeNotifications.map { it.id to it.tag }.toSet())
     }
 
+    @Test
+    fun publishedNotificationContainsOnlyGenericLocalizedText() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.cancelAll()
+
+        val result = AndroidNotificationPublisher(context).publish(REQUEST)
+        val posted = manager.activeNotifications.single().notification
+        val title = posted.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
+        val body = posted.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+
+        assertEquals(NotificationPublishResult.Published, result)
+        assertEquals(context.getString(net.mamby.health.R.string.notification_generic_title), title)
+        assertEquals(context.getString(net.mamby.health.R.string.notification_generic_body), body)
+        assertFalse(title.contains(REQUEST.title))
+        assertFalse(body.contains(REQUEST.message))
+        manager.cancelAll()
+    }
+
     private class DeniedNotificationContext(base: Context) : ContextWrapper(base) {
         override fun checkPermission(permission: String, pid: Int, uid: Int): Int =
             if (permission == Manifest.permission.POST_NOTIFICATIONS) {
@@ -46,6 +73,7 @@ class AndroidNotificationPublisherInstrumentedTest {
     private companion object {
         val REQUEST = ReminderRequest(
             id = "permission-test:${Instant.parse("2026-07-30T08:00:00Z")}",
+            profileId = "2f59f953-d6a2-4577-af28-3576c994094f",
             type = ReminderType.GENERAL,
             title = "Permission acceptance test",
             message = "This notification must not be posted.",

@@ -57,6 +57,7 @@ class WorkManagerReminderScheduler @Inject constructor(
 
     override suspend fun reconcile(requests: Collection<ReminderRequest>) {
         workManager.cancelAllWorkByTag(REMINDER_WORK_TAG)
+        notificationPublisher.cancelAll()
         requests.filter(ReminderRequest::enabled).forEach { request ->
             enqueue(request, ExistingWorkPolicy.REPLACE)
         }

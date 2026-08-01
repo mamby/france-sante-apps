@@ -79,6 +79,7 @@ sealed interface ReminderRecurrence {
 @Serializable
 data class ReminderRequest(
     val id: String,
+    val profileId: String,
     val type: ReminderType,
     val targetId: String? = null,
     val title: String,
@@ -88,6 +89,7 @@ data class ReminderRequest(
 ) {
     init {
         require(id.isNotBlank()) { "Reminder id must not be blank" }
+        require(profileId.isNotBlank()) { "Reminder profile id must not be blank" }
         require(title.isNotBlank()) { "Reminder title must not be blank" }
     }
 }

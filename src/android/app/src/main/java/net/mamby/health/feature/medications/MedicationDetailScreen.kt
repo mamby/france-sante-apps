@@ -19,25 +19,33 @@ import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import net.mamby.health.R
 import net.mamby.health.core.model.Medication
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.format.labelResource
-import net.mamby.health.ui.format.localizedTime
+import net.mamby.health.ui.format.localizedTimes
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun MedicationDetailScreen(
     medication: Medication,
+    profile: HealthProfile,
     today: LocalDate,
     onBack: () -> Unit,
     onUpsert: (Medication) -> Unit,
     onDelete: () -> Unit,
+    onProfileClick: () -> Unit,
 ) {
-    var editorVisible by remember { mutableStateOf(false) }
-    var deleteVisible by remember { mutableStateOf(false) }
-    AppScreenScaffold(medication.name, onBack = onBack) { innerPadding ->
+    var editorVisible by remember(profile.id) { mutableStateOf(false) }
+    var deleteVisible by remember(profile.id) { mutableStateOf(false) }
+    AppScreenScaffold(
+        medication.name,
+        onBack = onBack,
+        profile = profile,
+        onProfileClick = onProfileClick,
+    ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
@@ -50,7 +58,7 @@ fun MedicationDetailScreen(
                     stringResource(if (medication.isActive) R.string.status_active else R.string.status_inactive),
                 )
                 LabeledValue(stringResource(R.string.medication_recurrence), stringResource(medication.schedule.recurrence.labelResource()))
-                LabeledValue(stringResource(R.string.medication_times), medication.schedule.reminderTimes.joinToString { it.localizedTime() })
+                LabeledValue(stringResource(R.string.medication_times), medication.schedule.reminderTimes.localizedTimes())
                 LabeledValue(stringResource(R.string.medication_notes), medication.notes.orEmpty())
             }
             Button(onClick = { editorVisible = true }) { Text(stringResource(R.string.common_edit)) }

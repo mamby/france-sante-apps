@@ -14,12 +14,11 @@ import androidx.compose.ui.res.stringResource
 import java.time.Clock
 import java.time.ZoneId
 import net.mamby.health.R
-import net.mamby.health.core.model.HealthVault
+import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.RecurrenceCalculator
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.MetricCard
-import net.mamby.health.ui.components.SampleWorkspaceBanner
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.format.localizedDate
@@ -28,35 +27,40 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun DashboardScreen(
-    vault: HealthVault,
-    isDemo: Boolean,
+    record: ProfileRecord,
     clock: Clock,
     zoneId: ZoneId,
-    onStartVault: () -> Unit,
+    onProfileClick: () -> Unit,
     onSettings: () -> Unit,
     onReminders: () -> Unit,
     onDocumentSelected: (String) -> Unit,
+    onAddHealthInfo: () -> Unit,
+    onImportDocument: () -> Unit,
+    onAddMedication: () -> Unit,
+    onAddAppointment: () -> Unit,
 ) {
     val now = clock.instant()
-    val nextAppointment = vault.appointments
+    val nextAppointment = record.appointments
         .asSequence()
         .filter { it.startsAt.isAfter(now) }
         .minByOrNull { it.startsAt }
-    val nextReminder = vault.reminders
+    val nextReminder = record.reminders
         .asSequence()
         .mapNotNull { reminder ->
             RecurrenceCalculator.nextOccurrence(reminder, now, zoneId)?.let { it to reminder }
         }
         .minByOrNull { it.first }
-    val activeMedications = vault.medications.count { it.isActive }
-    val upcomingAppointments = vault.appointments.count { it.startsAt.isAfter(now) }
-    val enabledReminders = vault.reminders.count { it.isEnabled } +
-        vault.medications.count { it.isActive && it.remindersEnabled } +
-        vault.appointments.count { it.reminderLeadMinutes != null && it.startsAt.isAfter(now) }
+    val activeMedications = record.medications.count { it.isActive }
+    val upcomingAppointments = record.appointments.count { it.startsAt.isAfter(now) }
+    val enabledReminders = record.reminders.count { it.isEnabled } +
+        record.medications.count { it.isActive && it.remindersEnabled } +
+        record.appointments.count { it.reminderLeadMinutes != null && it.startsAt.isAfter(now) }
 
     AppScreenScaffold(
         title = stringResource(R.string.dashboard_title),
         onSettings = onSettings,
+        profile = record.profile,
+        onProfileClick = onProfileClick,
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
@@ -65,17 +69,26 @@ fun DashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (isDemo) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(stringResource(R.string.dashboard_greeting, record.profile.displayName))
+            }
+
+            if (record.documents.isEmpty() && record.medications.isEmpty() &&
+                record.appointments.isEmpty() && record.vaccinations.isEmpty() &&
+                record.profile.bloodType == null && record.profile.allergies.isEmpty() &&
+                record.profile.chronicConditions.isEmpty() && record.profile.surgeries.isEmpty()
+            ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    SampleWorkspaceBanner(onStartVault)
+                    SectionCard(stringResource(R.string.getting_started_title)) {
+                        Button(onClick = onAddHealthInfo) { Text(stringResource(R.string.getting_started_health)) }
+                        Button(onClick = onImportDocument) { Text(stringResource(R.string.import_document)) }
+                        Button(onClick = onAddMedication) { Text(stringResource(R.string.add_medication)) }
+                        Button(onClick = onAddAppointment) { Text(stringResource(R.string.add_appointment)) }
+                    }
                 }
             }
 
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(stringResource(R.string.dashboard_greeting, vault.profile.displayName))
-            }
-
-            item { MetricCard(stringResource(R.string.documents_metric), vault.documents.size.toString()) }
+            item { MetricCard(stringResource(R.string.documents_metric), record.documents.size.toString()) }
             item { MetricCard(stringResource(R.string.medications_metric), activeMedications.toString()) }
             item { MetricCard(stringResource(R.string.appointments_metric), upcomingAppointments.toString()) }
             item { MetricCard(stringResource(R.string.reminders_metric), enabledReminders.toString()) }
@@ -107,21 +120,21 @@ fun DashboardScreen(
 
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionCard(stringResource(R.string.quick_health_summary)) {
-                    LabeledValue(stringResource(R.string.blood_type), vault.profile.bloodType.orEmpty())
-                    LabeledValue(stringResource(R.string.allergies), vault.profile.allergies.joinToString())
+                    LabeledValue(stringResource(R.string.blood_type), record.profile.bloodType.orEmpty())
+                    LabeledValue(stringResource(R.string.allergies), record.profile.allergies.joinToString())
                     LabeledValue(
                         stringResource(R.string.last_updated),
-                        vault.profile.lastUpdatedAt.atZone(zoneId).toLocalDate().localizedDate(),
+                        record.profile.lastUpdatedAt.atZone(zoneId).toLocalDate().localizedDate(),
                     )
                 }
             }
 
-            if (vault.documents.isNotEmpty()) {
+            if (record.documents.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(stringResource(R.string.recent_documents))
                 }
                 items(
-                    items = vault.documents.sortedByDescending { it.documentDate }.take(4),
+                    items = record.documents.sortedByDescending { it.documentDate }.take(4),
                     key = { it.id },
                 ) { document ->
                     SectionCard(document.title, modifier = Modifier) {

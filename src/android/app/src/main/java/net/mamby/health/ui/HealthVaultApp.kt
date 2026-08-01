@@ -9,7 +9,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +17,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
@@ -32,13 +38,14 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +53,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -56,13 +62,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
-import java.time.Instant
+import java.util.UUID
 import kotlinx.coroutines.delay
 import net.mamby.health.R
-import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.HealthSearchResult
+import net.mamby.health.core.model.HealthSearchTarget
 import net.mamby.health.core.model.HealthVault
-import net.mamby.health.core.model.Medication
-import net.mamby.health.core.model.Reminder
+import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.profileRecord
 import net.mamby.health.data.VaultState
 import net.mamby.health.feature.appointments.AppointmentDetailScreen
 import net.mamby.health.feature.appointments.AppointmentsScreen
@@ -72,28 +79,39 @@ import net.mamby.health.feature.error.VaultUnreadableScreen
 import net.mamby.health.feature.lock.LockScreen
 import net.mamby.health.feature.medications.MedicationDetailScreen
 import net.mamby.health.feature.medications.MedicationsScreen
+import net.mamby.health.feature.profiles.ProfileManagementScreen
+import net.mamby.health.feature.profiles.ProfileNameDialog
 import net.mamby.health.feature.reminders.RemindersScreen
+import net.mamby.health.feature.search.SearchScreen
+import net.mamby.health.feature.search.SearchFilter
 import net.mamby.health.feature.settings.SettingsScreen
 import net.mamby.health.feature.summary.SummaryScreen
 import net.mamby.health.feature.vault.DocumentDetailScreen
+import net.mamby.health.feature.vault.DocumentPreviewState
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppointmentDetailRoute
 import net.mamby.health.navigation.AppointmentsRoute
-import net.mamby.health.navigation.DashboardRoute
-import net.mamby.health.navigation.DeepLinkCoordinator
 import net.mamby.health.navigation.DeepLinkKind
+import net.mamby.health.navigation.DeepLinkTarget
 import net.mamby.health.navigation.DocumentDetailRoute
+import net.mamby.health.navigation.HealthInfoDetailRoute
+import net.mamby.health.navigation.HealthRecordsRoute
+import net.mamby.health.navigation.HomeRoute
+import net.mamby.health.navigation.ManageProfilesRoute
 import net.mamby.health.navigation.MedicationDetailRoute
 import net.mamby.health.navigation.MedicationsRoute
 import net.mamby.health.navigation.RemindersRoute
+import net.mamby.health.navigation.SearchRoute
 import net.mamby.health.navigation.SettingsRoute
-import net.mamby.health.navigation.SummaryRoute
 import net.mamby.health.navigation.TopLevelDestination
-import net.mamby.health.navigation.VaultRoute
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.security.AppLockState
+import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.ThemeMode
+import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.theme.HealthVaultTheme
 import net.mamby.health.ui.theme.UiTokens
 
@@ -107,25 +125,25 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     val notice by viewModel.notice.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
-    var startVaultDialog by remember { mutableStateOf(false) }
+    var startDialog by remember { mutableStateOf(false) }
     var resetUnreadableDialog by remember { mutableStateOf(false) }
     var recoverySettingsVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(settings.localeTag) {
-        val requested = LocaleListCompat.forLanguageTags(settings.localeTag)
-        if (AppCompatDelegate.getApplicationLocales().toLanguageTags() != requested.toLanguageTags()) {
-            AppCompatDelegate.setApplicationLocales(requested)
-        }
-        viewModel.refreshDemo()
-    }
     LaunchedEffect(notice) {
         if (notice != null) {
             delay(NOTICE_DURATION_MILLIS)
             viewModel.clearNotice()
         }
     }
+    LaunchedEffect(lockState) {
+        if (lockState == AppLockState.Locked || lockState == AppLockState.Authenticating) {
+            viewModel.resetPreview()
+        }
+    }
     LaunchedEffect(vaultState) {
-        if (vaultState !is VaultState.Unreadable) recoverySettingsVisible = false
+        if (vaultState !is VaultState.Unreadable && vaultState !is VaultState.Missing) {
+            recoverySettingsVisible = false
+        }
     }
 
     val darkTheme = when (settings.themeMode) {
@@ -137,68 +155,52 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
         Surface(Modifier.fillMaxSize()) {
             when (lockState) {
                 AppLockState.Initializing -> VaultLoadingScreen()
-                AppLockState.Locked,
-                AppLockState.Authenticating,
-                -> LockScreen(
+                AppLockState.Locked, AppLockState.Authenticating -> LockScreen(
                     state = lockState,
                     message = notice?.let { stringResource(it.resourceId) },
                     onUnlock = { activity?.let(viewModel::unlock) },
                 )
-                AppLockState.Disabled,
-                AppLockState.Unlocked,
-                -> when (val state = vaultState) {
+                AppLockState.Disabled, AppLockState.Unlocked -> when (val state = vaultState) {
                     VaultState.Loading -> VaultLoadingScreen()
-                    is VaultState.Unreadable -> {
-                        if (recoverySettingsVisible) {
-                            SettingsScreen(
-                                settings = settings,
-                                zoneId = viewModel.zoneId,
-                                restorePreview = restorePreview,
-                                message = notice?.let { stringResource(it.resourceId) },
-                                onBack = { recoverySettingsVisible = false },
-                                onThemeChanged = viewModel::setThemeMode,
-                                onLocaleChanged = viewModel::setLocaleTag,
-                                onAppLockChanged = { enabled ->
-                                    activity?.let { viewModel.setAppLockEnabled(it, enabled) }
-                                },
-                                onAppLockTimeoutChanged = viewModel::setAppLockTimeout,
-                                onLockNow = viewModel::lockNow,
-                                onConfigureBackup = viewModel::configureBackup,
-                                onBackupNow = viewModel::backupNow,
-                                onClearBackup = viewModel::clearBackup,
-                                onPrepareRestore = viewModel::prepareRestore,
-                                onCommitRestore = viewModel::commitRestore,
-                                onDiscardRestore = viewModel::discardRestore,
-                                onDeleteVault = viewModel::deleteVault,
-                            )
-                        } else {
-                            VaultUnreadableScreen(
-                                reason = state.reason,
-                                onRestore = { recoverySettingsVisible = true },
-                                onReset = { resetUnreadableDialog = true },
-                            )
-                        }
+                    VaultState.Missing -> if (recoverySettingsVisible) {
+                        RecoverySettings(
+                            settings = settings,
+                            viewModel = viewModel,
+                            restorePreview = restorePreview,
+                            notice = notice,
+                            activity = activity,
+                            onBack = { recoverySettingsVisible = false },
+                        )
+                    } else {
+                        MissingVaultScreen(
+                            onStart = { startDialog = true },
+                            onRestore = { recoverySettingsVisible = true },
+                        )
                     }
-                    is VaultState.Demo -> VaultNavigation(
-                        vault = state.vault,
-                        isDemo = true,
-                        settings = settings,
-                        preview = preview,
-                        restorePreview = restorePreview,
-                        notice = notice,
-                        viewModel = viewModel,
-                        onStartVault = { startVaultDialog = true },
-                        activity = activity,
-                    )
+                    is VaultState.Unreadable -> if (recoverySettingsVisible) {
+                        RecoverySettings(
+                            settings = settings,
+                            viewModel = viewModel,
+                            restorePreview = restorePreview,
+                            notice = notice,
+                            activity = activity,
+                            onBack = { recoverySettingsVisible = false },
+                        )
+                    } else {
+                        VaultUnreadableScreen(
+                            reason = state.reason,
+                            onRestore = { recoverySettingsVisible = true },
+                            onReset = { resetUnreadableDialog = true },
+                        )
+                    }
                     is VaultState.Ready -> VaultNavigation(
                         vault = state.vault,
-                        isDemo = false,
+                        selectedProfileId = state.selectedProfileId,
                         settings = settings,
                         preview = preview,
                         restorePreview = restorePreview,
                         notice = notice,
                         viewModel = viewModel,
-                        onStartVault = { startVaultDialog = true },
                         activity = activity,
                     )
                 }
@@ -206,12 +208,14 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
         }
     }
 
-    if (startVaultDialog) {
-        StartVaultDialog(
-            onDismiss = { startVaultDialog = false },
-            onCreate = { name ->
-                startVaultDialog = false
-                viewModel.createVault(name)
+    if (startDialog) {
+        ProfileNameDialog(
+            title = stringResource(R.string.start_new_title),
+            initialName = "",
+            onDismiss = { startDialog = false },
+            onSave = {
+                startDialog = false
+                viewModel.createVault(it)
             },
         )
     }
@@ -226,26 +230,67 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     }
 }
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+private fun RecoverySettings(
+    settings: AppSettings,
+    viewModel: AppViewModel,
+    restorePreview: net.mamby.health.backup.RestorePreview?,
+    notice: UiNotice?,
+    activity: FragmentActivity?,
+    onBack: () -> Unit,
+) {
+    SettingsScreen(
+        settings = settings,
+        zoneId = viewModel.zoneId,
+        restorePreview = restorePreview,
+        message = notice?.let { stringResource(it.resourceId) },
+        onBack = onBack,
+        onThemeChanged = viewModel::setThemeMode,
+        onLocaleChanged = viewModel::setLocaleTag,
+        onAppLockChanged = { enabled -> activity?.let { viewModel.setAppLockEnabled(it, enabled) } },
+        onAppLockTimeoutChanged = viewModel::setAppLockTimeout,
+        onLockNow = viewModel::lockNow,
+        onConfigureBackup = viewModel::configureBackup,
+        onBackupNow = viewModel::backupNow,
+        onClearBackup = viewModel::clearBackup,
+        onPrepareRestore = viewModel::prepareRestore,
+        onCommitRestore = viewModel::commitRestore,
+        onDiscardRestore = viewModel::discardRestore,
+        onDeleteVault = viewModel::deleteVault,
+    )
+}
+
+@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun VaultNavigation(
     vault: HealthVault,
-    isDemo: Boolean,
-    settings: net.mamby.health.settings.AppSettings,
-    preview: net.mamby.health.feature.vault.DocumentPreviewState,
+    selectedProfileId: UUID,
+    settings: AppSettings,
+    preview: DocumentPreviewState,
     restorePreview: net.mamby.health.backup.RestorePreview?,
     notice: UiNotice?,
     viewModel: AppViewModel,
-    onStartVault: () -> Unit,
     activity: FragmentActivity?,
 ) {
     val navigation = rememberAppNavigationState()
+    val record = vault.profileRecord(selectedProfileId)
+    val currentVault by rememberUpdatedState(vault)
+    val currentSelectedProfileId by rememberUpdatedState(selectedProfileId)
     val context = LocalContext.current
+    var profileSheetVisible by remember { mutableStateOf(false) }
+    var addProfileVisible by remember { mutableStateOf(false) }
+    var healthTab by remember(selectedProfileId) { mutableStateOf(0) }
+    var searchQuery by remember(selectedProfileId) { mutableStateOf("") }
+    var searchFilter by remember(selectedProfileId) { mutableStateOf(SearchFilter.ALL) }
+    var healthCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var documentCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var medicationCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var appointmentCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var previousProfileId by remember { mutableStateOf(selectedProfileId) }
+    var pendingDeepLink by remember { mutableStateOf<DeepLinkTarget?>(null) }
     var notificationsBlocked by remember { mutableStateOf(viewModel.notificationsBlocked()) }
     var pendingNotificationAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) {
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         pendingNotificationAction?.invoke()
         pendingNotificationAction = null
         notificationsBlocked = viewModel.notificationsBlocked()
@@ -253,44 +298,70 @@ private fun VaultNavigation(
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                notificationsBlocked = viewModel.notificationsBlocked()
-            }
+            if (event == Lifecycle.Event.ON_RESUME) notificationsBlocked = viewModel.notificationsBlocked()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    LaunchedEffect(selectedProfileId) {
+        if (previousProfileId != selectedProfileId) {
+            navigation.trimToRoots(keepDestination = true)
+            profileSheetVisible = false
+            healthCreation = 0
+            documentCreation = 0
+            medicationCreation = 0
+            appointmentCreation = 0
+            searchQuery = ""
+            searchFilter = SearchFilter.ALL
+            viewModel.resetPreview()
+            previousProfileId = selectedProfileId
+        }
+    }
+    LaunchedEffect(selectedProfileId, pendingDeepLink) {
+        val target = pendingDeepLink?.takeIf { it.profileId == selectedProfileId.toString() }
+            ?: return@LaunchedEffect
+        pendingDeepLink = null
+        when (target.kind) {
+            DeepLinkKind.Dashboard -> navigation.select(TopLevelDestination.Home)
+            DeepLinkKind.Medication -> navigation.navigate(
+                TopLevelDestination.Medications,
+                target.recordId?.let { MedicationDetailRoute(selectedProfileId.toString(), it) },
+            )
+            DeepLinkKind.Appointment -> navigation.navigate(
+                TopLevelDestination.Appointments,
+                target.recordId?.let { AppointmentDetailRoute(selectedProfileId.toString(), it) },
+            )
+            DeepLinkKind.Reminder -> navigation.navigate(TopLevelDestination.Home, RemindersRoute)
+        }
+    }
+
+    fun selectProfile(profileId: UUID) {
+        profileSheetVisible = false
+        navigation.trimToRoots(keepDestination = true)
+        viewModel.resetPreview()
+        viewModel.selectProfile(profileId)
+    }
 
     fun withNotificationPermission(enabled: Boolean, action: () -> Unit) {
-        val needsRequest = enabled &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        val needsRequest = enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         if (needsRequest) {
             pendingNotificationAction = action
             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            action()
-        }
+        } else action()
     }
 
     LaunchedEffect(Unit) {
         viewModel.deepLinkTargets().collect { target ->
-            when (target.kind) {
-                DeepLinkKind.Dashboard -> navigation.select(TopLevelDestination.Dashboard)
-                DeepLinkKind.Medication -> navigation.navigate(
-                    TopLevelDestination.Medications,
-                    target.recordId?.let(::MedicationDetailRoute),
-                )
-                DeepLinkKind.Appointment -> navigation.navigate(
-                    TopLevelDestination.Appointments,
-                    target.recordId?.let(::AppointmentDetailRoute),
-                )
-                DeepLinkKind.Reminder -> navigation.navigate(
-                    TopLevelDestination.Dashboard,
-                    RemindersRoute,
-                )
+            val ownerId = runCatching { UUID.fromString(target.profileId) }.getOrNull()
+            if (ownerId == null || currentVault.profiles.none { it.profile.id == ownerId }) {
+                navigation.resetTo()
+                viewModel.showUnavailable()
+                return@collect
             }
+            pendingDeepLink = target
+            if (ownerId != currentSelectedProfileId) viewModel.selectProfile(ownerId)
         }
     }
 
@@ -303,91 +374,110 @@ private fun VaultNavigation(
     val zoneId = viewModel.zoneId
     val today = now.atZone(zoneId).toLocalDate()
     val navigateSettings = dropUnlessResumed { navigation.navigate(SettingsRoute) }
-    val navigateReminders = dropUnlessResumed { navigation.navigate(RemindersRoute) }
+    val openProfileSelector = { profileSheetVisible = true }
     val message = notice?.let { stringResource(it.resourceId) }
 
     Box(Modifier.fillMaxSize()) {
-        NavigationSuiteScaffold(
-            navigationSuiteItems = {
-                TopLevelDestination.entries.forEach { destination ->
-                    item(
-                        selected = navigation.selectedDestination == destination,
-                        onClick = { navigation.select(destination) },
-                        icon = { Icon(destination.icon, contentDescription = null) },
-                        label = { Text(stringResource(destination.label)) },
-                    )
-                }
-            },
+        AppNavigationSuite(
+            selectedDestination = navigation.selectedDestination,
+            onDestinationSelected = navigation::select,
         ) {
             NavDisplay(
                 backStack = navigation.currentBackStack,
                 onBack = navigation::goBack,
                 sceneStrategies = listOf(listDetailStrategy),
                 entryProvider = entryProvider {
-                    entry<DashboardRoute> {
+                    entry<HomeRoute> {
                         DashboardScreen(
-                            vault = vault,
-                            isDemo = isDemo,
+                            record = record,
                             clock = viewModel.clock,
                             zoneId = zoneId,
-                            onStartVault = onStartVault,
+                            onProfileClick = openProfileSelector,
                             onSettings = navigateSettings,
-                            onReminders = navigateReminders,
+                            onReminders = { navigation.navigate(RemindersRoute) },
                             onDocumentSelected = { id ->
-                                navigation.navigate(TopLevelDestination.Vault, DocumentDetailRoute(id))
-                                viewModel.resetPreview()
+                                healthTab = 1
+                                navigation.navigate(
+                                    TopLevelDestination.HealthRecords,
+                                    DocumentDetailRoute(selectedProfileId.toString(), id),
+                                )
+                            },
+                            onAddHealthInfo = {
+                                healthTab = 0
+                                healthCreation++
+                                navigation.select(TopLevelDestination.HealthRecords)
+                            },
+                            onImportDocument = {
+                                healthTab = 1
+                                documentCreation++
+                                navigation.select(TopLevelDestination.HealthRecords)
+                            },
+                            onAddMedication = {
+                                medicationCreation++
+                                navigation.select(TopLevelDestination.Medications)
+                            },
+                            onAddAppointment = {
+                                appointmentCreation++
+                                navigation.select(TopLevelDestination.Appointments)
                             },
                         )
                     }
-                    entry<VaultRoute>(
-                        metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { DetailPlaceholder(R.string.no_documents_body) },
-                        ),
+                    entry<HealthRecordsRoute>(
+                        metadata = if (healthTab == 1) {
+                            ListDetailSceneStrategy.listPane(
+                                detailPlaceholder = { DetailPlaceholder(R.string.no_documents_body) },
+                            )
+                        } else emptyMap(),
                     ) {
-                        VaultScreen(
-                            documents = vault.documents,
-                            isDemo = isDemo,
-                            today = today,
-                            onStartVault = onStartVault,
-                            onSettings = navigateSettings,
-                            onImport = viewModel::importDocument,
-                            onDocumentSelected = { id ->
-                                navigation.navigate(DocumentDetailRoute(id))
-                                viewModel.resetPreview()
-                            },
-                        )
-                    }
-                    entry<DocumentDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val document = vault.documents.firstOrNull { it.id.toString() == route.id }
-                        if (document == null) {
-                            MissingRecordScreen(navigation::goBack)
+                        if (healthTab == 0) {
+                            SummaryScreen(
+                                profile = record.profile,
+                                vaccinations = record.vaccinations,
+                                today = today,
+                                onProfileClick = openProfileSelector,
+                                onSettings = navigateSettings,
+                                onUpdateProfile = { viewModel.updateProfile(selectedProfileId, it) },
+                                onUpsertVaccination = { viewModel.upsertVaccination(selectedProfileId, it) },
+                                onDeleteVaccination = { viewModel.deleteVaccination(selectedProfileId, it) },
+                                creationRequest = healthCreation,
+                                selectedTab = healthTab,
+                                onTabSelected = { healthTab = it },
+                            )
                         } else {
-                            DocumentDetailScreen(
-                                document = document,
-                                preview = preview,
-                                onBack = navigation::goBack,
-                                onLoadPreview = { page -> viewModel.loadPreview(document, page) },
-                                onEdit = { if (isDemo) onStartVault() else viewModel.updateDocument(it) },
-                                onDelete = {
-                                    if (isDemo) onStartVault() else {
-                                        viewModel.deleteDocument(document.id)
-                                        navigation.goBack()
-                                    }
+                            VaultScreen(
+                                documents = record.documents,
+                                profile = record.profile,
+                                today = today,
+                                onProfileClick = openProfileSelector,
+                                onSettings = navigateSettings,
+                                onImport = { viewModel.importDocument(selectedProfileId, it) },
+                                onDocumentSelected = { id ->
+                                    navigation.navigate(DocumentDetailRoute(selectedProfileId.toString(), id))
+                                    viewModel.resetPreview()
                                 },
+                                creationRequest = documentCreation,
+                                selectedTab = healthTab,
+                                onTabSelected = { healthTab = it },
                             )
                         }
                     }
-                    entry<SummaryRoute> {
-                        SummaryScreen(
-                            profile = vault.profile,
-                            vaccinations = vault.vaccinations,
-                            isDemo = isDemo,
-                            today = today,
-                            onStartVault = onStartVault,
+                    entry<SearchRoute>(
+                        metadata = ListDetailSceneStrategy.listPane(
+                            detailPlaceholder = { DetailPlaceholder(R.string.search_initial_body) },
+                        ),
+                    ) {
+                        SearchScreen(
+                            record = record,
+                            onProfileClick = openProfileSelector,
                             onSettings = navigateSettings,
-                            onUpdateProfile = { if (isDemo) onStartVault() else viewModel.updateProfile(it) },
-                            onUpsertVaccination = { if (isDemo) onStartVault() else viewModel.upsertVaccination(it) },
-                            onDeleteVaccination = { if (isDemo) onStartVault() else viewModel.deleteVaccination(it) },
+                            onResultSelected = { result ->
+                                navigation.navigate(result.toRoute(selectedProfileId))
+                                viewModel.resetPreview()
+                            },
+                            query = searchQuery,
+                            filter = searchFilter,
+                            onQueryChanged = { searchQuery = it },
+                            onFilterChanged = { searchFilter = it },
                         )
                     }
                     entry<MedicationsRoute>(
@@ -396,43 +486,21 @@ private fun VaultNavigation(
                         ),
                     ) {
                         MedicationsScreen(
-                            medications = vault.medications,
-                            isDemo = isDemo,
+                            medications = record.medications,
+                            profile = record.profile,
                             today = today,
-                            onStartVault = onStartVault,
+                            onProfileClick = openProfileSelector,
                             onSettings = navigateSettings,
                             onUpsert = { medication ->
-                                if (isDemo) onStartVault()
-                                else withNotificationPermission(medication.remindersEnabled) {
-                                    viewModel.upsertMedication(medication)
+                                withNotificationPermission(medication.remindersEnabled) {
+                                    viewModel.upsertMedication(selectedProfileId, medication)
                                 }
                             },
-                            onSelected = { navigation.navigate(MedicationDetailRoute(it)) },
+                            onSelected = {
+                                navigation.navigate(MedicationDetailRoute(selectedProfileId.toString(), it))
+                            },
+                            creationRequest = medicationCreation,
                         )
-                    }
-                    entry<MedicationDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val medication = vault.medications.firstOrNull { it.id.toString() == route.id }
-                        if (medication == null) {
-                            MissingRecordScreen(navigation::goBack)
-                        } else {
-                            MedicationDetailScreen(
-                                medication = medication,
-                                today = today,
-                                onBack = navigation::goBack,
-                                onUpsert = { updated ->
-                                    if (isDemo) onStartVault()
-                                    else withNotificationPermission(updated.remindersEnabled) {
-                                        viewModel.upsertMedication(updated)
-                                    }
-                                },
-                                onDelete = {
-                                    if (isDemo) onStartVault() else {
-                                        viewModel.deleteMedication(medication.id)
-                                        navigation.goBack()
-                                    }
-                                },
-                            )
-                        }
                     }
                     entry<AppointmentsRoute>(
                         metadata = ListDetailSceneStrategy.listPane(
@@ -440,70 +508,126 @@ private fun VaultNavigation(
                         ),
                     ) {
                         AppointmentsScreen(
-                            appointments = vault.appointments,
-                            documents = vault.documents,
-                            isDemo = isDemo,
+                            appointments = record.appointments,
+                            documents = record.documents,
+                            profile = record.profile,
                             zoneId = zoneId,
                             now = now,
-                            onStartVault = onStartVault,
+                            onProfileClick = openProfileSelector,
                             onSettings = navigateSettings,
                             onUpsert = { appointment ->
-                                if (isDemo) onStartVault()
-                                else withNotificationPermission(appointment.reminderLeadMinutes != null) {
-                                    viewModel.upsertAppointment(appointment)
+                                withNotificationPermission(appointment.reminderLeadMinutes != null) {
+                                    viewModel.upsertAppointment(selectedProfileId, appointment)
                                 }
                             },
-                            onSelected = { navigation.navigate(AppointmentDetailRoute(it)) },
+                            onSelected = {
+                                navigation.navigate(AppointmentDetailRoute(selectedProfileId.toString(), it))
+                            },
+                            creationRequest = appointmentCreation,
+                        )
+                    }
+                    entry<DocumentDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val document = if (route.profileId == selectedProfileId.toString()) {
+                            record.documents.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (document == null) MissingRecordScreen(navigation::goBack) else DocumentDetailScreen(
+                            document = document,
+                            profile = record.profile,
+                            preview = preview,
+                            onBack = navigation::goBack,
+                            onLoadPreview = { viewModel.loadPreview(selectedProfileId, document, it) },
+                            onEdit = { viewModel.updateDocument(selectedProfileId, it) },
+                            onDelete = {
+                                viewModel.deleteDocument(selectedProfileId, document.id)
+                                navigation.goBack()
+                            },
+                            onProfileClick = openProfileSelector,
+                        )
+                    }
+                    entry<MedicationDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val medication = if (route.profileId == selectedProfileId.toString()) {
+                            record.medications.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (medication == null) MissingRecordScreen(navigation::goBack) else MedicationDetailScreen(
+                            medication = medication,
+                            profile = record.profile,
+                            today = today,
+                            onBack = navigation::goBack,
+                            onUpsert = { updated ->
+                                withNotificationPermission(updated.remindersEnabled) {
+                                    viewModel.upsertMedication(selectedProfileId, updated)
+                                }
+                            },
+                            onDelete = {
+                                viewModel.deleteMedication(selectedProfileId, medication.id)
+                                navigation.goBack()
+                            },
+                            onProfileClick = openProfileSelector,
                         )
                     }
                     entry<AppointmentDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val appointment = vault.appointments.firstOrNull { it.id.toString() == route.id }
-                        if (appointment == null) {
+                        val appointment = if (route.profileId == selectedProfileId.toString()) {
+                            record.appointments.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (appointment == null) MissingRecordScreen(navigation::goBack) else AppointmentDetailScreen(
+                            appointment = appointment,
+                            profile = record.profile,
+                            documents = record.documents,
+                            zoneId = zoneId,
+                            today = today,
+                            onBack = navigation::goBack,
+                            onUpsert = { updated ->
+                                withNotificationPermission(updated.reminderLeadMinutes != null) {
+                                    viewModel.upsertAppointment(selectedProfileId, updated)
+                                }
+                            },
+                            onDelete = {
+                                viewModel.deleteAppointment(selectedProfileId, appointment.id)
+                                navigation.goBack()
+                            },
+                            onDocumentSelected = { id ->
+                                healthTab = 1
+                                navigation.navigate(
+                                    TopLevelDestination.HealthRecords,
+                                    DocumentDetailRoute(selectedProfileId.toString(), id),
+                                )
+                            },
+                            onProfileClick = openProfileSelector,
+                        )
+                    }
+                    entry<HealthInfoDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        if (route.profileId != selectedProfileId.toString()) {
                             MissingRecordScreen(navigation::goBack)
                         } else {
-                            AppointmentDetailScreen(
-                                appointment = appointment,
-                                documents = vault.documents,
-                                zoneId = zoneId,
-                                today = today,
+                            HealthInfoDetailScreen(
+                                record = record,
+                                route = route,
                                 onBack = navigation::goBack,
-                                onUpsert = { updated ->
-                                    if (isDemo) onStartVault()
-                                    else withNotificationPermission(updated.reminderLeadMinutes != null) {
-                                        viewModel.upsertAppointment(updated)
-                                    }
-                                },
-                                onDelete = {
-                                    if (isDemo) onStartVault() else {
-                                        viewModel.deleteAppointment(appointment.id)
-                                        navigation.goBack()
-                                    }
-                                },
-                                onDocumentSelected = { id ->
-                                    navigation.navigate(TopLevelDestination.Vault, DocumentDetailRoute(id))
-                                    viewModel.resetPreview()
+                                onProfileClick = openProfileSelector,
+                                onOpenRecords = {
+                                    healthTab = 0
+                                    navigation.resetTo(TopLevelDestination.HealthRecords)
                                 },
                             )
                         }
                     }
                     entry<RemindersRoute> {
                         RemindersScreen(
-                            reminders = vault.reminders,
-                            isDemo = isDemo,
+                            reminders = record.reminders,
+                            profile = record.profile,
                             today = today,
                             notificationsBlocked = notificationsBlocked,
                             now = now,
                             zoneId = zoneId,
                             onBack = navigation::goBack,
-                            onStartVault = onStartVault,
+                            onProfileClick = openProfileSelector,
                             onUpsert = { reminder ->
-                                if (isDemo) onStartVault()
-                                else withNotificationPermission(reminder.isEnabled) {
-                                    viewModel.upsertReminder(reminder)
+                                withNotificationPermission(reminder.isEnabled) {
+                                    viewModel.upsertReminder(selectedProfileId, reminder)
                                 }
                             },
-                            onDelete = { id -> if (isDemo) onStartVault() else viewModel.deleteReminder(id) },
-                            onOpenNotificationSettings = { context.openNotificationSettings() },
+                            onDelete = { viewModel.deleteReminder(selectedProfileId, it) },
+                            onOpenNotificationSettings = context::openNotificationSettings,
                         )
                     }
                     entry<SettingsRoute> {
@@ -524,13 +648,31 @@ private fun VaultNavigation(
                             onBackupNow = viewModel::backupNow,
                             onClearBackup = viewModel::clearBackup,
                             onPrepareRestore = viewModel::prepareRestore,
-                            onCommitRestore = { restore, crossFlavorConfirmed ->
-                                viewModel.commitRestore(restore, crossFlavorConfirmed)
+                            onCommitRestore = { restore, confirmed ->
+                                searchQuery = ""
+                                searchFilter = SearchFilter.ALL
+                                viewModel.commitRestore(restore, confirmed)
                                 navigation.resetTo()
                             },
                             onDiscardRestore = viewModel::discardRestore,
                             onDeleteVault = {
                                 viewModel.deleteVault()
+                                navigation.resetTo()
+                            },
+                            onManageProfiles = { navigation.navigate(ManageProfilesRoute) },
+                        )
+                    }
+                    entry<ManageProfilesRoute> {
+                        ProfileManagementScreen(
+                            profiles = vault.profiles,
+                            onBack = navigation::goBack,
+                            onAdd = {
+                                viewModel.addProfile(it)
+                                navigation.resetTo()
+                            },
+                            onRename = viewModel::updateProfile,
+                            onDelete = {
+                                viewModel.deleteProfile(it)
                                 navigation.resetTo()
                             },
                         )
@@ -545,6 +687,132 @@ private fun VaultNavigation(
                     .navigationBarsPadding()
                     .padding(UiTokens.ScreenPadding),
             ) { Text(message) }
+        }
+    }
+
+    if (profileSheetVisible) {
+        ModalBottomSheet(onDismissRequest = { profileSheetVisible = false }) {
+            Text(
+                stringResource(R.string.profiles_title),
+                modifier = Modifier.padding(UiTokens.ScreenPadding),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            vault.profiles.forEach { candidate ->
+                ListItem(
+                    headlineContent = { Text(candidate.profile.displayName) },
+                    trailingContent = {
+                        if (candidate.profile.id == selectedProfileId) {
+                            Icon(Icons.Outlined.Check, stringResource(R.string.profile_selected))
+                        }
+                    },
+                    modifier = Modifier.clickable { selectProfile(candidate.profile.id) },
+                )
+            }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.add_profile)) },
+                leadingContent = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    profileSheetVisible = false
+                    addProfileVisible = true
+                },
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.manage_profiles)) },
+                leadingContent = { Icon(Icons.Outlined.ManageAccounts, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    profileSheetVisible = false
+                    navigation.navigate(ManageProfilesRoute)
+                },
+            )
+        }
+    }
+    if (addProfileVisible) {
+        ProfileNameDialog(
+            title = stringResource(R.string.add_profile),
+            initialName = "",
+            onDismiss = { addProfileVisible = false },
+            onSave = {
+                addProfileVisible = false
+                viewModel.addProfile(it)
+                navigation.resetTo()
+            },
+        )
+    }
+}
+
+private fun HealthSearchResult.toRoute(profileId: UUID) = when (val selected = target) {
+    is HealthSearchTarget.Document -> DocumentDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.Medication -> MedicationDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.Appointment -> AppointmentDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.EmergencyContact -> HealthInfoDetailRoute(
+        profileId.toString(),
+        "contact",
+        selected.id.toString(),
+    )
+    is HealthSearchTarget.Vaccination -> HealthInfoDetailRoute(
+        profileId.toString(),
+        "vaccination",
+        selected.id.toString(),
+    )
+    is HealthSearchTarget.HealthInfo -> HealthInfoDetailRoute(
+        profileId.toString(),
+        "health",
+    )
+}
+
+@Composable
+private fun HealthInfoDetailScreen(
+    record: ProfileRecord,
+    route: HealthInfoDetailRoute,
+    onBack: () -> Unit,
+    onProfileClick: () -> Unit,
+    onOpenRecords: () -> Unit,
+) {
+    val content = when (route.targetKind) {
+        "contact" -> record.profile.emergencyContacts
+            .firstOrNull { it.id.toString() == route.id }
+            ?.let { it.name to listOf(it.relationship, it.phoneNumber, it.notes.orEmpty()).filter(String::isNotBlank) }
+        "vaccination" -> record.vaccinations
+            .firstOrNull { it.id.toString() == route.id }
+            ?.let { it.name to listOf(it.dateAdministered.toString(), it.provider.orEmpty()).filter(String::isNotBlank) }
+        else -> stringResource(R.string.health_info_tab) to listOf(
+            record.profile.bloodType.orEmpty(),
+            record.profile.allergies.joinToString(),
+            record.profile.chronicConditions.joinToString(),
+            record.profile.surgeries.joinToString(),
+        ).filter(String::isNotBlank)
+    }
+    if (content == null) {
+        MissingRecordScreen(onBack)
+        return
+    }
+    AppScreenScaffold(
+        title = content.first,
+        onBack = onBack,
+        profile = record.profile,
+        onProfileClick = onProfileClick,
+    ) { padding ->
+        Column(
+            modifier = Modifier.padding(padding).padding(UiTokens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+        ) {
+            SectionCard(content.first) { content.second.forEach { Text(it) } }
+            Button(onClick = onOpenRecords) { Text(stringResource(R.string.open_in_health_records)) }
+        }
+    }
+}
+
+@Composable
+internal fun MissingVaultScreen(onStart: () -> Unit, onRestore: () -> Unit) {
+    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+        ) {
+            Text(stringResource(R.string.no_vault_title), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.no_vault_body))
+            Button(onClick = onStart) { Text(stringResource(R.string.start_new)) }
+            TextButton(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
         }
     }
 }
@@ -563,29 +831,8 @@ private fun MissingRecordScreen(onBack: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            Text(stringResource(R.string.error_generic))
+            Text(stringResource(R.string.record_unavailable))
             Button(onClick = onBack) { Text(stringResource(R.string.action_back)) }
-        }
-    }
-}
-
-@Composable
-private fun StartVaultDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
-    var displayName by remember { mutableStateOf("") }
-    FormDialog(
-        title = stringResource(R.string.start_vault_title),
-        saveEnabled = displayName.isNotBlank(),
-        onDismiss = onDismiss,
-        onSave = { onCreate(displayName.trim()) },
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
-            Text(stringResource(R.string.start_vault_message))
-            OutlinedTextField(
-                value = displayName,
-                onValueChange = { displayName = it },
-                label = { Text(stringResource(R.string.display_name)) },
-                singleLine = true,
-            )
         }
     }
 }
@@ -613,9 +860,7 @@ private fun ResetUnreadableDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) 
                 Text(stringResource(R.string.vault_reset_action))
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
 

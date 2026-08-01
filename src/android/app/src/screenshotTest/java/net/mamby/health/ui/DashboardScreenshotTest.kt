@@ -17,9 +17,12 @@ import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.MedicationSchedule
+import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Reminder
 import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.feature.dashboard.DashboardScreen
+import net.mamby.health.navigation.TopLevelDestination
+import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.theme.HealthVaultTheme
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
@@ -68,78 +71,108 @@ fun dashboardArabicRtl() {
     DashboardPreviewContent()
 }
 
+@PreviewTest
+@Preview(name = "No vault compact", widthDp = 400, heightDp = 800)
+@Preview(
+    name = "No vault dark",
+    widthDp = 400,
+    heightDp = 800,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Preview(name = "No vault expanded", widthDp = 900, heightDp = 700)
+@Preview(name = "No vault large text", widthDp = 400, heightDp = 1_000, fontScale = 1.5f)
+@Preview(name = "No vault Arabic RTL", widthDp = 400, heightDp = 800, locale = "ar")
+@Composable
+fun missingVaultMatrix() {
+    HealthVaultTheme {
+        MissingVaultScreen(onStart = {}, onRestore = {})
+    }
+}
+
 @Composable
 private fun DashboardPreviewContent(darkTheme: Boolean = false) {
     HealthVaultTheme(darkTheme = darkTheme) {
-        DashboardScreen(
-            vault = screenshotVault(),
-            isDemo = true,
-            clock = FIXED_CLOCK,
-            zoneId = ZoneOffset.UTC,
-            onStartVault = {},
-            onSettings = {},
-            onReminders = {},
-            onDocumentSelected = {},
-        )
+        AppNavigationSuite(
+            selectedDestination = TopLevelDestination.Home,
+            onDestinationSelected = {},
+        ) {
+            DashboardScreen(
+                record = screenshotVault().profiles.single(),
+                clock = FIXED_CLOCK,
+                zoneId = ZoneOffset.UTC,
+                onProfileClick = {},
+                onSettings = {},
+                onReminders = {},
+                onDocumentSelected = {},
+                onAddHealthInfo = {},
+                onImportDocument = {},
+                onAddMedication = {},
+                onAddAppointment = {},
+            )
+        }
     }
 }
 
 private fun screenshotVault(): HealthVault = HealthVault(
     revision = 3,
-    profile = HealthProfile(
-        id = id("11111111-1111-4111-8111-111111111111"),
-        displayName = "Alex",
-        bloodType = "O+",
-        allergies = listOf("Penicillin"),
-        chronicConditions = listOf("Asthma"),
-        lastUpdatedAt = FIXED_INSTANT,
-    ),
-    documents = listOf(
-        MedicalDocument(
-            id = id("22222222-2222-4222-8222-222222222222"),
-            title = "Blood test results",
-            category = DocumentCategory.LAB_RESULTS,
-            documentDate = LocalDate.of(2026, 7, 28),
-            source = "Community clinic",
-            blobId = id("33333333-3333-4333-8333-333333333333"),
-            mimeType = "application/pdf",
-            sizeBytes = 4_096,
-            updatedAt = FIXED_INSTANT,
-        ),
-    ),
-    medications = listOf(
-        Medication(
-            id = id("44444444-4444-4444-8444-444444444444"),
-            name = "Daily medication",
-            dose = "10 mg",
-            instructions = "Take with water",
-            schedule = MedicationSchedule(
-                recurrence = ReminderRecurrence.DAILY,
-                reminderTimes = listOf(LocalTime.of(8, 0)),
-                startsOn = LocalDate.of(2026, 7, 1),
+    profiles = listOf(
+        ProfileRecord(
+            profile = HealthProfile(
+                id = id("11111111-1111-4111-8111-111111111111"),
+                displayName = "Alex",
+                bloodType = "O+",
+                allergies = listOf("Penicillin"),
+                chronicConditions = listOf("Asthma"),
+                lastUpdatedAt = FIXED_INSTANT,
             ),
-            remindersEnabled = true,
-            updatedAt = FIXED_INSTANT,
-        ),
-    ),
-    appointments = listOf(
-        Appointment(
-            id = id("55555555-5555-4555-8555-555555555555"),
-            title = "Follow-up appointment",
-            clinician = "Dr. Martin",
-            location = "Community clinic",
-            startsAt = Instant.parse("2026-08-02T09:30:00Z"),
-            reminderLeadMinutes = 1_440,
-            updatedAt = FIXED_INSTANT,
-        ),
-    ),
-    reminders = listOf(
-        Reminder(
-            id = id("66666666-6666-4666-8666-666666666666"),
-            title = "Renew prescription",
-            startsOn = LocalDate.of(2026, 8, 1),
-            timeOfDay = LocalTime.of(10, 0),
-            updatedAt = FIXED_INSTANT,
+            documents = listOf(
+                MedicalDocument(
+                    id = id("22222222-2222-4222-8222-222222222222"),
+                    title = "Blood test results",
+                    category = DocumentCategory.LAB_RESULTS,
+                    documentDate = LocalDate.of(2026, 7, 28),
+                    source = "Community clinic",
+                    blobId = id("33333333-3333-4333-8333-333333333333"),
+                    mimeType = "application/pdf",
+                    sizeBytes = 4_096,
+                    updatedAt = FIXED_INSTANT,
+                ),
+            ),
+            medications = listOf(
+                Medication(
+                    id = id("44444444-4444-4444-8444-444444444444"),
+                    name = "Daily medication",
+                    dose = "10 mg",
+                    instructions = "Take with water",
+                    schedule = MedicationSchedule(
+                        recurrence = ReminderRecurrence.DAILY,
+                        reminderTimes = listOf(LocalTime.of(8, 0)),
+                        startsOn = LocalDate.of(2026, 7, 1),
+                    ),
+                    remindersEnabled = true,
+                    updatedAt = FIXED_INSTANT,
+                ),
+            ),
+            appointments = listOf(
+                Appointment(
+                    id = id("55555555-5555-4555-8555-555555555555"),
+                    title = "Follow-up appointment",
+                    clinician = "Dr. Martin",
+                    location = "Community clinic",
+                    startsAt = Instant.parse("2026-08-02T09:30:00Z"),
+                    reminderLeadMinutes = 1_440,
+                    updatedAt = FIXED_INSTANT,
+                ),
+            ),
+            reminders = listOf(
+                Reminder(
+                    id = id("66666666-6666-4666-8666-666666666666"),
+                    title = "Renew prescription",
+                    startsOn = LocalDate.of(2026, 8, 1),
+                    timeOfDay = LocalTime.of(10, 0),
+                    updatedAt = FIXED_INSTANT,
+                ),
+            ),
         ),
     ),
     updatedAt = FIXED_INSTANT,

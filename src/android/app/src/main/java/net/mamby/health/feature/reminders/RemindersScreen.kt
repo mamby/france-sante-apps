@@ -39,13 +39,13 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.RecurrenceCalculator
 import net.mamby.health.core.model.Reminder
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.SampleWorkspaceBanner
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -57,13 +57,13 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun RemindersScreen(
     reminders: List<Reminder>,
-    isDemo: Boolean,
+    profile: HealthProfile,
     today: LocalDate,
     notificationsBlocked: Boolean,
     now: Instant,
     zoneId: ZoneId,
     onBack: () -> Unit,
-    onStartVault: () -> Unit,
+    onProfileClick: () -> Unit,
     onUpsert: (Reminder) -> Unit,
     onDelete: (UUID) -> Unit,
     onOpenNotificationSettings: () -> Unit,
@@ -73,8 +73,10 @@ fun RemindersScreen(
     AppScreenScaffold(
         title = stringResource(R.string.reminders_title),
         onBack = onBack,
+        profile = profile,
+        onProfileClick = onProfileClick,
         floatingActionButton = {
-            FloatingActionButton(onClick = { if (isDemo) onStartVault() else adding = true }) {
+            FloatingActionButton(onClick = { adding = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_reminder))
             }
         },
@@ -86,7 +88,6 @@ fun RemindersScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (isDemo) item(span = { GridItemSpan(maxLineSpan) }) { SampleWorkspaceBanner(onStartVault) }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.reminders_intro)) }
             if (notificationsBlocked) {
                 item(span = { GridItemSpan(maxLineSpan) }) {

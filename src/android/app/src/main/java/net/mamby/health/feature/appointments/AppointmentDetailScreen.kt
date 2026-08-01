@@ -20,6 +20,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import net.mamby.health.R
 import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
@@ -31,6 +32,7 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun AppointmentDetailScreen(
     appointment: Appointment,
+    profile: HealthProfile,
     documents: List<MedicalDocument>,
     zoneId: ZoneId,
     today: LocalDate,
@@ -38,11 +40,17 @@ fun AppointmentDetailScreen(
     onUpsert: (Appointment) -> Unit,
     onDelete: () -> Unit,
     onDocumentSelected: (String) -> Unit,
+    onProfileClick: () -> Unit,
 ) {
-    var editorVisible by remember { mutableStateOf(false) }
-    var deleteVisible by remember { mutableStateOf(false) }
+    var editorVisible by remember(profile.id) { mutableStateOf(false) }
+    var deleteVisible by remember(profile.id) { mutableStateOf(false) }
     val related = documents.filter { it.id in appointment.relatedDocumentIds }
-    AppScreenScaffold(appointment.title, onBack = onBack) { innerPadding ->
+    AppScreenScaffold(
+        appointment.title,
+        onBack = onBack,
+        profile = profile,
+        onProfileClick = onProfileClick,
+    ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),

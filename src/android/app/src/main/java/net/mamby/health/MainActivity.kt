@@ -6,7 +6,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import net.mamby.health.navigation.DeepLinkCoordinator
@@ -14,7 +14,7 @@ import net.mamby.health.security.AppLockWindowProtector
 import net.mamby.health.ui.HealthVaultApp
 
 @AndroidEntryPoint
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var deepLinkCoordinator: DeepLinkCoordinator
 

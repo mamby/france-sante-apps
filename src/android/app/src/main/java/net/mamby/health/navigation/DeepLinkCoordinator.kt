@@ -16,6 +16,7 @@ enum class DeepLinkKind {
 
 data class DeepLinkTarget(
     val kind: DeepLinkKind,
+    val profileId: String,
     val recordId: String? = null,
 )
 
@@ -29,13 +30,16 @@ class DeepLinkCoordinator @Inject constructor() {
         val kind = intent?.getStringExtra(EXTRA_KIND)
             ?.let { raw -> DeepLinkKind.entries.firstOrNull { it.name == raw } }
             ?: return
-        targetChannel.trySend(DeepLinkTarget(kind, intent.getStringExtra(EXTRA_RECORD_ID)))
+        val profileId = intent.getStringExtra(EXTRA_PROFILE_ID) ?: return
+        targetChannel.trySend(DeepLinkTarget(kind, profileId, intent.getStringExtra(EXTRA_RECORD_ID)))
         intent.removeExtra(EXTRA_KIND)
+        intent.removeExtra(EXTRA_PROFILE_ID)
         intent.removeExtra(EXTRA_RECORD_ID)
     }
 
     companion object {
         const val EXTRA_KIND = "net.mamby.health.extra.DEEP_LINK_KIND"
+        const val EXTRA_PROFILE_ID = "net.mamby.health.extra.PROFILE_ID"
         const val EXTRA_RECORD_ID = "net.mamby.health.extra.RECORD_ID"
     }
 }

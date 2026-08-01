@@ -30,6 +30,7 @@ import net.mamby.health.data.MedicalDocumentDraft
 import net.mamby.health.data.RestoreDocumentBlob
 import net.mamby.health.data.VaultRepository
 import net.mamby.health.data.VaultState
+import net.mamby.health.testing.StubVaultRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -45,7 +46,7 @@ class SecureDocumentPreviewerInstrumentedTest {
         val document = document("image/png", plaintext.size.toLong())
         val previewer = SecureDocumentPreviewer(ApplicationProvider.getApplicationContext(), repository)
 
-        val rendered = previewer.render(document, requestedPage = 0)
+        val rendered = previewer.render(PROFILE_ID, document, requestedPage = 0)
 
         assertEquals(24, rendered.image.width)
         assertEquals(12, rendered.image.height)
@@ -62,7 +63,11 @@ class SecureDocumentPreviewerInstrumentedTest {
             PreviewVaultRepository(plaintext),
         )
 
-        val rendered = previewer.render(document("application/pdf", plaintext.size.toLong()), requestedPage = 0)
+        val rendered = previewer.render(
+            PROFILE_ID,
+            document("application/pdf", plaintext.size.toLong()),
+            requestedPage = 0,
+        )
 
         assertEquals(120, rendered.image.width)
         assertEquals(80, rendered.image.height)
@@ -79,7 +84,7 @@ class SecureDocumentPreviewerInstrumentedTest {
         )
 
         assertThrows(IOException::class.java) {
-            runBlocking { previewer.render(document("image/png", 0), requestedPage = 0) }
+            runBlocking { previewer.render(PROFILE_ID, document("image/png", 0), requestedPage = 0) }
         }
     }
 
@@ -124,43 +129,13 @@ class SecureDocumentPreviewerInstrumentedTest {
         }
     }
 
-    private class PreviewVaultRepository(private val plaintext: ByteArray?) : VaultRepository {
-        override val state: StateFlow<VaultState> = MutableStateFlow(VaultState.Loading)
-
-        override suspend fun readDocumentBlob(blobId: UUID): ByteArray? =
-            plaintext?.takeIf { blobId == BLOB_ID }
-
-        override fun searchDocuments(query: String, category: DocumentCategory): Flow<List<MedicalDocument>> =
-            emptyFlow()
-
-        override suspend fun initialize(): Unit = unused()
-        override suspend fun createEmpty(displayName: String): Unit = unused()
-        override suspend fun updateProfile(profile: HealthProfile): Unit = unused()
-        override suspend fun upsertEmergencyContact(contact: EmergencyContact): Unit = unused()
-        override suspend fun deleteEmergencyContact(contactId: UUID): Unit = unused()
-        override suspend fun importDocument(
-            draft: MedicalDocumentDraft,
-            imported: ImportedDocumentData,
-        ): MedicalDocument = unused()
-        override suspend fun updateDocument(document: MedicalDocument): Unit = unused()
-        override suspend fun deleteDocument(documentId: UUID): Unit = unused()
-        override suspend fun upsertMedication(medication: Medication): Unit = unused()
-        override suspend fun deleteMedication(medicationId: UUID): Unit = unused()
-        override suspend fun upsertAppointment(appointment: Appointment): Unit = unused()
-        override suspend fun deleteAppointment(appointmentId: UUID): Unit = unused()
-        override suspend fun upsertVaccination(vaccination: Vaccination): Unit = unused()
-        override suspend fun deleteVaccination(vaccinationId: UUID): Unit = unused()
-        override suspend fun upsertReminder(reminder: Reminder): Unit = unused()
-        override suspend fun deleteReminder(reminderId: UUID): Unit = unused()
-        override suspend fun exportSnapshot(): HealthVault = unused()
-        override suspend fun copyDocumentBlob(blobId: UUID, output: OutputStream): Long = unused()
-        override suspend fun restore(vault: HealthVault, documentBlobs: List<RestoreDocumentBlob>): Unit = unused()
-        override suspend fun deleteVault(): Unit = unused()
-
-        private fun <T> unused(): T = error("Not used by preview tests")
+    private class PreviewVaultRepository(private val plaintext: ByteArray?) : StubVaultRepository() {
+        override suspend fun readDocumentBlob(profileId: UUID, blobId: UUID): ByteArray? =
+            plaintext?.takeIf { profileId == PROFILE_ID && blobId == BLOB_ID }
     }
 
     private companion object {
         val BLOB_ID: UUID = UUID.fromString("8ff3e7d6-92ed-4164-8b63-4fbddae1d4f8")
+        val PROFILE_ID: UUID = UUID.fromString("2f59f953-d6a2-4577-af28-3576c994094f")
     }
 }

@@ -3,6 +3,7 @@ package net.mamby.health.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -29,7 +30,7 @@ class AppNavigationState internal constructor(
     }
 
     fun navigate(destination: TopLevelDestination, route: AppRoute? = null) {
-        select(destination)
+        selectedDestination = destination
         route?.let { backStacks.getValue(destination).add(it) }
     }
 
@@ -37,29 +38,41 @@ class AppNavigationState internal constructor(
         currentBackStack.removeLastOrNull()
     }
 
-    fun resetTo(destination: TopLevelDestination = TopLevelDestination.Dashboard) {
+    fun trimToRoots(keepDestination: Boolean = true) {
         backStacks.values.forEach { backStack ->
             while (backStack.size > 1) backStack.removeLastOrNull()
         }
+        if (!keepDestination) selectedDestination = TopLevelDestination.Home
+    }
+
+    fun resetTo(destination: TopLevelDestination = TopLevelDestination.Home) {
+        trimToRoots()
         selectedDestination = destination
     }
 }
 
 @Composable
 fun rememberAppNavigationState(): AppNavigationState {
-    val selected = rememberSaveable { androidx.compose.runtime.mutableStateOf(TopLevelDestination.Dashboard) }
-    val dashboard = rememberNavBackStack(DashboardRoute)
-    val vault = rememberNavBackStack(VaultRoute)
-    val summary = rememberNavBackStack(SummaryRoute)
-    val medications = rememberNavBackStack(MedicationsRoute)
-    val appointments = rememberNavBackStack(AppointmentsRoute)
-    return remember(dashboard, vault, summary, medications, appointments) {
+    val selected = rememberSaveable("navigation_state_v2") {
+        androidx.compose.runtime.mutableStateOf(TopLevelDestination.Home)
+    }
+    val backStacks = key("navigation_state_v2") {
+        listOf(
+            rememberNavBackStack(HomeRoute),
+            rememberNavBackStack(HealthRecordsRoute),
+            rememberNavBackStack(SearchRoute),
+            rememberNavBackStack(MedicationsRoute),
+            rememberNavBackStack(AppointmentsRoute),
+        )
+    }
+    val (home, records, search, medications, appointments) = backStacks
+    return remember(home, records, search, medications, appointments) {
         AppNavigationState(
             selected,
             mapOf(
-                TopLevelDestination.Dashboard to dashboard,
-                TopLevelDestination.Vault to vault,
-                TopLevelDestination.Summary to summary,
+                TopLevelDestination.Home to home,
+                TopLevelDestination.HealthRecords to records,
+                TopLevelDestination.Search to search,
                 TopLevelDestination.Medications to medications,
                 TopLevelDestination.Appointments to appointments,
             ),

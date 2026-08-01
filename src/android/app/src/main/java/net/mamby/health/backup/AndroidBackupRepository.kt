@@ -35,11 +35,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import net.mamby.health.core.model.HealthVault
+import net.mamby.health.core.model.UnsupportedVaultVersionException
+import net.mamby.health.core.model.allDocuments
+import net.mamby.health.core.model.requireValid
 import net.mamby.health.data.RestoreDocumentBlob
+import net.mamby.health.data.VaultCodec
 import net.mamby.health.data.VaultRepository
 import net.mamby.health.di.ApplicationScope
 import net.mamby.health.di.EnvironmentName
@@ -60,7 +61,6 @@ class AndroidBackupRepository @Inject constructor(
     private val cryptography: PortableBackupCryptography,
     private val localKeyProtector: LocalBackupKeyProtector,
     private val workManager: WorkManager,
-    private val json: Json,
     private val clock: Clock,
     @EnvironmentName private val environmentName: String,
     @ApplicationScope applicationScope: CoroutineScope,
@@ -254,6 +254,7 @@ class AndroidBackupRepository @Inject constructor(
                 currentEnvironment = environmentName,
                 revision = manifest.revision,
                 updatedAt = Instant.parse(manifest.updatedAt),
+                profileCount = vault.profiles.size,
                 documentCount = manifest.documents.size,
             )
             restoreMutex.withLock {
@@ -372,14 +373,17 @@ class AndroidBackupRepository @Inject constructor(
         backupKey: ByteArray,
     ) {
         val vault = vaultRepository.exportSnapshot()
-        val documents = vault.documents.mapIndexed { index, document ->
+        val ownedDocuments = vault.profiles.flatMap { record ->
+            record.documents.map { document -> record.profile.id to document }
+        }
+        val documents = ownedDocuments.mapIndexed { index, (_, document) ->
             BackupDocumentEntry(
                 index = index,
                 blobId = document.blobId.toString(),
                 sizeBytes = document.sizeBytes,
             )
         }
-        val vaultJsonBytes = json.encodeToString(vault).encodeToByteArray()
+        val vaultJsonBytes = VaultCodec.encode(vault)
         val vaultJsonBase64 = try {
             PortableBackupCryptography.encodeBase64(vaultJsonBytes)
         } finally {
@@ -406,7 +410,11 @@ class AndroidBackupRepository @Inject constructor(
                 manifest = manifest,
                 backupKey = backupKey,
             ) { document, output ->
-                vaultRepository.copyDocumentBlob(UUID.fromString(document.blobId), output)
+                val (profileId, ownedDocument) = ownedDocuments[document.index]
+                check(ownedDocument.blobId.toString() == document.blobId) {
+                    "Backup document order changed while writing."
+                }
+                vaultRepository.copyDocumentBlob(profileId, ownedDocument.blobId, output)
             }
             publishStagedBackup(staging, configuration.destinationUri.toUri())
         } finally {
@@ -433,23 +441,23 @@ class AndroidBackupRepository @Inject constructor(
             throw UnsupportedBackupException("Unsupported backup manifest version")
         }
         val vaultBytes = PortableBackupCryptography.decodeBase64(manifest.vaultJsonBase64)
-        val vault = try {
-            json.decodeFromString<HealthVault>(vaultBytes.decodeToString())
+        val decoded = try {
+            VaultCodec.decode(vaultBytes)
+        } catch (error: UnsupportedVaultVersionException) {
+            throw UnsupportedBackupException("Unsupported vault schema version")
         } catch (error: Exception) {
             throw BackupCorruptionException("Backup vault snapshot is invalid", error)
         } finally {
             vaultBytes.fill(0)
         }
-        if (vault.version != manifest.vaultSchemaVersion) {
+        if (decoded.sourceVersion != manifest.vaultSchemaVersion) {
             throw BackupCorruptionException("Backup vault schema metadata does not match")
         }
-        if (vault.version != HealthVault.CURRENT_VERSION) {
-            throw UnsupportedBackupException("Unsupported vault schema version")
-        }
+        val vault = decoded.vault.requireValid()
         if (vault.revision != manifest.revision || vault.updatedAt.toString() != manifest.updatedAt) {
             throw BackupCorruptionException("Backup vault revision metadata does not match")
         }
-        val expectedDocuments = vault.documents.map { it.blobId.toString() to it.sizeBytes }
+        val expectedDocuments = vault.allDocuments().map { it.blobId.toString() to it.sizeBytes }
         val actualDocuments = manifest.documents.map { it.blobId to it.sizeBytes }
         if (expectedDocuments != actualDocuments) {
             throw BackupCorruptionException("Backup document manifest does not match the vault")
