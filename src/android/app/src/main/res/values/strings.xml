@@ -83,7 +83,7 @@
     <string name="start_new">Create a profile</string>
     <string name="start_new_title">Profile name</string>
     <string name="no_vault_title">Welcome</string>
-    <string name="no_vault_body">Create a profile to start saving your health information. If you have used this app before, you can restore a backup instead.</string>
+    <string name="no_vault_body">Create a profile to start saving your health information. Or restore your information from a backup.</string>
     <string name="notification_generic_title">Health reminder</string>
     <string name="notification_generic_body">Open Personal Health Vault to view the reminder.</string>
     <string name="settings_title">Settings</string>

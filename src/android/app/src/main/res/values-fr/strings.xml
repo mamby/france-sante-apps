@@ -83,7 +83,7 @@
     <string name="start_new">Créer un profil</string>
     <string name="start_new_title">Nom du profil</string>
     <string name="no_vault_title">Bienvenue</string>
-    <string name="no_vault_body">Créez un profil pour commencer à enregistrer vos informations de santé. Si vous avez déjà utilisé cette application, vous pouvez plutôt restaurer une sauvegarde.</string>
+    <string name="no_vault_body">Créez un profil pour commencer à enregistrer vos informations de santé. Ou restaurez vos informations à partir d’une sauvegarde.</string>
     <string name="notification_generic_title">Rappel de santé</string>
     <string name="notification_generic_body">Ouvrez Personal Health Vault pour consulter le rappel.</string>
     <string name="settings_title">Paramètres</string>
