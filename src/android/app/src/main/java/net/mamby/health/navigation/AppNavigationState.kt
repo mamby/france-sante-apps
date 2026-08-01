@@ -21,6 +21,9 @@ class AppNavigationState internal constructor(
     val currentBackStack: NavBackStack<NavKey>
         get() = backStacks.getValue(selectedDestination)
 
+    val isAtSecondaryRoot: Boolean
+        get() = selectedDestination != TopLevelDestination.Home && currentBackStack.size == 1
+
     fun select(destination: TopLevelDestination) {
         selectedDestination = destination
     }
@@ -35,7 +38,11 @@ class AppNavigationState internal constructor(
     }
 
     fun goBack() {
-        currentBackStack.removeLastOrNull()
+        if (currentBackStack.size > 1) {
+            currentBackStack.removeLastOrNull()
+        } else if (selectedDestination != TopLevelDestination.Home) {
+            selectedDestination = TopLevelDestination.Home
+        }
     }
 
     fun trimToRoots(keepDestination: Boolean = true) {

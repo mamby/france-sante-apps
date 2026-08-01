@@ -39,6 +39,7 @@ import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppNavigationState
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.HealthRecordsRoute
+import net.mamby.health.navigation.HomeRoute
 import net.mamby.health.navigation.MedicationDetailRoute
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
@@ -172,6 +173,10 @@ class ComposeScreensInstrumentedTest {
             assertEquals(DocumentDetailRoute(profileId, "document-id"), navigation.currentBackStack.last())
             navigation.goBack()
             assertEquals(HealthRecordsRoute, navigation.currentBackStack.last())
+            assertTrue(navigation.isAtSecondaryRoot)
+            navigation.goBack()
+            assertEquals(TopLevelDestination.Home, navigation.selectedDestination)
+            assertEquals(HomeRoute, navigation.currentBackStack.last())
         }
     }
 
@@ -210,6 +215,7 @@ class ComposeScreensInstrumentedTest {
         val arabicContext = base.createConfigurationContext(arabic)
 
         assertEquals("Accueil", frenchContext.getString(R.string.nav_home))
+        assertEquals("Paramètres", frenchContext.getString(R.string.settings_title))
         assertEquals("الرئيسية", arabicContext.getString(R.string.nav_home))
         assertEquals(LayoutDirection.Rtl.ordinal, arabicContext.resources.configuration.layoutDirection)
     }

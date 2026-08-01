@@ -313,7 +313,7 @@
     <string name="unlock_reason_open">أكّد هويتك لفتح بياناتك الصحية المحلية.</string>
     <string name="unlock_failed">فشلت مصادقة الجهاز.</string>
     <string name="unlock_canceled">أُلغيت مصادقة الجهاز.</string>
-    <string name="unlock_not_enrolled">أعد أولًا قياسًا حيويًا قويًا أو بيانات اعتماد للجهاز.</string>
+    <string name="unlock_not_enrolled">أعِدّ أولًا بيانات قياس حيوي قوية أو بيانات اعتماد للجهاز.</string>
     <string name="unlock_unavailable">مصادقة الجهاز غير متوفرة.</string>
     <string name="unlock_locked_out">مصادقة الجهاز مقفلة مؤقتًا. استخدم بيانات اعتماد جهازك أو حاول لاحقًا.</string>
     <string name="unlock_disabled_by_policy">مصادقة الجهاز معطلة بموجب السياسة.</string>
@@ -389,7 +389,7 @@
     <string name="recovery_title">الاسترداد</string>
     <string name="recovery_body">احفظ العبارة السرية في مدير كلمات مرور موثوق. لا يستطيع التطبيق استردادها.</string>
     <string name="data_title">البيانات المحلية</string>
-    <string name="build_channel">قناة البناء: %1$s</string>
+    <string name="build_channel">قناة التوزيع: %1$s</string>
     <string name="privacy_body">لا خادم ولا حساب ولا إعلانات ولا تتبع. تبقى السجلات الصحية مشفرة على هذا الجهاز.</string>
     <string name="delete_vault">حذف البيانات الصحية المحلية</string>
     <string name="delete_vault_title">حذف البيانات الصحية المحلية نهائيًا؟</string>
@@ -408,7 +408,7 @@
     <string name="vault_reset_message">تزيل إعادة التعيين البيانات المحلية غير القابلة للقراءة ومفتاحها نهائيًا. استعد نسخة أولًا إن كانت لديك.</string>
     <string name="vault_reset_action">إعادة تعيين البيانات الصحية</string>
     <string name="medical_disclaimer_title">مهم</string>
-    <string name="medical_disclaimer_body">Personal Health Vault منظم سجلات شخصية. لا يقدم نصائح طبية أو تشخيصًا أو إرشادات طوارئ أو تذكيرات سريرية دقيقة.</string>
+    <string name="medical_disclaimer_body">Personal Health Vault منظّم للسجلات الشخصية. لا يقدم نصائح طبية أو تشخيصًا أو إرشادات طوارئ أو تذكيرات سريرية دقيقة.</string>
     <string name="notification_timing_disclaimer">قد تتأخر التذكيرات بسبب ظروف نظام Android.</string>
     <string name="app_lock_boundary_notice">يتحكم قفل التطبيق في الوصول إلى الواجهة؛ ويحمي التشفير الملفات المحفوظة.</string>
     <string name="a11y_open_settings">فتح الإعدادات</string>

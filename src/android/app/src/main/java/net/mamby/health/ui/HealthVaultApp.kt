@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -14,9 +15,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
@@ -46,11 +49,13 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -125,9 +130,9 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     val notice by viewModel.notice.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
-    var startDialog by remember { mutableStateOf(false) }
-    var resetUnreadableDialog by remember { mutableStateOf(false) }
-    var recoverySettingsVisible by remember { mutableStateOf(false) }
+    var startDialog by rememberSaveable { mutableStateOf(false) }
+    var resetUnreadableDialog by rememberSaveable { mutableStateOf(false) }
+    var recoverySettingsVisible by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(notice) {
         if (notice != null) {
@@ -239,6 +244,7 @@ private fun RecoverySettings(
     activity: FragmentActivity?,
     onBack: () -> Unit,
 ) {
+    BackHandler(onBack = onBack)
     SettingsScreen(
         settings = settings,
         zoneId = viewModel.zoneId,
@@ -378,6 +384,7 @@ private fun VaultNavigation(
     val message = notice?.let { stringResource(it.resourceId) }
 
     Box(Modifier.fillMaxSize()) {
+        BackHandler(enabled = navigation.isAtSecondaryRoot, onBack = navigation::goBack)
         AppNavigationSuite(
             selectedDestination = navigation.selectedDestination,
             onDestinationSelected = navigation::select,
@@ -804,13 +811,31 @@ private fun HealthInfoDetailScreen(
 
 @Composable
 internal fun MissingVaultScreen(onStart: () -> Unit, onRestore: () -> Unit) {
-    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
+            .padding(UiTokens.ScreenPadding),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
+            modifier = Modifier
+                .widthIn(max = UiTokens.FormMaxWidth)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            Text(stringResource(R.string.no_vault_title), style = MaterialTheme.typography.headlineSmall)
-            Text(stringResource(R.string.no_vault_body))
+            Text(
+                text = stringResource(R.string.no_vault_title),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = stringResource(R.string.no_vault_body),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
             Button(onClick = onStart) { Text(stringResource(R.string.start_new)) }
             TextButton(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
         }
