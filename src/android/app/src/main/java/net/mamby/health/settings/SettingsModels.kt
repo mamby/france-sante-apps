@@ -47,7 +47,6 @@ data class BackupStatus(
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val localeTag: String = DEFAULT_LOCALE_TAG,
     val appLockEnabled: Boolean = false,
     val appLockTimeout: Duration = Duration.ZERO,
     val backupConfiguration: BackupConfiguration? = null,

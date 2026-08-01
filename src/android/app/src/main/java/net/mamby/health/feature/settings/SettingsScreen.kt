@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -65,6 +67,14 @@ fun SettingsScreen(
     onDeleteVault: () -> Unit,
     onManageProfiles: (() -> Unit)? = null,
 ) {
+    val configuration = LocalConfiguration.current
+    val selectedLocaleTag = remember(configuration) {
+        AppCompatDelegate.getApplicationLocales()
+            .get(0)
+            ?.language
+            ?.takeIf { it in AppSettings.supportedLocaleTags }
+            ?: AppSettings.DEFAULT_LOCALE_TAG
+    }
     var backupDialog by remember { mutableStateOf(false) }
     var pendingBackupPassphrase by remember { mutableStateOf<CharArray?>(null) }
     var pendingBackupScheduled by remember { mutableStateOf(true) }
@@ -113,7 +123,7 @@ fun SettingsScreen(
             SectionCard(stringResource(R.string.language_title)) {
                 localeChoices().forEach { (tag, label) ->
                     FilterChip(
-                        selected = settings.localeTag == tag,
+                        selected = selectedLocaleTag == tag,
                         onClick = { onLocaleChanged(tag) },
                         label = { Text(stringResource(label)) },
                     )

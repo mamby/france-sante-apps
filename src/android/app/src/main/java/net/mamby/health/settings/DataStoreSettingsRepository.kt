@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,16 +46,18 @@ class DataStoreSettingsRepository @Inject constructor(
 
     init {
         applicationScope.launch {
-            settings
-                .map { appSettings: AppSettings -> appSettings.localeTag }
-                .distinctUntilChanged()
-                .collect { localeTag: String ->
-                    withContext(mainDispatcher) {
+            val legacyLocaleTag = dataStore.data.first()[Keys.localeTag]
+                ?.takeIf { it in AppSettings.supportedLocaleTags }
+            if (legacyLocaleTag != null) {
+                withContext(mainDispatcher) {
+                    if (AppCompatDelegate.getApplicationLocales().isEmpty) {
                         AppCompatDelegate.setApplicationLocales(
-                            LocaleListCompat.forLanguageTags(localeTag),
+                            LocaleListCompat.forLanguageTags(legacyLocaleTag),
                         )
                     }
                 }
+                dataStore.edit { it.remove(Keys.localeTag) }
+            }
         }
     }
 
@@ -66,7 +69,12 @@ class DataStoreSettingsRepository @Inject constructor(
         require(localeTag in AppSettings.supportedLocaleTags) {
             "Unsupported locale tag"
         }
-        dataStore.edit { it[Keys.localeTag] = localeTag }
+        withContext(mainDispatcher) {
+            AppCompatDelegate.setApplicationLocales(
+                LocaleListCompat.forLanguageTags(localeTag),
+            )
+        }
+        dataStore.edit { it.remove(Keys.localeTag) }
     }
 
     override suspend fun setAppLockEnabled(enabled: Boolean) {
@@ -145,9 +153,6 @@ class DataStoreSettingsRepository @Inject constructor(
             themeMode = preferences[Keys.themeMode]
                 ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
-            localeTag = preferences[Keys.localeTag]
-                ?.takeIf { it in AppSettings.supportedLocaleTags }
-                ?: AppSettings.DEFAULT_LOCALE_TAG,
             appLockEnabled = preferences[Keys.appLockEnabled] ?: false,
             appLockTimeout = Duration.ofMillis(
                 (preferences[Keys.appLockTimeoutMillis] ?: 0L).coerceAtLeast(0L),

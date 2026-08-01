@@ -114,7 +114,7 @@ private class FakeSettingsRepository(initial: AppSettings) : SettingsRepository 
     }
 
     override suspend fun setLocaleTag(localeTag: String) {
-        mutableSettings.update { it.copy(localeTag = localeTag) }
+        // Locale selection is owned by AppCompat rather than AppSettings.
     }
 
     override suspend fun setAppLockEnabled(enabled: Boolean) {

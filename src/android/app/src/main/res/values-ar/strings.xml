@@ -80,10 +80,10 @@
     <string name="record_unavailable">هذا العنصر غير متاح للملف الشخصي المحدد.</string>
     <string name="getting_started_title">ابدأ الآن</string>
     <string name="getting_started_health">إضافة معلومات صحية</string>
-    <string name="start_new">بدء جديد</string>
-    <string name="start_new_title">لمن هذه البيانات الصحية؟</string>
-    <string name="no_vault_title">مساحتك الصحية الخاصة فارغة</string>
-    <string name="no_vault_body">ابدأ بشخص أو استعد نسخة احتياطية مشفرة.</string>
+    <string name="start_new">إنشاء ملف شخصي</string>
+    <string name="start_new_title">اسم الملف الشخصي</string>
+    <string name="no_vault_title">مرحبًا</string>
+    <string name="no_vault_body">أنشئ ملفًا شخصيًا لبدء حفظ معلوماتك الصحية. إذا سبق لك استخدام هذا التطبيق، يمكنك استعادة نسخة احتياطية بدلًا من ذلك.</string>
     <string name="notification_generic_title">تذكير صحي</string>
     <string name="notification_generic_body">افتح Personal Health Vault لعرض التذكير.</string>
     <string name="settings_title">الإعدادات</string>

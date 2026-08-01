@@ -80,10 +80,10 @@
     <string name="record_unavailable">This item is unavailable for the selected profile.</string>
     <string name="getting_started_title">Get started</string>
     <string name="getting_started_health">Add health information</string>
-    <string name="start_new">Start new</string>
-    <string name="start_new_title">Who is this health data for?</string>
-    <string name="no_vault_title">Your private health space is empty</string>
-    <string name="no_vault_body">Start with a person or restore an encrypted backup.</string>
+    <string name="start_new">Create a profile</string>
+    <string name="start_new_title">Profile name</string>
+    <string name="no_vault_title">Welcome</string>
+    <string name="no_vault_body">Create a profile to start saving your health information. If you have used this app before, you can restore a backup instead.</string>
     <string name="notification_generic_title">Health reminder</string>
     <string name="notification_generic_body">Open Personal Health Vault to view the reminder.</string>
     <string name="settings_title">Settings</string>
@@ -361,7 +361,7 @@
     <string name="backup_disable_title">Disable scheduled backup?</string>
     <string name="backup_disable_message">Scheduled work and saved destination access will be removed. Existing backup files will remain with the provider.</string>
     <string name="remove_backup_configuration">Remove backup configuration</string>
-    <string name="restore_backup">Restore backup</string>
+    <string name="restore_backup">Restore a backup</string>
     <string name="restore_title">Restore encrypted backup</string>
     <string name="restore_intro">Restore validates the complete snapshot before replacing local data.</string>
     <string name="restore_choose_file">Choose backup file</string>
