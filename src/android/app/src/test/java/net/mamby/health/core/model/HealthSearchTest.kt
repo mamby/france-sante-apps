@@ -24,7 +24,7 @@ class HealthSearchTest {
                 MedicalDocument(
                     UUID.randomUUID(),
                     "Résultat laboratoire",
-                    DocumentCategory.LAB_RESULTS,
+                    BuiltInDocumentCategory.LAB_RESULTS.asReference(),
                     LocalDate.of(2026, 7, 1),
                     "Clinique",
                     notes = "Suivi annuel",
@@ -65,5 +65,26 @@ class HealthSearchTest {
         )
 
         assertTrue(HealthSearch.search(record, "secret reminder").isEmpty())
+    }
+
+    @Test
+    fun searchIndexesIdentifierLabelAndIssuerButNeverItsValue() {
+        val identifier = HealthIdentifier(
+            id = UUID.randomUUID(),
+            kind = HealthIdentifierKind.SOCIAL_SECURITY,
+            label = "National identifier",
+            value = "SENSITIVE-123456789",
+            issuer = "Public insurer",
+            updatedAt = now,
+        )
+        val record = ProfileRecord(
+            profile = HealthProfile(UUID.randomUUID(), "Owner", lastUpdatedAt = now),
+            healthIdentifiers = listOf(identifier),
+        )
+
+        assertEquals(1, HealthSearch.search(record, "national identifier").size)
+        assertEquals(1, HealthSearch.search(record, "public insurer").size)
+        assertTrue(HealthSearch.search(record, "SENSITIVE-123456789").isEmpty())
+        assertTrue(HealthSearch.search(record, "123456789").isEmpty())
     }
 }

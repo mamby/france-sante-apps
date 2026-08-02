@@ -40,6 +40,7 @@ fun AppScreenScaffold(
     onSettings: (() -> Unit)? = null,
     profile: HealthProfile? = null,
     onProfileClick: (() -> Unit)? = null,
+    actions: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -60,6 +61,7 @@ fun AppScreenScaffold(
                         }
                     },
                     actions = {
+                        actions()
                         if (onSettings != null) {
                             IconButton(onClick = onSettings) {
                                 Icon(

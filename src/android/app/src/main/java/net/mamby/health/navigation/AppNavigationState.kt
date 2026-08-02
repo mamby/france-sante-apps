@@ -37,6 +37,11 @@ class AppNavigationState internal constructor(
         route?.let { backStacks.getValue(destination).add(it) }
     }
 
+    fun navigate(destination: TopLevelDestination, vararg routes: AppRoute) {
+        selectedDestination = destination
+        backStacks.getValue(destination).addAll(routes)
+    }
+
     fun goBack() {
         if (currentBackStack.size > 1) {
             currentBackStack.removeLastOrNull()

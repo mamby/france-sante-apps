@@ -7,7 +7,20 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.coroutines.test.runTest
-import net.mamby.health.core.model.DocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.CareDirective
+import net.mamby.health.core.model.CareDirectiveKind
+import net.mamby.health.core.model.CareDirectoryEntry
+import net.mamby.health.core.model.CareDirectoryKind
+import net.mamby.health.core.model.CustomDocumentCategory
+import net.mamby.health.core.model.CustomMeasurementType
+import net.mamby.health.core.model.DocumentCategoryRef
+import net.mamby.health.core.model.HealthMeasurement
+import net.mamby.health.core.model.MeasurementReading
+import net.mamby.health.core.model.MeasurementTypeRef
+import net.mamby.health.core.model.MeasurementUnitRef
+import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.profileRecord
@@ -58,8 +71,8 @@ class DefaultVaultRepositoryTest {
         )
 
         val vault = repository.exportSnapshot()
-        assertTrue(vault.profileRecord(first)!!.medications.isEmpty())
-        assertEquals(1, vault.profileRecord(second)!!.medications.size)
+        assertTrue(vault.profileRecord(first).medications.isEmpty())
+        assertEquals(1, vault.profileRecord(second).medications.size)
         assertEquals(revisionAfterAdd + 1, vault.revision)
         assertThrows(NoSuchElementException::class.java) {
             kotlinx.coroutines.test.runTest {
@@ -108,7 +121,7 @@ class DefaultVaultRepositoryTest {
         try {
             repository.importDocument(
                 profileId,
-                MedicalDocumentDraft("Document", DocumentCategory.REPORTS, LocalDate.of(2026, 7, 30), "Clinic"),
+                MedicalDocumentDraft("Document", BuiltInDocumentCategory.REPORTS.asReference(), LocalDate.of(2026, 7, 30), "Clinic"),
                 ImportedDocumentData("report.pdf", "application/pdf", content.size.toLong(), content),
             )
         } catch (_: TestStorageFailure) {
@@ -117,7 +130,7 @@ class DefaultVaultRepositoryTest {
 
         assertTrue(blobs.contents.isEmpty())
         assertTrue(content.all { it == 0.toByte() })
-        assertTrue(repository.exportSnapshot().profileRecord(profileId)!!.documents.isEmpty())
+        assertTrue(repository.exportSnapshot().profileRecord(profileId).documents.isEmpty())
     }
 
     @Test
@@ -138,11 +151,167 @@ class DefaultVaultRepositoryTest {
         assertEquals(before, repository.exportSnapshot())
     }
 
+    @Test
+    fun directoryAndDocumentDeletionCleanReferencesAtomicallyWithOneRevisionEach() = runTest {
+        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore(), FakeSelectedProfileStore())
+        repository.initialize()
+        repository.createVault("Owner")
+        val profileId = (repository.state.value as VaultState.Ready).selectedProfileId
+        val doctorId = UUID.randomUUID()
+        repository.upsertCareDirectoryEntry(
+            profileId,
+            CareDirectoryEntry(doctorId, CareDirectoryKind.DOCTOR, "Dr Martin", updatedAt = Instant.EPOCH),
+        )
+        repository.setPrimaryDoctor(profileId, doctorId)
+        val document = repository.importDocument(
+            profileId,
+            MedicalDocumentDraft(
+                "Directive attachment",
+                BuiltInDocumentCategory.DIRECTIVES.asReference(),
+                LocalDate.of(2026, 7, 30),
+                "Dr Martin",
+                sourceEntryId = doctorId,
+            ),
+            importedPdf(),
+        )
+        repository.upsertAppointment(
+            profileId,
+            Appointment(
+                UUID.randomUUID(),
+                "Visit",
+                "Dr Martin",
+                "Clinic",
+                now,
+                relatedDocumentIds = listOf(document.id),
+                clinicianEntryId = doctorId,
+                updatedAt = Instant.EPOCH,
+            ),
+        )
+        repository.upsertCareDirective(
+            profileId,
+            CareDirective(
+                UUID.randomUUID(),
+                CareDirectiveKind.ADVANCE_DIRECTIVE,
+                "Directive",
+                "Personal text",
+                LocalDate.of(2026, 7, 30),
+                relatedDocumentIds = listOf(document.id),
+                updatedAt = Instant.EPOCH,
+            ),
+        )
+
+        val beforeDirectoryDelete = repository.exportSnapshot().revision
+        repository.deleteCareDirectoryEntry(profileId, doctorId)
+        val afterDirectoryDelete = repository.exportSnapshot()
+        val afterDirectoryRecord = afterDirectoryDelete.profileRecord(profileId)
+        assertEquals(beforeDirectoryDelete + 1, afterDirectoryDelete.revision)
+        assertEquals(null, afterDirectoryRecord.profile.primaryDoctorEntryId)
+        assertEquals(null, afterDirectoryRecord.documents.single().sourceEntryId)
+        assertEquals("Dr Martin", afterDirectoryRecord.documents.single().source)
+        assertEquals(null, afterDirectoryRecord.appointments.single().clinicianEntryId)
+        assertEquals("Dr Martin", afterDirectoryRecord.appointments.single().clinician)
+
+        val beforeDocumentDelete = afterDirectoryDelete.revision
+        repository.deleteDocument(profileId, document.id)
+        val afterDocumentDelete = repository.exportSnapshot()
+        val afterDocumentRecord = afterDocumentDelete.profileRecord(profileId)
+        assertEquals(beforeDocumentDelete + 1, afterDocumentDelete.revision)
+        assertTrue(afterDocumentRecord.documents.isEmpty())
+        assertTrue(afterDocumentRecord.appointments.single().relatedDocumentIds.isEmpty())
+        assertTrue(afterDocumentRecord.directives.single().relatedDocumentIds.isEmpty())
+    }
+
+    @Test
+    fun deletingUsedCustomCategoryReclassifiesDocumentsInOneMutation() = runTest {
+        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore(), FakeSelectedProfileStore())
+        repository.initialize()
+        repository.createVault("Owner")
+        val profileId = (repository.state.value as VaultState.Ready).selectedProfileId
+        val categoryId = UUID.randomUUID()
+        repository.upsertCustomDocumentCategory(
+            profileId,
+            CustomDocumentCategory(categoryId, "Invoices", Instant.EPOCH),
+        )
+        val document = repository.importDocument(
+            profileId,
+            MedicalDocumentDraft(
+                "Invoice",
+                DocumentCategoryRef.Custom(categoryId),
+                LocalDate.of(2026, 7, 30),
+                "Hospital",
+            ),
+            importedPdf(),
+        )
+        val before = repository.exportSnapshot().revision
+
+        repository.deleteCustomDocumentCategory(
+            profileId,
+            categoryId,
+            BuiltInDocumentCategory.INVOICES_RECEIPTS.asReference(),
+        )
+
+        val after = repository.exportSnapshot()
+        val record = after.profileRecord(profileId)
+        assertEquals(before + 1, after.revision)
+        assertTrue(record.customDocumentCategories.isEmpty())
+        assertEquals(
+            BuiltInDocumentCategory.INVOICES_RECEIPTS.asReference(),
+            record.documents.single { it.id == document.id }.category,
+        )
+    }
+
+    @Test
+    fun customMeasurementTypeEditsDoNotReinterpretHistoryAndDeletionIsBlockedWhileUsed() = runTest {
+        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore(), FakeSelectedProfileStore())
+        repository.initialize()
+        repository.createVault("Owner")
+        val profileId = (repository.state.value as VaultState.Ready).selectedProfileId
+        val typeId = UUID.randomUUID()
+        val measurementId = UUID.randomUUID()
+        repository.upsertCustomMeasurementType(
+            profileId,
+            CustomMeasurementType(typeId, "Waist", "cm", Instant.EPOCH),
+        )
+        repository.upsertMeasurement(
+            profileId,
+            HealthMeasurement(
+                measurementId,
+                MeasurementTypeRef.Custom(typeId),
+                MeasurementReading.Scalar(82.0, MeasurementUnitRef.Custom("cm")),
+                now,
+                updatedAt = Instant.EPOCH,
+            ),
+        )
+
+        repository.upsertCustomMeasurementType(
+            profileId,
+            CustomMeasurementType(typeId, "Waist circumference", "in", Instant.EPOCH),
+        )
+        val record = repository.exportSnapshot().profileRecord(profileId)
+        assertEquals("in", record.customMeasurementTypes.single().suggestedUnit)
+        assertEquals(
+            MeasurementUnitRef.Custom("cm"),
+            (record.measurements.single().reading as MeasurementReading.Scalar).unit,
+        )
+        assertThrows(IllegalStateException::class.java) {
+            runTest { repository.deleteCustomMeasurementType(profileId, typeId) }
+        }
+
+        repository.deleteMeasurement(profileId, measurementId)
+        repository.deleteCustomMeasurementType(profileId, typeId)
+        assertTrue(repository.exportSnapshot().profileRecord(profileId).customMeasurementTypes.isEmpty())
+    }
+
     private fun repository(
         store: FakeVaultStore,
         blobs: FakeDocumentBlobStore,
         selected: FakeSelectedProfileStore,
     ) = DefaultVaultRepository(store, blobs, selected, clock, UuidGenerator(UUID::randomUUID))
+
+    private fun importedPdf(): ImportedDocumentData {
+        val content = "%PDF-private".encodeToByteArray()
+        return ImportedDocumentData("document.pdf", "application/pdf", content.size.toLong(), content)
+    }
 }
 
 private class FakeSelectedProfileStore : SelectedProfileStore {

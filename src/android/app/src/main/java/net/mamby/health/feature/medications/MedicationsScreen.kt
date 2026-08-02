@@ -40,11 +40,14 @@ import java.time.LocalTime
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.Medication
+import net.mamby.health.core.model.CareDirectoryEntry
+import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicationSchedule
 import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
+import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SectionCard
@@ -58,6 +61,7 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun MedicationsScreen(
     medications: List<Medication>,
+    directory: List<CareDirectoryEntry>,
     profile: HealthProfile,
     today: LocalDate,
     onProfileClick: () -> Unit,
@@ -116,6 +120,7 @@ fun MedicationsScreen(
     if (editorVisible) {
         MedicationDialog(
             existing = null,
+            directory = directory,
             today = today,
             onDismiss = { editorVisible = false },
             onSave = {
@@ -130,6 +135,7 @@ fun MedicationsScreen(
 @Composable
 fun MedicationDialog(
     existing: Medication?,
+    directory: List<CareDirectoryEntry>,
     today: LocalDate,
     onDismiss: () -> Unit,
     onSave: (Medication) -> Unit,
@@ -138,6 +144,8 @@ fun MedicationDialog(
     var dose by remember { mutableStateOf(existing?.dose.orEmpty()) }
     var instructions by remember { mutableStateOf(existing?.instructions.orEmpty()) }
     var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
+    var prescriberEntryId by remember { mutableStateOf(existing?.prescriberEntryId) }
+    var pharmacyEntryId by remember { mutableStateOf(existing?.pharmacyEntryId) }
     var active by remember { mutableStateOf(existing?.isActive ?: true) }
     var remindersEnabled by remember { mutableStateOf(existing?.remindersEnabled ?: false) }
     var recurrence by remember { mutableStateOf(existing?.schedule?.recurrence ?: ReminderRecurrence.NONE) }
@@ -171,6 +179,8 @@ fun MedicationDialog(
                     ),
                     isActive = active,
                     remindersEnabled = remindersEnabled,
+                    prescriberEntryId = prescriberEntryId,
+                    pharmacyEntryId = pharmacyEntryId,
                     notes = notes.trim().ifBlank { null },
                     updatedAt = existing?.updatedAt ?: Instant.EPOCH,
                 ),
@@ -181,6 +191,18 @@ fun MedicationDialog(
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_name)) })
             OutlinedTextField(dose, { dose = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_dose)) })
             OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_instructions)) }, minLines = 2)
+            CareDirectoryPicker(
+                entries = directory.filter { it.kind == CareDirectoryKind.DOCTOR || it.kind == CareDirectoryKind.OTHER },
+                selectedId = prescriberEntryId,
+                onSelected = { prescriberEntryId = it },
+                label = stringResource(R.string.medication_prescriber_directory),
+            )
+            CareDirectoryPicker(
+                entries = directory.filter { it.kind == CareDirectoryKind.PHARMACY },
+                selectedId = pharmacyEntryId,
+                onSelected = { pharmacyEntryId = it },
+                label = stringResource(R.string.medication_pharmacy_directory),
+            )
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_notes)) }, minLines = 2)
             SwitchField(stringResource(R.string.medication_active), active, { active = it })
             SwitchField(stringResource(R.string.medication_reminders), remindersEnabled, { remindersEnabled = it })

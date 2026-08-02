@@ -6,8 +6,17 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.StateFlow
 import net.mamby.health.core.model.Appointment
-import net.mamby.health.core.model.DocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
+import net.mamby.health.core.model.CareDirective
+import net.mamby.health.core.model.CareDirectoryEntry
+import net.mamby.health.core.model.CustomDocumentCategory
+import net.mamby.health.core.model.CustomMeasurementType
+import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.EmergencyContact
+import net.mamby.health.core.model.FamilyHistoryEntry
+import net.mamby.health.core.model.HealthIdentifier
+import net.mamby.health.core.model.HealthMeasurement
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
@@ -97,9 +106,10 @@ interface DocumentBlobStore {
 
 data class MedicalDocumentDraft(
     val title: String,
-    val category: DocumentCategory,
+    val category: DocumentCategoryRef,
     val documentDate: LocalDate,
     val source: String,
+    val sourceEntryId: UUID? = null,
     val notes: String? = null,
     val tags: List<String> = emptyList(),
 )
@@ -155,6 +165,50 @@ interface VaultRepository {
     suspend fun upsertReminder(profileId: UUID, reminder: Reminder)
 
     suspend fun deleteReminder(profileId: UUID, reminderId: UUID)
+
+    suspend fun upsertHealthNote(profileId: UUID, note: HealthNote)
+
+    suspend fun deleteHealthNote(profileId: UUID, noteId: UUID)
+
+    suspend fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement)
+
+    suspend fun deleteMeasurement(profileId: UUID, measurementId: UUID)
+
+    suspend fun upsertCustomMeasurementType(profileId: UUID, type: CustomMeasurementType)
+
+    suspend fun deleteCustomMeasurementType(profileId: UUID, typeId: UUID)
+
+    suspend fun upsertCareDirectoryEntry(profileId: UUID, entry: CareDirectoryEntry)
+
+    suspend fun deleteCareDirectoryEntry(profileId: UUID, entryId: UUID)
+
+    suspend fun setPrimaryDoctor(profileId: UUID, entryId: UUID?)
+
+    suspend fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry)
+
+    suspend fun deleteFamilyHistoryEntry(profileId: UUID, entryId: UUID)
+
+    suspend fun upsertCareDirective(profileId: UUID, directive: CareDirective)
+
+    suspend fun deleteCareDirective(profileId: UUID, directiveId: UUID)
+
+    suspend fun upsertHealthIdentifier(profileId: UUID, identifier: HealthIdentifier)
+
+    suspend fun deleteHealthIdentifier(profileId: UUID, identifierId: UUID)
+
+    suspend fun upsertCustomDocumentCategory(profileId: UUID, category: CustomDocumentCategory)
+
+    suspend fun deleteCustomDocumentCategory(
+        profileId: UUID,
+        categoryId: UUID,
+        replacement: DocumentCategoryRef? = null,
+    )
+
+    suspend fun updateBuiltInDocumentCategoryPreference(
+        profileId: UUID,
+        preference: BuiltInDocumentCategoryPreference,
+        replacement: DocumentCategoryRef? = null,
+    )
 
     suspend fun exportSnapshot(): HealthVault
 

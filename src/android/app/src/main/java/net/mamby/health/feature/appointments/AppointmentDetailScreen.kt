@@ -20,6 +20,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import net.mamby.health.R
 import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.ui.components.AppScreenScaffold
@@ -34,6 +35,7 @@ fun AppointmentDetailScreen(
     appointment: Appointment,
     profile: HealthProfile,
     documents: List<MedicalDocument>,
+    directory: List<CareDirectoryEntry>,
     zoneId: ZoneId,
     today: LocalDate,
     onBack: () -> Unit,
@@ -79,6 +81,7 @@ fun AppointmentDetailScreen(
         AppointmentDialog(
             existing = appointment,
             documents = documents,
+            directory = directory,
             zoneId = zoneId,
             today = today,
             onDismiss = { editorVisible = false },

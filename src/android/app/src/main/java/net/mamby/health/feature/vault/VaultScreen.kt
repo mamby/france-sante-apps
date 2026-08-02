@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -22,10 +23,9 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,45 +36,59 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import net.mamby.health.R
-import net.mamby.health.core.model.DocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.DocumentSearch
-import net.mamby.health.core.model.MedicalDocument
-import net.mamby.health.core.model.HealthProfile
+import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.asReference
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
+import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.withScreenPadding
-import net.mamby.health.ui.format.labelResource
+import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.theme.UiTokens
 
 data class DocumentImportDraft(
     val uri: Uri,
     val title: String,
-    val category: DocumentCategory,
+    val category: DocumentCategoryRef,
     val documentDate: LocalDate,
     val source: String,
+    val sourceEntryId: java.util.UUID? = null,
     val notes: String?,
     val tags: List<String>,
 )
 
 @Composable
 fun VaultScreen(
-    documents: List<MedicalDocument>,
-    profile: HealthProfile,
+    record: ProfileRecord,
     today: LocalDate,
+    onBack: () -> Unit,
     onProfileClick: () -> Unit,
     onSettings: () -> Unit,
+    onManageCategories: () -> Unit,
     onImport: (DocumentImportDraft) -> Unit,
     onDocumentSelected: (String) -> Unit,
     creationRequest: Long = 0,
-    selectedTab: Int = 1,
-    onTabSelected: (Int) -> Unit = {},
 ) {
-    var category by remember(profile.id) { mutableStateOf(DocumentCategory.ALL) }
+    val profile = record.profile
+    val documents = record.documents
+    val availableCategories = remember(record) {
+        BuiltInDocumentCategory.entries
+            .filter { builtIn ->
+                record.builtInDocumentCategoryPreferences
+                    .firstOrNull { it.category == builtIn }
+                    ?.isHidden != true
+            }
+            .map(BuiltInDocumentCategory::asReference) +
+            record.customDocumentCategories.map { DocumentCategoryRef.Custom(it.id) }
+    }
+    var category by remember(profile.id) { mutableStateOf<DocumentCategoryRef?>(null) }
     var pendingUri by remember(profile.id) { mutableStateOf<Uri?>(null) }
     val filtered = remember(documents, category) {
         DocumentSearch.search(documents, "", category)
@@ -89,10 +103,16 @@ fun VaultScreen(
     }
 
     AppScreenScaffold(
-        title = stringResource(R.string.health_records_title),
+        title = stringResource(R.string.documents_tab),
+        onBack = onBack,
         onSettings = onSettings,
         profile = profile,
         onProfileClick = onProfileClick,
+        actions = {
+            IconButton(onClick = onManageCategories) {
+                Icon(Icons.Outlined.Tune, stringResource(R.string.manage_document_categories))
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -111,27 +131,20 @@ fun VaultScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SecondaryTabRow(selectedTabIndex = selectedTab) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { onTabSelected(0) },
-                        text = { Text(stringResource(R.string.health_info_tab)) },
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { onTabSelected(1) },
-                        text = { Text(stringResource(R.string.documents_tab)) },
-                    )
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
-                    items(DocumentCategory.entries.size) { index ->
-                        val candidate = DocumentCategory.entries[index]
+                    item {
+                        FilterChip(
+                            selected = category == null,
+                            onClick = { category = null },
+                            label = { Text(stringResource(R.string.category_all)) },
+                        )
+                    }
+                    items(availableCategories.size) { index ->
+                        val candidate = availableCategories[index]
                         FilterChip(
                             selected = category == candidate,
                             onClick = { category = candidate },
-                            label = { Text(stringResource(candidate.labelResource())) },
+                            label = { Text(candidate.localizedLabel(record)) },
                         )
                     }
                 }
@@ -146,7 +159,7 @@ fun VaultScreen(
             } else {
                 items(filtered, key = { it.id }) { document ->
                     SectionCard(document.title) {
-                        Text(stringResource(document.category.labelResource()))
+                        Text(document.category.localizedLabel(record))
                         Text(document.documentDate.localizedDate())
                         Text(document.source)
                         androidx.compose.material3.TextButton(
@@ -163,6 +176,7 @@ fun VaultScreen(
     pendingUri?.let { uri ->
         DocumentImportDialog(
             uri = uri,
+            record = record,
             today = today,
             onDismiss = { pendingUri = null },
             onImport = {
@@ -177,21 +191,35 @@ fun VaultScreen(
 @Composable
 private fun DocumentImportDialog(
     uri: Uri,
+    record: ProfileRecord,
     today: LocalDate,
     onDismiss: () -> Unit,
     onImport: (DocumentImportDraft) -> Unit,
 ) {
     var title by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("") }
+    var sourceEntryId by remember { mutableStateOf<java.util.UUID?>(null) }
     var notes by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf(emptyList<String>()) }
     var date by remember { mutableStateOf(today) }
-    var category by remember { mutableStateOf(DocumentCategory.OTHER) }
+    val availableCategories = remember(record) {
+        BuiltInDocumentCategory.entries
+            .filter { builtIn ->
+                record.builtInDocumentCategoryPreferences
+                    .firstOrNull { it.category == builtIn }
+                    ?.isHidden != true
+            }
+            .map(BuiltInDocumentCategory::asReference) +
+            record.customDocumentCategories.map { DocumentCategoryRef.Custom(it.id) }
+    }
+    var category by remember(record.profile.id) {
+        mutableStateOf(availableCategories.firstOrNull() ?: BuiltInDocumentCategory.OTHER.asReference())
+    }
     var categoryExpanded by remember { mutableStateOf(false) }
 
     FormDialog(
         title = stringResource(R.string.import_document),
-        saveEnabled = title.isNotBlank() && source.isNotBlank(),
+        saveEnabled = title.isNotBlank() && source.isNotBlank() && category in availableCategories,
         onDismiss = onDismiss,
         onSave = {
             onImport(
@@ -201,6 +229,7 @@ private fun DocumentImportDialog(
                     category = category,
                     documentDate = date,
                     source = source.trim(),
+                    sourceEntryId = sourceEntryId,
                     notes = notes.trim().ifBlank { null },
                     tags = tags,
                 ),
@@ -221,7 +250,7 @@ private fun DocumentImportDialog(
                 onExpandedChange = { categoryExpanded = it },
             ) {
                 OutlinedTextField(
-                    value = stringResource(category.labelResource()),
+                    value = category.localizedLabel(record),
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier
@@ -231,9 +260,9 @@ private fun DocumentImportDialog(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoryExpanded) },
                 )
                 ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
-                    DocumentCategory.entries.filterNot { it == DocumentCategory.ALL }.forEach { candidate ->
+                    availableCategories.forEach { candidate ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(candidate.labelResource())) },
+                            text = { Text(candidate.localizedLabel(record)) },
                             onClick = {
                                 category = candidate
                                 categoryExpanded = false
@@ -249,6 +278,12 @@ private fun DocumentImportDialog(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.document_source)) },
                 singleLine = true,
+            )
+            CareDirectoryPicker(
+                entries = record.careDirectory,
+                selectedId = sourceEntryId,
+                onSelected = { sourceEntryId = it },
+                label = stringResource(R.string.document_source_directory),
             )
             OutlinedTextField(
                 value = notes,

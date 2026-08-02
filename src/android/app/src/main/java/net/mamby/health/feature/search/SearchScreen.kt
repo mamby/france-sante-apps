@@ -22,12 +22,14 @@ import net.mamby.health.R
 import net.mamby.health.core.model.HealthSearch
 import net.mamby.health.core.model.HealthSearchGroup
 import net.mamby.health.core.model.HealthSearchResult
+import net.mamby.health.core.model.HealthSearchTarget
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.theme.UiTokens
+import net.mamby.health.ui.format.localizedLabel
 
 enum class SearchFilter { ALL, HEALTH_RECORDS, MEDICATIONS, APPOINTMENTS }
 
@@ -102,7 +104,15 @@ fun SearchScreen(
                     )
                 }
                 else -> items(results, key = { "${it.target}:${it.primaryText}" }) { result ->
-                    SectionCard(result.primaryText) {
+                    val primaryText = when (val target = result.target) {
+                        is HealthSearchTarget.Measurement -> record.measurements
+                            .firstOrNull { it.id == target.id }
+                            ?.type
+                            ?.localizedLabel(record)
+                            ?: result.primaryText
+                        else -> result.primaryText
+                    }
+                    SectionCard(primaryText) {
                         result.secondaryText?.takeIf(String::isNotBlank)?.let { Text(it) }
                         androidx.compose.material3.TextButton(onClick = { onResultSelected(result) }) {
                             Text(stringResource(R.string.common_open))

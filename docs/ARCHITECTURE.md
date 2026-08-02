@@ -23,14 +23,14 @@ Repositories expose immutable state through Flow. The root vault state is one of
 
 - `Loading`: encrypted state is being inspected
 - `Missing`: no local vault exists; onboarding may create an empty first profile or restore a backup
-- `Ready(vault, selectedProfileId)`: a schema-v2 multi-profile vault was authenticated and the app-wide selected profile exists
+- `Ready(vault, selectedProfileId)`: a schema-v3 multi-profile vault was authenticated and the app-wide selected profile exists
 - `Unreadable`: ciphertext exists but cannot be safely decoded or authenticated
 
 User actions flow from Compose to a state holder, through an explicit profile-owned repository mutation, into atomic encrypted persistence, and back through Flow. A failed mutation leaves the last valid state active. There is no production sample provider: starting new creates one genuinely empty profile.
 
-Schema v2 stores ordered `ProfileRecord` values. Each record owns its health profile, documents, medications, appointments, vaccinations, and reminders. The exact schema-v1 wire shape is decoded and migrated into one profile; only schema v2 is encoded. IDs are globally unique and relationships never cross profile ownership.
+Schema v3 stores ordered `ProfileRecord` values. In addition to the existing profile, documents, medications, appointments, vaccinations, and reminders, each record owns independent notes, typed measurements, custom measurement types, a care directory, family history, personal directives, health identifiers, document categories, and category preferences. Exact frozen schema-v1 and schema-v2 wire shapes are decoded and deterministically migrated; only schema v3 is encoded. IDs are globally unique and relationships never cross profile ownership.
 
-Search and dashboard metrics are derived rather than persisted. Search is Unicode-, case-, and diacritic-insensitive, exists only in unlocked process memory, and reads only the selected profile.
+Search, the recent-item index, and dashboard metrics are derived rather than persisted. Search is Unicode-, case-, and diacritic-insensitive, exists only in unlocked process memory, and reads only the selected profile. Health identifier values are deliberately excluded from searchable content.
 
 ## Local encrypted storage
 
@@ -50,7 +50,7 @@ No broad storage or media permission is required.
 
 ## Navigation and adaptive UI
 
-Navigation 3 owns type-safe destinations and saved top-level back stacks. Home, Health records, Search, Medications, and Appointments are the five icon-only top-level destinations. Health records contains labeled Health info and Documents tabs. Settings and profile management are vault-wide destinations.
+Navigation 3 owns type-safe destinations and saved top-level back stacks. Home, Health records, Search, Medications, and Appointments are the five icon-only top-level destinations. Health records is an adaptive hub for Health information, Measurements, Notes, Care directory, and Documents. Each collection uses typed list/detail destinations; category and measurement-type management have dedicated routes. Settings and profile management are vault-wide destinations.
 
 Compact windows use bottom navigation and full-screen detail destinations. Expanded windows use a navigation rail and list/detail scenes where useful. Layout decisions come from official window-size and adaptive APIs rather than device names or hardcoded screen dimensions.
 
@@ -66,7 +66,7 @@ The user chooses a destination with the Storage Access Framework. The portable c
 
 Scheduled backup stores only a Keystore-wrapped copy of the backup data key and the persisted destination permission. The passphrase is never retained. WorkManager coalesces changes and records success or a user-action-required state.
 
-Every backup contains every profile in one encrypted snapshot, with documents flattened in profile/list order. The portable container remains format v1 while its manifest identifies the embedded vault schema. Restore accepts schema-v1 or schema-v2 snapshots, migrates v1 through the same strict codec, validates the complete manifest and every entry, and atomically replaces the active snapshot. Restore is full-snapshot replacement, not a record merge or synchronization protocol.
+Every backup contains every profile in one encrypted snapshot, with documents flattened in profile/list order. The portable container remains format v1 while its manifest identifies the embedded vault schema. Restore accepts schema-v1, schema-v2, or schema-v3 snapshots, migrates historical schemas through the same strict codec, validates the complete manifest and every entry, and atomically replaces the active snapshot. Restore is full-snapshot replacement, not a record merge or synchronization protocol.
 
 ## Reminders
 

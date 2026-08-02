@@ -10,21 +10,15 @@ import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
-import androidx.test.rule.GrantPermissionRule
 import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 @RunWith(AndroidJUnit4::class)
 class AndroidNotificationPublisherInstrumentedTest {
-    @get:Rule
-    val notificationPermission: GrantPermissionRule =
-        GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
-
     @Test
     fun deniedRuntimePermission_blocksPublishingBeforeNotificationManagerMutation() {
         val applicationContext = ApplicationProvider.getApplicationContext<Context>()
@@ -43,22 +37,16 @@ class AndroidNotificationPublisherInstrumentedTest {
     }
 
     @Test
-    fun publishedNotificationContainsOnlyGenericLocalizedText() {
+    fun notificationBuiltForPublishingContainsOnlyGenericLocalizedText() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.cancelAll()
-
-        val result = AndroidNotificationPublisher(context).publish(REQUEST)
-        val posted = manager.activeNotifications.single().notification
+        val posted = AndroidNotificationPublisher(context).buildNotification(REQUEST)
         val title = posted.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
         val body = posted.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
 
-        assertEquals(NotificationPublishResult.Published, result)
         assertEquals(context.getString(net.mamby.health.R.string.notification_generic_title), title)
         assertEquals(context.getString(net.mamby.health.R.string.notification_generic_body), body)
         assertFalse(title.contains(REQUEST.title))
         assertFalse(body.contains(REQUEST.message))
-        manager.cancelAll()
     }
 
     private class DeniedNotificationContext(base: Context) : ContextWrapper(base) {

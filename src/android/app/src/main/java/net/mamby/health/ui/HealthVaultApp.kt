@@ -10,6 +10,7 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -85,6 +86,7 @@ import net.mamby.health.core.model.HealthSearchResult
 import net.mamby.health.core.model.HealthSearchTarget
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.VaultItemKind
 import net.mamby.health.core.model.profileRecord
 import net.mamby.health.data.VaultState
 import net.mamby.health.feature.appointments.AppointmentDetailScreen
@@ -95,6 +97,14 @@ import net.mamby.health.feature.error.VaultUnreadableScreen
 import net.mamby.health.feature.lock.LockScreen
 import net.mamby.health.feature.medications.MedicationDetailScreen
 import net.mamby.health.feature.medications.MedicationsScreen
+import net.mamby.health.feature.measurements.ManageMeasurementTypesScreen
+import net.mamby.health.feature.measurements.MeasurementDetailScreen
+import net.mamby.health.feature.measurements.MeasurementsScreen
+import net.mamby.health.feature.notes.NoteDetailScreen
+import net.mamby.health.feature.notes.NotesScreen
+import net.mamby.health.feature.directory.DirectoryEntryDetailScreen
+import net.mamby.health.feature.directory.DirectoryScreen
+import net.mamby.health.feature.records.HealthRecordsHubScreen
 import net.mamby.health.feature.profiles.ProfileManagementScreen
 import net.mamby.health.feature.profiles.ProfileNameDialog
 import net.mamby.health.feature.reminders.RemindersScreen
@@ -102,7 +112,13 @@ import net.mamby.health.feature.search.SearchScreen
 import net.mamby.health.feature.search.SearchFilter
 import net.mamby.health.feature.settings.SettingsScreen
 import net.mamby.health.feature.summary.SummaryScreen
+import net.mamby.health.feature.summary.CareDirectiveDetailScreen
+import net.mamby.health.feature.summary.EmergencyContactDetailScreen
+import net.mamby.health.feature.summary.FamilyHistoryDetailScreen
+import net.mamby.health.feature.summary.HealthIdentifierDetailScreen
+import net.mamby.health.feature.summary.VaccinationDetailScreen
 import net.mamby.health.feature.vault.DocumentDetailScreen
+import net.mamby.health.feature.vault.ManageDocumentCategoriesScreen
 import net.mamby.health.feature.vault.DocumentPreviewState
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppointmentDetailRoute
@@ -110,16 +126,30 @@ import net.mamby.health.navigation.AppointmentsRoute
 import net.mamby.health.navigation.DeepLinkKind
 import net.mamby.health.navigation.DeepLinkTarget
 import net.mamby.health.navigation.DocumentDetailRoute
-import net.mamby.health.navigation.HealthInfoDetailRoute
+import net.mamby.health.navigation.CareDirectiveDetailRoute
+import net.mamby.health.navigation.DirectoryEntryDetailRoute
+import net.mamby.health.navigation.EmergencyContactDetailRoute
+import net.mamby.health.navigation.FamilyHistoryDetailRoute
+import net.mamby.health.navigation.HealthIdentifierDetailRoute
+import net.mamby.health.navigation.HealthInfoRoute
 import net.mamby.health.navigation.HealthRecordsRoute
 import net.mamby.health.navigation.HomeRoute
 import net.mamby.health.navigation.ManageProfilesRoute
+import net.mamby.health.navigation.ManageDocumentCategoriesRoute
+import net.mamby.health.navigation.ManageMeasurementTypesRoute
 import net.mamby.health.navigation.MedicationDetailRoute
 import net.mamby.health.navigation.MedicationsRoute
+import net.mamby.health.navigation.MeasurementDetailRoute
+import net.mamby.health.navigation.MeasurementsRoute
+import net.mamby.health.navigation.NoteDetailRoute
+import net.mamby.health.navigation.NotesRoute
+import net.mamby.health.navigation.DirectoryRoute
+import net.mamby.health.navigation.DocumentsRoute
 import net.mamby.health.navigation.RemindersRoute
 import net.mamby.health.navigation.SearchRoute
 import net.mamby.health.navigation.SettingsRoute
 import net.mamby.health.navigation.TopLevelDestination
+import net.mamby.health.navigation.VaccinationDetailRoute
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.security.AppLockState
 import net.mamby.health.settings.AppSettings
@@ -150,9 +180,17 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     val outgoingContentLayer = rememberGraphicsLayer()
     val localeOverlayFrames = remember { Channel<Long>(Channel.CONFLATED) }
     val localizedContentFrames = remember { Channel<LocalizedContentFrame>(Channel.CONFLATED) }
-    val currentLocaleTag = LocalConfiguration.current.locales[0].language
+    val configuration = LocalConfiguration.current
+    val currentLocaleTag = configuration.locales[0].language
+    val selectedLocaleTag = remember(configuration) {
+        AppCompatDelegate.getApplicationLocales()
+            .get(0)
+            ?.language
+            ?.takeIf { it in AppSettings.supportedLocaleTags }
+            ?: AppSettings.DEFAULT_LOCALE_TAG
+    }
     val requestLocaleChange: (String) -> Unit = { localeTag ->
-        if (localeRequest == null && localeTag != currentLocaleTag) {
+        if (localeRequest == null && localeTag != selectedLocaleTag) {
             nextLocaleRequestId += 1
             localeRequest = LocaleTransitionRequest(nextLocaleRequestId, localeTag)
         }
@@ -175,9 +213,9 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
             recoverySettingsVisible = false
         }
     }
-    LaunchedEffect(localeRequest, currentLocaleTag) {
+    LaunchedEffect(localeRequest, selectedLocaleTag) {
         val request = localeRequest ?: return@LaunchedEffect
-        if (currentLocaleTag != request.localeTag) {
+        if (selectedLocaleTag != request.localeTag) {
             localeOverlayAlpha.snapTo(1f)
             while (localeOverlayFrames.receive() != request.id) {
                 // Ignore frames from an earlier transition.
@@ -185,7 +223,7 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
             withFrameNanos { }
             viewModel.setLocaleTag(request.localeTag)
         } else {
-            while (localizedContentFrames.receive() != LocalizedContentFrame(request.id, request.localeTag)) {
+            while (localizedContentFrames.receive() != LocalizedContentFrame(request.id, currentLocaleTag)) {
                 // Keep the outgoing frame visible until the localized content has drawn.
             }
             withFrameNanos { }
@@ -295,27 +333,27 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
                 }
             }
         }
-    }
 
-    if (startDialog) {
-        ProfileNameDialog(
-            title = stringResource(R.string.start_new_title),
-            initialName = "",
-            onDismiss = { startDialog = false },
-            onSave = {
-                startDialog = false
-                viewModel.createVault(it)
-            },
-        )
-    }
-    if (resetUnreadableDialog) {
-        ResetUnreadableDialog(
-            onDismiss = { resetUnreadableDialog = false },
-            onConfirm = {
-                resetUnreadableDialog = false
-                viewModel.deleteVault()
-            },
-        )
+        if (startDialog) {
+            ProfileNameDialog(
+                title = stringResource(R.string.start_new_title),
+                initialName = "",
+                onDismiss = { startDialog = false },
+                onSave = {
+                    startDialog = false
+                    viewModel.createVault(it)
+                },
+            )
+        }
+        if (resetUnreadableDialog) {
+            ResetUnreadableDialog(
+                onDismiss = { resetUnreadableDialog = false },
+                onConfirm = {
+                    resetUnreadableDialog = false
+                    viewModel.deleteVault()
+                },
+            )
+        }
     }
 }
 
@@ -371,11 +409,13 @@ private fun VaultNavigation(
     val context = LocalContext.current
     var profileSheetVisible by remember { mutableStateOf(false) }
     var addProfileVisible by remember { mutableStateOf(false) }
-    var healthTab by remember(selectedProfileId) { mutableStateOf(0) }
     var searchQuery by remember(selectedProfileId) { mutableStateOf("") }
     var searchFilter by remember(selectedProfileId) { mutableStateOf(SearchFilter.ALL) }
     var healthCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
     var documentCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var noteCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var measurementCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
+    var directoryCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
     var medicationCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
     var appointmentCreation by remember(selectedProfileId) { mutableLongStateOf(0) }
     var previousProfileId by remember { mutableStateOf(selectedProfileId) }
@@ -401,6 +441,9 @@ private fun VaultNavigation(
             profileSheetVisible = false
             healthCreation = 0
             documentCreation = 0
+            noteCreation = 0
+            measurementCreation = 0
+            directoryCreation = 0
             medicationCreation = 0
             appointmentCreation = 0
             searchQuery = ""
@@ -489,21 +532,72 @@ private fun VaultNavigation(
                             onSettings = navigateSettings,
                             onReminders = { navigation.navigate(RemindersRoute) },
                             onDocumentSelected = { id ->
-                                healthTab = 1
                                 navigation.navigate(
                                     TopLevelDestination.HealthRecords,
+                                    DocumentsRoute,
                                     DocumentDetailRoute(selectedProfileId.toString(), id),
                                 )
                             },
+                            onRecentItem = { item ->
+                                when (item.kind) {
+                                    VaultItemKind.DOCUMENT -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        DocumentsRoute,
+                                        DocumentDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.MEDICATION -> navigation.navigate(
+                                        TopLevelDestination.Medications,
+                                        MedicationDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.APPOINTMENT -> navigation.navigate(
+                                        TopLevelDestination.Appointments,
+                                        AppointmentDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.VACCINATION -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        HealthInfoRoute,
+                                        VaccinationDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.REMINDER -> navigation.navigate(TopLevelDestination.Home, RemindersRoute)
+                                    VaultItemKind.NOTE -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        NotesRoute,
+                                        NoteDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.MEASUREMENT -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        MeasurementsRoute,
+                                        MeasurementDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.DIRECTORY_ENTRY -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        DirectoryRoute,
+                                        DirectoryEntryDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.FAMILY_HISTORY -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        HealthInfoRoute,
+                                        FamilyHistoryDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.DIRECTIVE -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        HealthInfoRoute,
+                                        CareDirectiveDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                    VaultItemKind.IDENTIFIER -> navigation.navigate(
+                                        TopLevelDestination.HealthRecords,
+                                        HealthInfoRoute,
+                                        HealthIdentifierDetailRoute(selectedProfileId.toString(), item.id.toString()),
+                                    )
+                                }
+                            },
                             onAddHealthInfo = {
-                                healthTab = 0
                                 healthCreation++
-                                navigation.select(TopLevelDestination.HealthRecords)
+                                navigation.navigate(TopLevelDestination.HealthRecords, HealthInfoRoute)
                             },
                             onImportDocument = {
-                                healthTab = 1
                                 documentCreation++
-                                navigation.select(TopLevelDestination.HealthRecords)
+                                navigation.navigate(TopLevelDestination.HealthRecords, DocumentsRoute)
                             },
                             onAddMedication = {
                                 medicationCreation++
@@ -515,44 +609,119 @@ private fun VaultNavigation(
                             },
                         )
                     }
-                    entry<HealthRecordsRoute>(
-                        metadata = if (healthTab == 1) {
-                            ListDetailSceneStrategy.listPane(
-                                detailPlaceholder = { DetailPlaceholder(R.string.no_documents_body) },
-                            )
-                        } else emptyMap(),
+                    entry<HealthRecordsRoute> {
+                        HealthRecordsHubScreen(
+                            record = record,
+                            onProfileClick = openProfileSelector,
+                            onSettings = navigateSettings,
+                            onHealthInfo = { navigation.navigate(HealthInfoRoute) },
+                            onMeasurements = { navigation.navigate(MeasurementsRoute) },
+                            onNotes = { navigation.navigate(NotesRoute) },
+                            onDirectory = { navigation.navigate(DirectoryRoute) },
+                            onDocuments = { navigation.navigate(DocumentsRoute) },
+                        )
+                    }
+                    entry<HealthInfoRoute> {
+                        SummaryScreen(
+                            record = record,
+                            today = today,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onSettings = navigateSettings,
+                            onUpdateProfile = { viewModel.updateProfile(selectedProfileId, it) },
+                            onUpsertVaccination = { viewModel.upsertVaccination(selectedProfileId, it) },
+                            onDeleteVaccination = { viewModel.deleteVaccination(selectedProfileId, it) },
+                            onSetPrimaryDoctor = { viewModel.setPrimaryDoctor(selectedProfileId, it) },
+                            onUpsertFamilyHistory = { viewModel.upsertFamilyHistoryEntry(selectedProfileId, it) },
+                            onDeleteFamilyHistory = { viewModel.deleteFamilyHistoryEntry(selectedProfileId, it) },
+                            onUpsertDirective = { viewModel.upsertCareDirective(selectedProfileId, it) },
+                            onDeleteDirective = { viewModel.deleteCareDirective(selectedProfileId, it) },
+                            onUpsertIdentifier = { viewModel.upsertHealthIdentifier(selectedProfileId, it) },
+                            onDeleteIdentifier = { viewModel.deleteHealthIdentifier(selectedProfileId, it) },
+                            onEmergencyContactSelected = {
+                                navigation.navigate(EmergencyContactDetailRoute(selectedProfileId.toString(), it.toString()))
+                            },
+                            onVaccinationSelected = {
+                                navigation.navigate(VaccinationDetailRoute(selectedProfileId.toString(), it.toString()))
+                            },
+                            onFamilyHistorySelected = {
+                                navigation.navigate(FamilyHistoryDetailRoute(selectedProfileId.toString(), it.toString()))
+                            },
+                            onDirectiveSelected = {
+                                navigation.navigate(CareDirectiveDetailRoute(selectedProfileId.toString(), it.toString()))
+                            },
+                            onIdentifierSelected = {
+                                navigation.navigate(HealthIdentifierDetailRoute(selectedProfileId.toString(), it.toString()))
+                            },
+                            creationRequest = healthCreation,
+                        )
+                    }
+                    entry<DocumentsRoute>(
+                        metadata = ListDetailSceneStrategy.listPane(
+                            detailPlaceholder = { DetailPlaceholder(R.string.no_documents_body) },
+                        ),
                     ) {
-                        if (healthTab == 0) {
-                            SummaryScreen(
-                                profile = record.profile,
-                                vaccinations = record.vaccinations,
-                                today = today,
-                                onProfileClick = openProfileSelector,
-                                onSettings = navigateSettings,
-                                onUpdateProfile = { viewModel.updateProfile(selectedProfileId, it) },
-                                onUpsertVaccination = { viewModel.upsertVaccination(selectedProfileId, it) },
-                                onDeleteVaccination = { viewModel.deleteVaccination(selectedProfileId, it) },
-                                creationRequest = healthCreation,
-                                selectedTab = healthTab,
-                                onTabSelected = { healthTab = it },
-                            )
-                        } else {
-                            VaultScreen(
-                                documents = record.documents,
-                                profile = record.profile,
-                                today = today,
-                                onProfileClick = openProfileSelector,
-                                onSettings = navigateSettings,
-                                onImport = { viewModel.importDocument(selectedProfileId, it) },
-                                onDocumentSelected = { id ->
-                                    navigation.navigate(DocumentDetailRoute(selectedProfileId.toString(), id))
-                                    viewModel.resetPreview()
-                                },
-                                creationRequest = documentCreation,
-                                selectedTab = healthTab,
-                                onTabSelected = { healthTab = it },
-                            )
-                        }
+                        VaultScreen(
+                            record = record,
+                            today = today,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onSettings = navigateSettings,
+                            onManageCategories = { navigation.navigate(ManageDocumentCategoriesRoute) },
+                            onImport = { viewModel.importDocument(selectedProfileId, it) },
+                            onDocumentSelected = { id ->
+                                navigation.navigate(DocumentDetailRoute(selectedProfileId.toString(), id))
+                                viewModel.resetPreview()
+                            },
+                            creationRequest = documentCreation,
+                        )
+                    }
+                    entry<NotesRoute>(
+                        metadata = ListDetailSceneStrategy.listPane(
+                            detailPlaceholder = { DetailPlaceholder(R.string.no_health_notes_body) },
+                        ),
+                    ) {
+                        NotesScreen(
+                            record = record,
+                            now = now,
+                            zoneId = zoneId,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onUpsert = { viewModel.upsertHealthNote(selectedProfileId, it) },
+                            onSelected = { navigation.navigate(NoteDetailRoute(selectedProfileId.toString(), it.toString())) },
+                            creationRequest = noteCreation,
+                        )
+                    }
+                    entry<MeasurementsRoute>(
+                        metadata = ListDetailSceneStrategy.listPane(
+                            detailPlaceholder = { DetailPlaceholder(R.string.no_measurements_body) },
+                        ),
+                    ) {
+                        MeasurementsScreen(
+                            record = record,
+                            now = now,
+                            zoneId = zoneId,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onManageTypes = { navigation.navigate(ManageMeasurementTypesRoute) },
+                            onUpsert = { viewModel.upsertMeasurement(selectedProfileId, it) },
+                            onSelected = { navigation.navigate(MeasurementDetailRoute(selectedProfileId.toString(), it.toString())) },
+                            creationRequest = measurementCreation,
+                        )
+                    }
+                    entry<DirectoryRoute>(
+                        metadata = ListDetailSceneStrategy.listPane(
+                            detailPlaceholder = { DetailPlaceholder(R.string.no_directory_entries_body) },
+                        ),
+                    ) {
+                        DirectoryScreen(
+                            record = record,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onUpsert = { viewModel.upsertCareDirectoryEntry(selectedProfileId, it) },
+                            onSelected = { navigation.navigate(DirectoryEntryDetailRoute(selectedProfileId.toString(), it.toString())) },
+                            creationRequest = directoryCreation,
+                        )
                     }
                     entry<SearchRoute>(
                         metadata = ListDetailSceneStrategy.listPane(
@@ -580,6 +749,7 @@ private fun VaultNavigation(
                     ) {
                         MedicationsScreen(
                             medications = record.medications,
+                            directory = record.careDirectory,
                             profile = record.profile,
                             today = today,
                             onProfileClick = openProfileSelector,
@@ -603,6 +773,7 @@ private fun VaultNavigation(
                         AppointmentsScreen(
                             appointments = record.appointments,
                             documents = record.documents,
+                            directory = record.careDirectory,
                             profile = record.profile,
                             zoneId = zoneId,
                             now = now,
@@ -625,7 +796,7 @@ private fun VaultNavigation(
                         } else null
                         if (document == null) MissingRecordScreen(navigation::goBack) else DocumentDetailScreen(
                             document = document,
-                            profile = record.profile,
+                            record = record,
                             preview = preview,
                             onBack = navigation::goBack,
                             onLoadPreview = { viewModel.loadPreview(selectedProfileId, document, it) },
@@ -637,12 +808,127 @@ private fun VaultNavigation(
                             onProfileClick = openProfileSelector,
                         )
                     }
+                    entry<NoteDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val note = if (route.profileId == selectedProfileId.toString()) {
+                            record.notes.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (note == null) MissingRecordScreen(navigation::goBack) else NoteDetailScreen(
+                            record = record,
+                            note = note,
+                            now = now,
+                            zoneId = zoneId,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onUpsert = { viewModel.upsertHealthNote(selectedProfileId, it) },
+                            onDelete = {
+                                viewModel.deleteHealthNote(selectedProfileId, note.id)
+                                navigation.goBack()
+                            },
+                        )
+                    }
+                    entry<MeasurementDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val measurement = if (route.profileId == selectedProfileId.toString()) {
+                            record.measurements.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (measurement == null) MissingRecordScreen(navigation::goBack) else MeasurementDetailScreen(
+                            record = record,
+                            measurement = measurement,
+                            now = now,
+                            zoneId = zoneId,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onUpsert = { viewModel.upsertMeasurement(selectedProfileId, it) },
+                            onDelete = {
+                                viewModel.deleteMeasurement(selectedProfileId, measurement.id)
+                                navigation.goBack()
+                            },
+                        )
+                    }
+                    entry<DirectoryEntryDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val directoryEntry = if (route.profileId == selectedProfileId.toString()) {
+                            record.careDirectory.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (directoryEntry == null) MissingRecordScreen(navigation::goBack) else DirectoryEntryDetailScreen(
+                            record = record,
+                            entry = directoryEntry,
+                            onBack = navigation::goBack,
+                            onProfileClick = openProfileSelector,
+                            onUpsert = { viewModel.upsertCareDirectoryEntry(selectedProfileId, it) },
+                            onSetPrimaryDoctor = { viewModel.setPrimaryDoctor(selectedProfileId, it) },
+                            onDelete = {
+                                viewModel.deleteCareDirectoryEntry(selectedProfileId, directoryEntry.id)
+                                navigation.goBack()
+                            },
+                        )
+                    }
+                    entry<EmergencyContactDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val contact = if (route.profileId == selectedProfileId.toString()) {
+                            record.profile.emergencyContacts.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (contact == null) MissingRecordScreen(navigation::goBack) else EmergencyContactDetailScreen(
+                            record, contact, navigation::goBack, openProfileSelector,
+                        )
+                    }
+                    entry<VaccinationDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val vaccination = if (route.profileId == selectedProfileId.toString()) {
+                            record.vaccinations.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (vaccination == null) MissingRecordScreen(navigation::goBack) else VaccinationDetailScreen(
+                            record, vaccination, navigation::goBack, openProfileSelector,
+                        )
+                    }
+                    entry<FamilyHistoryDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val history = if (route.profileId == selectedProfileId.toString()) {
+                            record.familyHistory.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (history == null) MissingRecordScreen(navigation::goBack) else FamilyHistoryDetailScreen(
+                            record, history, navigation::goBack, openProfileSelector,
+                        )
+                    }
+                    entry<CareDirectiveDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val careDirective = if (route.profileId == selectedProfileId.toString()) {
+                            record.directives.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (careDirective == null) MissingRecordScreen(navigation::goBack) else CareDirectiveDetailScreen(
+                            record, careDirective, navigation::goBack, openProfileSelector,
+                        )
+                    }
+                    entry<HealthIdentifierDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val identifier = if (route.profileId == selectedProfileId.toString()) {
+                            record.healthIdentifiers.firstOrNull { it.id.toString() == route.id }
+                        } else null
+                        if (identifier == null) MissingRecordScreen(navigation::goBack) else HealthIdentifierDetailScreen(
+                            record, identifier, navigation::goBack, openProfileSelector,
+                        )
+                    }
+                    entry<ManageMeasurementTypesRoute> {
+                        ManageMeasurementTypesScreen(
+                            record = record,
+                            onBack = navigation::goBack,
+                            onUpsert = { viewModel.upsertCustomMeasurementType(selectedProfileId, it) },
+                            onDelete = { viewModel.deleteCustomMeasurementType(selectedProfileId, it) },
+                        )
+                    }
+                    entry<ManageDocumentCategoriesRoute> {
+                        ManageDocumentCategoriesScreen(
+                            record = record,
+                            onBack = navigation::goBack,
+                            onUpdateBuiltIn = { preference, replacement ->
+                                viewModel.updateBuiltInDocumentCategoryPreference(selectedProfileId, preference, replacement)
+                            },
+                            onUpsertCustom = { viewModel.upsertCustomDocumentCategory(selectedProfileId, it) },
+                            onDeleteCustom = { id, replacement ->
+                                viewModel.deleteCustomDocumentCategory(selectedProfileId, id, replacement)
+                            },
+                        )
+                    }
                     entry<MedicationDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
                         val medication = if (route.profileId == selectedProfileId.toString()) {
                             record.medications.firstOrNull { it.id.toString() == route.id }
                         } else null
                         if (medication == null) MissingRecordScreen(navigation::goBack) else MedicationDetailScreen(
                             medication = medication,
+                            directory = record.careDirectory,
                             profile = record.profile,
                             today = today,
                             onBack = navigation::goBack,
@@ -666,6 +952,7 @@ private fun VaultNavigation(
                             appointment = appointment,
                             profile = record.profile,
                             documents = record.documents,
+                            directory = record.careDirectory,
                             zoneId = zoneId,
                             today = today,
                             onBack = navigation::goBack,
@@ -679,30 +966,14 @@ private fun VaultNavigation(
                                 navigation.goBack()
                             },
                             onDocumentSelected = { id ->
-                                healthTab = 1
                                 navigation.navigate(
                                     TopLevelDestination.HealthRecords,
+                                    DocumentsRoute,
                                     DocumentDetailRoute(selectedProfileId.toString(), id),
                                 )
                             },
                             onProfileClick = openProfileSelector,
                         )
-                    }
-                    entry<HealthInfoDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        if (route.profileId != selectedProfileId.toString()) {
-                            MissingRecordScreen(navigation::goBack)
-                        } else {
-                            HealthInfoDetailScreen(
-                                record = record,
-                                route = route,
-                                onBack = navigation::goBack,
-                                onProfileClick = openProfileSelector,
-                                onOpenRecords = {
-                                    healthTab = 0
-                                    navigation.resetTo(TopLevelDestination.HealthRecords)
-                                },
-                            )
-                        }
                     }
                     entry<RemindersRoute> {
                         RemindersScreen(
@@ -837,93 +1108,51 @@ private fun HealthSearchResult.toRoute(profileId: UUID) = when (val selected = t
     is HealthSearchTarget.Document -> DocumentDetailRoute(profileId.toString(), selected.id.toString())
     is HealthSearchTarget.Medication -> MedicationDetailRoute(profileId.toString(), selected.id.toString())
     is HealthSearchTarget.Appointment -> AppointmentDetailRoute(profileId.toString(), selected.id.toString())
-    is HealthSearchTarget.EmergencyContact -> HealthInfoDetailRoute(
-        profileId.toString(),
-        "contact",
-        selected.id.toString(),
-    )
-    is HealthSearchTarget.Vaccination -> HealthInfoDetailRoute(
-        profileId.toString(),
-        "vaccination",
-        selected.id.toString(),
-    )
-    is HealthSearchTarget.HealthInfo -> HealthInfoDetailRoute(
-        profileId.toString(),
-        "health",
-    )
-}
-
-@Composable
-private fun HealthInfoDetailScreen(
-    record: ProfileRecord,
-    route: HealthInfoDetailRoute,
-    onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-    onOpenRecords: () -> Unit,
-) {
-    val content = when (route.targetKind) {
-        "contact" -> record.profile.emergencyContacts
-            .firstOrNull { it.id.toString() == route.id }
-            ?.let { it.name to listOf(it.relationship, it.phoneNumber, it.notes.orEmpty()).filter(String::isNotBlank) }
-        "vaccination" -> record.vaccinations
-            .firstOrNull { it.id.toString() == route.id }
-            ?.let { it.name to listOf(it.dateAdministered.toString(), it.provider.orEmpty()).filter(String::isNotBlank) }
-        else -> stringResource(R.string.health_info_tab) to listOf(
-            record.profile.bloodType.orEmpty(),
-            record.profile.allergies.joinToString(),
-            record.profile.chronicConditions.joinToString(),
-            record.profile.surgeries.joinToString(),
-        ).filter(String::isNotBlank)
-    }
-    if (content == null) {
-        MissingRecordScreen(onBack)
-        return
-    }
-    AppScreenScaffold(
-        title = content.first,
-        onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
-    ) { padding ->
-        Column(
-            modifier = Modifier.padding(padding).padding(UiTokens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
-        ) {
-            SectionCard(content.first) { content.second.forEach { Text(it) } }
-            Button(onClick = onOpenRecords) { Text(stringResource(R.string.open_in_health_records)) }
-        }
-    }
+    is HealthSearchTarget.EmergencyContact -> EmergencyContactDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.Vaccination -> VaccinationDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.HealthInfo -> HealthInfoRoute
+    is HealthSearchTarget.Note -> NoteDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.Measurement -> MeasurementDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.DirectoryEntry -> DirectoryEntryDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.FamilyHistory -> FamilyHistoryDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.Directive -> CareDirectiveDetailRoute(profileId.toString(), selected.id.toString())
+    is HealthSearchTarget.Identifier -> HealthIdentifierDetailRoute(profileId.toString(), selected.id.toString())
 }
 
 @Composable
 internal fun MissingVaultScreen(onStart: () -> Unit, onRestore: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .safeDrawingPadding()
-            .padding(UiTokens.ScreenPadding),
-        contentAlignment = Alignment.Center,
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .widthIn(max = UiTokens.FormMaxWidth)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .padding(UiTokens.ScreenPadding),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = stringResource(R.string.no_vault_title),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                text = stringResource(R.string.no_vault_body),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
-            Button(onClick = onStart) { Text(stringResource(R.string.start_new)) }
-            TextButton(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
+            Column(
+                modifier = Modifier
+                    .widthIn(max = UiTokens.FormMaxWidth)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+            ) {
+                Text(
+                    text = stringResource(R.string.no_vault_title),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    text = stringResource(R.string.no_vault_body),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+                Button(onClick = onStart) { Text(stringResource(R.string.start_new)) }
+                TextButton(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
+            }
         }
     }
 }

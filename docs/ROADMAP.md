@@ -4,7 +4,7 @@
 
 - Exercise encrypted import, backup, restore, and app-lock behavior across supported Android versions and device security configurations.
 - Expand accessibility testing for screen readers, large text, keyboard use, right-to-left layout, tablets, and foldables.
-- Add automated compatibility tests for older portable backup schema versions.
+- Maintain automated compatibility tests for older portable backup schema versions.
 - Improve recovery diagnostics without exposing sensitive record content.
 - Complete independent security review and dependency review before a production release.
 

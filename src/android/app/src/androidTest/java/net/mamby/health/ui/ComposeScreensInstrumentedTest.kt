@@ -83,16 +83,17 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun emptyDocumentsHasProfileContextTabsAndImportAction() {
-        val profile = emptyVault("Amina").profiles.single().profile
+    fun emptyDocumentsHasProfileContextAndImportAction() {
+        val record = emptyVault("Amina").profiles.single()
         composeRule.setContent {
             HealthVaultTheme {
                 VaultScreen(
-                    documents = emptyList(),
-                    profile = profile,
+                    record = record,
                     today = LocalDate.of(2026, 7, 30),
+                    onBack = {},
                     onProfileClick = {},
                     onSettings = {},
+                    onManageCategories = {},
                     onImport = {},
                     onDocumentSelected = {},
                 )
@@ -100,7 +101,6 @@ class ComposeScreensInstrumentedTest {
         }
 
         composeRule.onNodeWithText("Amina").assertIsDisplayed()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.health_info_tab)).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.documents_tab)).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.no_documents_title)).assertIsDisplayed()
     }

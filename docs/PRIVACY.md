@@ -4,13 +4,13 @@ Personal Health Vault is an offline personal record organizer. It does not requi
 
 ## Data kept by the application
 
-The vault may contain multiple profiles, each with profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medication schedules, appointments, reminder schedules, document metadata, and imported PDF or image contents.
+The vault may contain multiple profiles, each with profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medication schedules, appointments, reminders, independent notes, health measurements, care-directory entries, family history, personal directives, health identifiers, category preferences, document metadata, and imported PDF or image contents. Invoices, receipts, and reimbursement records are encrypted documents rather than a financial ledger.
 
 User health information is persisted only as authenticated ciphertext in app-private storage that is excluded from Android platform backup. The selected profile ID is also authenticated ciphertext in separate non-backed-up storage. Theme, language, app-lock preference, timeout, and backup-destination state are non-health preferences stored separately.
 
 Fresh install contains no sample health data. Starting new asks who the first profile is for and creates an empty encrypted profile.
 
-Global search examines only the selected profile. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms.
+Global search examines only the selected profile. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms. Identifier values are never indexed or displayed in result lists. They remain masked until the user explicitly reveals a detail value, and that reveal state is temporary.
 
 ## Network and third parties
 

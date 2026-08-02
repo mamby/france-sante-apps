@@ -30,16 +30,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import android.text.format.Formatter
 import net.mamby.health.R
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.MedicalDocument
-import net.mamby.health.core.model.HealthProfile
+import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.asReference
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
+import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
-import net.mamby.health.ui.format.labelResource
+import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.theme.UiTokens
 
@@ -53,7 +57,7 @@ sealed interface DocumentPreviewState {
 @Composable
 fun DocumentDetailScreen(
     document: MedicalDocument,
-    profile: HealthProfile,
+    record: ProfileRecord,
     preview: DocumentPreviewState,
     onBack: () -> Unit,
     onLoadPreview: (Int) -> Unit,
@@ -61,6 +65,7 @@ fun DocumentDetailScreen(
     onDelete: () -> Unit,
     onProfileClick: () -> Unit,
 ) {
+    val profile = record.profile
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
     var editorVisible by remember(profile.id) { mutableStateOf(false) }
     val context = LocalContext.current
@@ -79,7 +84,7 @@ fun DocumentDetailScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             SectionCard(stringResource(R.string.document_file)) {
-                LabeledValue(stringResource(R.string.document_category), stringResource(document.category.labelResource()))
+                LabeledValue(stringResource(R.string.document_category), document.category.localizedLabel(record))
                 LabeledValue(stringResource(R.string.document_date), document.documentDate.localizedDate())
                 LabeledValue(stringResource(R.string.document_source), document.source)
                 LabeledValue(stringResource(R.string.document_mime_type), document.mimeType)
@@ -130,6 +135,7 @@ fun DocumentDetailScreen(
     if (editorVisible) {
         DocumentEditDialog(
             document = document,
+            record = record,
             onDismiss = { editorVisible = false },
             onSave = {
                 onEdit(it)
@@ -154,11 +160,23 @@ fun DocumentDetailScreen(
 @Composable
 private fun DocumentEditDialog(
     document: MedicalDocument,
+    record: ProfileRecord,
     onDismiss: () -> Unit,
     onSave: (MedicalDocument) -> Unit,
 ) {
+    val availableCategories = remember(record) {
+        BuiltInDocumentCategory.entries
+            .filter { builtIn ->
+                record.builtInDocumentCategoryPreferences
+                    .firstOrNull { it.category == builtIn }
+                    ?.isHidden != true
+            }
+            .map(BuiltInDocumentCategory::asReference) +
+            record.customDocumentCategories.map { DocumentCategoryRef.Custom(it.id) }
+    }
     var title by remember { mutableStateOf(document.title) }
     var source by remember { mutableStateOf(document.source) }
+    var sourceEntryId by remember { mutableStateOf(document.sourceEntryId) }
     var notes by remember { mutableStateOf(document.notes.orEmpty()) }
     var tags by remember { mutableStateOf(document.tags) }
     var date by remember { mutableStateOf(document.documentDate) }
@@ -175,6 +193,7 @@ private fun DocumentEditDialog(
                     category = category,
                     documentDate = date,
                     source = source.trim(),
+                    sourceEntryId = sourceEntryId,
                     notes = notes.trim().ifBlank { null },
                     tags = tags,
                 ),
@@ -185,7 +204,7 @@ private fun DocumentEditDialog(
             OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_title)) })
             ExposedDropdownMenuBox(categoryExpanded, { categoryExpanded = it }) {
                 OutlinedTextField(
-                    value = stringResource(category.labelResource()),
+                    value = category.localizedLabel(record),
                     onValueChange = {},
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     readOnly = true,
@@ -193,11 +212,9 @@ private fun DocumentEditDialog(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoryExpanded) },
                 )
                 ExposedDropdownMenu(categoryExpanded, { categoryExpanded = false }) {
-                    net.mamby.health.core.model.DocumentCategory.entries
-                        .filterNot { it == net.mamby.health.core.model.DocumentCategory.ALL }
-                        .forEach { candidate ->
+                    availableCategories.forEach { candidate ->
                             DropdownMenuItem(
-                                text = { Text(stringResource(candidate.labelResource())) },
+                                text = { Text(candidate.localizedLabel(record)) },
                                 onClick = {
                                     category = candidate
                                     categoryExpanded = false
@@ -208,6 +225,12 @@ private fun DocumentEditDialog(
             }
             DateField(stringResource(R.string.document_date), date, { date = it })
             OutlinedTextField(source, { source = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_source)) })
+            CareDirectoryPicker(
+                entries = record.careDirectory,
+                selectedId = sourceEntryId,
+                onSelected = { sourceEntryId = it },
+                label = stringResource(R.string.document_source_directory),
+            )
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_notes)) }, minLines = 2)
             StringListEditor(stringResource(R.string.document_tags), tags, { tags = it })
         }

@@ -11,7 +11,8 @@ import java.time.LocalTime
 import java.time.ZoneOffset
 import java.util.UUID
 import net.mamby.health.core.model.Appointment
-import net.mamby.health.core.model.DocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
@@ -129,7 +130,7 @@ private fun screenshotVault(): HealthVault = HealthVault(
                 MedicalDocument(
                     id = id("22222222-2222-4222-8222-222222222222"),
                     title = "Blood test results",
-                    category = DocumentCategory.LAB_RESULTS,
+                    category = BuiltInDocumentCategory.LAB_RESULTS.asReference(),
                     documentDate = LocalDate.of(2026, 7, 28),
                     source = "Community clinic",
                     blobId = id("33333333-3333-4333-8333-333333333333"),

@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import net.mamby.health.R
 import net.mamby.health.core.model.Medication
+import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
@@ -31,6 +32,7 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun MedicationDetailScreen(
     medication: Medication,
+    directory: List<CareDirectoryEntry>,
     profile: HealthProfile,
     today: LocalDate,
     onBack: () -> Unit,
@@ -68,6 +70,7 @@ fun MedicationDetailScreen(
     if (editorVisible) {
         MedicationDialog(
             existing = medication,
+            directory = directory,
             today = today,
             onDismiss = { editorVisible = false },
             onSave = {

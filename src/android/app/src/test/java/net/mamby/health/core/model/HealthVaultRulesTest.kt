@@ -16,13 +16,13 @@ class HealthVaultRulesTest {
         val now = Instant.parse("2026-07-30T00:00:00Z")
         val matching = document(
             title = "Annual blood panel",
-            category = DocumentCategory.LAB_RESULTS,
+            category = BuiltInDocumentCategory.LAB_RESULTS.asReference(),
             notes = "Fasting result",
             now = now,
         )
         val other = document(
             title = "Discharge report",
-            category = DocumentCategory.REPORTS,
+            category = BuiltInDocumentCategory.REPORTS.asReference(),
             notes = "Blood pressure follow-up",
             now = now.minusSeconds(60),
         )
@@ -30,7 +30,7 @@ class HealthVaultRulesTest {
         val result = DocumentSearch.search(
             documents = listOf(other, matching),
             query = "blood fasting",
-            category = DocumentCategory.LAB_RESULTS,
+            category = BuiltInDocumentCategory.LAB_RESULTS.asReference(),
         )
 
         assertEquals(listOf(matching), result)
@@ -80,7 +80,7 @@ class HealthVaultRulesTest {
 
     private fun document(
         title: String,
-        category: DocumentCategory,
+        category: DocumentCategoryRef,
         notes: String,
         now: Instant,
     ) = MedicalDocument(

@@ -2,11 +2,24 @@ package net.mamby.health.backup
 
 import java.io.File
 import java.security.SecureRandom
+import java.time.Instant
+import java.time.LocalDate
+import java.util.Base64
+import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.CareDirective
+import net.mamby.health.core.model.CareDirectiveKind
+import net.mamby.health.core.model.HealthProfile
+import net.mamby.health.core.model.HealthVault
+import net.mamby.health.core.model.MedicalDocument
+import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.asReference
+import net.mamby.health.data.VaultCodec
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -72,6 +85,78 @@ class PortableBackupContainerTest {
         } finally {
             key.fill(0)
             documentBytes.fill(0)
+        }
+    }
+
+    @Test
+    fun formatV1ContainerRoundTripsSchemaV3InvoiceAndDirectiveAttachment(): Unit = runBlocking {
+        val target = temporaryFolder.newFile("schema-v3.phvbackup")
+        val key = ByteArray(BackupKeyDeriver.KEY_SIZE_BYTES) { (it + 5).toByte() }
+        val documentBytes = "encrypted invoice".encodeToByteArray()
+        val now = Instant.parse("2026-07-30T12:00:00Z")
+        val profileId = UUID.fromString("9a8cf916-3fbe-4d35-bffe-e7dd4530eb67")
+        val documentId = UUID.fromString("7946b206-8607-4c68-adc5-f71af3148438")
+        val blobId = UUID.fromString("4eb7fcad-dda6-47b8-8dda-7d485d43ca1e")
+        val document = MedicalDocument(
+            documentId,
+            "Hospital invoice",
+            BuiltInDocumentCategory.INVOICES_RECEIPTS.asReference(),
+            LocalDate.of(2026, 7, 29),
+            "Hospital",
+            blobId = blobId,
+            mimeType = "application/pdf",
+            sizeBytes = documentBytes.size.toLong(),
+            updatedAt = now,
+        )
+        val vault = HealthVault(
+            revision = 12,
+            profiles = listOf(
+                ProfileRecord(
+                    HealthProfile(profileId, "Owner", lastUpdatedAt = now),
+                    documents = listOf(document),
+                    directives = listOf(
+                        CareDirective(
+                            UUID.fromString("90750f8d-5589-4e23-bdb6-0e8676d391b4"),
+                            CareDirectiveKind.CARE_PREFERENCE,
+                            "Preference",
+                            "Personal record",
+                            LocalDate.of(2026, 7, 30),
+                            listOf(documentId),
+                            now,
+                        ),
+                    ),
+                ),
+            ),
+            updatedAt = now,
+        )
+        val vaultBytes = VaultCodec.encode(vault)
+        val backupDocument = BackupDocumentEntry(0, blobId.toString(), documentBytes.size.toLong())
+        val manifest = BackupManifest(
+            sourceEnvironment = "dev",
+            vaultSchemaVersion = 3,
+            revision = vault.revision,
+            updatedAt = vault.updatedAt.toString(),
+            vaultJsonBase64 = Base64.getEncoder().encodeToString(vaultBytes),
+            documents = listOf(backupDocument),
+        )
+
+        try {
+            container.write(target, header(), manifest, key) { _, output ->
+                output.write(documentBytes)
+                documentBytes.size.toLong()
+            }
+            val restoredManifest = container.readManifest(target, key)
+            assertEquals(PortableBackupFormat.VERSION, restoredManifest.formatVersion)
+            assertEquals(3, restoredManifest.vaultSchemaVersion)
+            val restoredVault = VaultCodec.decode(
+                Base64.getDecoder().decode(restoredManifest.vaultJsonBase64),
+            ).vault
+            assertEquals(vault, restoredVault)
+            container.verifyDocuments(target, restoredManifest, key)
+        } finally {
+            key.fill(0)
+            documentBytes.fill(0)
+            vaultBytes.fill(0)
         }
     }
 

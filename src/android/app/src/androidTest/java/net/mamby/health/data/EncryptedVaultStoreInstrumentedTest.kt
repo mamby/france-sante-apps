@@ -13,7 +13,8 @@ import java.util.UUID
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.runBlocking
-import net.mamby.health.core.model.DocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.crypto.AesGcmVaultCipher
@@ -244,7 +245,7 @@ class EncryptedVaultStoreInstrumentedTest {
     ) = MedicalDocument(
         id = id,
         title = title,
-        category = DocumentCategory.REPORTS,
+        category = BuiltInDocumentCategory.REPORTS.asReference(),
         documentDate = LocalDate.of(2026, 7, 30),
         source = "Test clinic",
         blobId = blobId,

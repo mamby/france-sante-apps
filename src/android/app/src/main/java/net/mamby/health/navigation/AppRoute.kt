@@ -30,11 +30,21 @@ sealed interface TopLevelRoute : AppRoute
 @Serializable data class DocumentDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class MedicationDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class AppointmentDetailRoute(val profileId: String, val id: String) : AppRoute
-@Serializable data class HealthInfoDetailRoute(
-    val profileId: String,
-    val targetKind: String,
-    val id: String? = null,
-) : AppRoute
+@Serializable data object HealthInfoRoute : AppRoute
+@Serializable data object DocumentsRoute : AppRoute
+@Serializable data object NotesRoute : AppRoute
+@Serializable data object MeasurementsRoute : AppRoute
+@Serializable data object DirectoryRoute : AppRoute
+@Serializable data object ManageDocumentCategoriesRoute : AppRoute
+@Serializable data object ManageMeasurementTypesRoute : AppRoute
+@Serializable data class EmergencyContactDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class VaccinationDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class NoteDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class MeasurementDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class DirectoryEntryDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class FamilyHistoryDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class CareDirectiveDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class HealthIdentifierDetailRoute(val profileId: String, val id: String) : AppRoute
 
 @Serializable data object RemindersRoute : AppRoute
 @Serializable data object SettingsRoute : AppRoute

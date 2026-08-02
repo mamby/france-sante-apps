@@ -118,13 +118,13 @@ androidComponents {
 }
 
 jacoco {
-    toolVersion = "0.8.13"
+    toolVersion = "0.8.15"
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     val lifecycleVersion = "2.11.0"
-    val navigation3Version = "1.1.4"
+    val navigation3Version = "1.1.5"
     val adaptiveVersion = "1.3.0-rc01"
     val workVersion = "2.11.2"
 
@@ -160,13 +160,13 @@ dependencies {
     implementation("androidx.navigation3:navigation3-runtime:$navigation3Version")
     implementation("androidx.navigation3:navigation3-ui:$navigation3Version")
     implementation("androidx.work:work-runtime:$workVersion")
-    implementation("com.google.dagger:hilt-android:2.59.2")
+    implementation("com.google.dagger:hilt-android:2.60.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
-    ksp("com.google.dagger:hilt-compiler:2.59.2")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
     ksp("androidx.hilt:hilt-compiler:1.4.0")
-    kspAndroidTest("com.google.dagger:hilt-compiler:2.59.2")
+    kspAndroidTest("com.google.dagger:hilt-compiler:2.60.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -181,8 +181,8 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.work:work-testing:$workVersion")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.59.2")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.60.1")
 
-    screenshotTestImplementation("com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha14")
+    screenshotTestImplementation("com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha16")
     screenshotTestImplementation("androidx.compose.ui:ui-tooling")
 }

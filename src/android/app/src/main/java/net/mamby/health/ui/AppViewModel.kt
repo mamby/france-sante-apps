@@ -26,6 +26,16 @@ import net.mamby.health.backup.RestoreCommitResult
 import net.mamby.health.backup.RestorePreparationResult
 import net.mamby.health.backup.RestorePreview
 import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
+import net.mamby.health.core.model.CareDirective
+import net.mamby.health.core.model.CareDirectoryEntry
+import net.mamby.health.core.model.CustomDocumentCategory
+import net.mamby.health.core.model.CustomMeasurementType
+import net.mamby.health.core.model.DocumentCategoryRef
+import net.mamby.health.core.model.FamilyHistoryEntry
+import net.mamby.health.core.model.HealthIdentifier
+import net.mamby.health.core.model.HealthMeasurement
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
@@ -147,6 +157,7 @@ class AppViewModel @Inject constructor(
                 category = draft.category,
                 documentDate = draft.documentDate,
                 source = draft.source,
+                sourceEntryId = draft.sourceEntryId,
                 notes = draft.notes,
                 tags = draft.tags,
             ),
@@ -219,6 +230,87 @@ class AppViewModel @Inject constructor(
     fun deleteReminder(profileId: UUID, id: UUID) = launchOperation {
         vaultRepository.deleteReminder(profileId, id)
         reconcileReminders()
+    }
+
+    fun upsertHealthNote(profileId: UUID, note: HealthNote) = launchOperation {
+        vaultRepository.upsertHealthNote(profileId, note)
+    }
+
+    fun deleteHealthNote(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteHealthNote(profileId, id)
+    }
+
+    fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement) = launchOperation {
+        vaultRepository.upsertMeasurement(profileId, measurement)
+    }
+
+    fun deleteMeasurement(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteMeasurement(profileId, id)
+    }
+
+    fun upsertCustomMeasurementType(profileId: UUID, type: CustomMeasurementType) = launchOperation {
+        vaultRepository.upsertCustomMeasurementType(profileId, type)
+    }
+
+    fun deleteCustomMeasurementType(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteCustomMeasurementType(profileId, id)
+    }
+
+    fun upsertCareDirectoryEntry(profileId: UUID, entry: CareDirectoryEntry) = launchOperation {
+        vaultRepository.upsertCareDirectoryEntry(profileId, entry)
+    }
+
+    fun deleteCareDirectoryEntry(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteCareDirectoryEntry(profileId, id)
+    }
+
+    fun setPrimaryDoctor(profileId: UUID, id: UUID?) = launchOperation {
+        vaultRepository.setPrimaryDoctor(profileId, id)
+    }
+
+    fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry) = launchOperation {
+        vaultRepository.upsertFamilyHistoryEntry(profileId, entry)
+    }
+
+    fun deleteFamilyHistoryEntry(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteFamilyHistoryEntry(profileId, id)
+    }
+
+    fun upsertCareDirective(profileId: UUID, directive: CareDirective) = launchOperation {
+        vaultRepository.upsertCareDirective(profileId, directive)
+    }
+
+    fun deleteCareDirective(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteCareDirective(profileId, id)
+    }
+
+    fun upsertHealthIdentifier(profileId: UUID, identifier: HealthIdentifier) = launchOperation {
+        vaultRepository.upsertHealthIdentifier(profileId, identifier)
+    }
+
+    fun deleteHealthIdentifier(profileId: UUID, id: UUID) = launchOperation {
+        vaultRepository.deleteHealthIdentifier(profileId, id)
+    }
+
+    fun upsertCustomDocumentCategory(profileId: UUID, category: CustomDocumentCategory) =
+        launchOperation {
+            vaultRepository.upsertCustomDocumentCategory(profileId, category)
+        }
+
+    fun deleteCustomDocumentCategory(
+        profileId: UUID,
+        id: UUID,
+        replacement: DocumentCategoryRef?,
+    ) = launchOperation {
+        vaultRepository.deleteCustomDocumentCategory(profileId, id, replacement)
+    }
+
+    fun updateBuiltInDocumentCategoryPreference(
+        profileId: UUID,
+        preference: BuiltInDocumentCategoryPreference,
+        replacement: DocumentCategoryRef?,
+    ) = launchOperation {
+        vaultRepository.updateBuiltInDocumentCategoryPreference(profileId, preference, replacement)
     }
 
     fun setThemeMode(mode: ThemeMode) = launchOperation {

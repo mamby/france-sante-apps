@@ -22,6 +22,18 @@ sealed interface HealthSearchTarget {
     data class Medication(val id: UUID) : HealthSearchTarget
 
     data class Appointment(val id: UUID) : HealthSearchTarget
+
+    data class Note(val id: UUID) : HealthSearchTarget
+
+    data class Measurement(val id: UUID) : HealthSearchTarget
+
+    data class DirectoryEntry(val id: UUID) : HealthSearchTarget
+
+    data class FamilyHistory(val id: UUID) : HealthSearchTarget
+
+    data class Directive(val id: UUID) : HealthSearchTarget
+
+    data class Identifier(val id: UUID) : HealthSearchTarget
 }
 
 data class HealthSearchResult(
@@ -139,6 +151,113 @@ object HealthSearch {
                                 .filter(String::isNotBlank)
                                 .joinToString(SEPARATOR),
                             HealthSearchTarget.Appointment(appointment.id),
+                        ),
+                    )
+                }
+            record.notes
+                .filter { listOf(it.title, it.body).matches(terms) }
+                .sortedByDescending(HealthNote::notedAt)
+                .forEach { note ->
+                    add(
+                        HealthSearchResult(
+                            profileId,
+                            HealthSearchGroup.HEALTH_RECORDS,
+                            note.title,
+                            note.body,
+                            HealthSearchTarget.Note(note.id),
+                        ),
+                    )
+                }
+            record.measurements
+                .filter {
+                    listOf(it.type.searchableName(record), it.notes.orEmpty()).matches(terms)
+                }
+                .sortedByDescending(HealthMeasurement::measuredAt)
+                .forEach { measurement ->
+                    add(
+                        HealthSearchResult(
+                            profileId,
+                            HealthSearchGroup.HEALTH_RECORDS,
+                            measurement.type.searchableName(record),
+                            measurement.notes,
+                            HealthSearchTarget.Measurement(measurement.id),
+                        ),
+                    )
+                }
+            record.careDirectory
+                .filter { entry ->
+                    listOf(
+                        entry.name,
+                        entry.specialty.orEmpty(),
+                        entry.organization.orEmpty(),
+                        entry.address.addressLines.joinToString(" "),
+                        entry.address.locality.orEmpty(),
+                        entry.address.region.orEmpty(),
+                        entry.address.postalCode.orEmpty(),
+                        entry.address.country.orEmpty(),
+                        entry.phoneNumbers.joinToString(" "),
+                        entry.emailAddresses.joinToString(" "),
+                        entry.notes.orEmpty(),
+                    ).matches(terms)
+                }
+                .sortedBy(CareDirectoryEntry::name)
+                .forEach { entry ->
+                    add(
+                        HealthSearchResult(
+                            profileId,
+                            HealthSearchGroup.HEALTH_RECORDS,
+                            entry.name,
+                            listOf(entry.specialty.orEmpty(), entry.organization.orEmpty())
+                                .filter(String::isNotBlank)
+                                .joinToString(SEPARATOR),
+                            HealthSearchTarget.DirectoryEntry(entry.id),
+                        ),
+                    )
+                }
+            record.familyHistory
+                .filter {
+                    listOf(it.relationship, it.condition, it.notes.orEmpty()).matches(terms)
+                }
+                .sortedBy(FamilyHistoryEntry::relationship)
+                .forEach { entry ->
+                    add(
+                        HealthSearchResult(
+                            profileId,
+                            HealthSearchGroup.HEALTH_RECORDS,
+                            entry.condition,
+                            entry.relationship,
+                            HealthSearchTarget.FamilyHistory(entry.id),
+                        ),
+                    )
+                }
+            record.directives
+                .filter { listOf(it.title, it.text).matches(terms) }
+                .sortedByDescending(CareDirective::recordedOn)
+                .forEach { directive ->
+                    add(
+                        HealthSearchResult(
+                            profileId,
+                            HealthSearchGroup.HEALTH_RECORDS,
+                            directive.title,
+                            directive.text,
+                            HealthSearchTarget.Directive(directive.id),
+                        ),
+                    )
+                }
+            record.healthIdentifiers
+                .filter {
+                    // Identifier values are deliberately excluded from the searchable content.
+                    listOf(it.label, it.issuer.orEmpty()).matches(terms)
+                }
+                .sortedBy(HealthIdentifier::label)
+                .forEach { identifier ->
+                    add(
+                        HealthSearchResult(
+                            profileId,
+                            HealthSearchGroup.HEALTH_RECORDS,
+                            identifier.label,
+                            identifier.issuer,
+                            HealthSearchTarget.Identifier(identifier.id),
                         ),
                     )
                 }

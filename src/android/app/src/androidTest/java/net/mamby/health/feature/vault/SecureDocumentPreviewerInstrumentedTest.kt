@@ -17,7 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import net.mamby.health.core.model.Appointment
-import net.mamby.health.core.model.DocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.EmergencyContact
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
@@ -91,7 +92,7 @@ class SecureDocumentPreviewerInstrumentedTest {
     private fun document(mimeType: String, size: Long) = MedicalDocument(
         id = UUID.fromString("0b45740d-cbf5-4b0b-b321-50dd33acf4d4"),
         title = "Synthetic image",
-        category = DocumentCategory.REPORTS,
+        category = BuiltInDocumentCategory.REPORTS.asReference(),
         documentDate = LocalDate.of(2026, 7, 30),
         source = "Instrumented test",
         blobId = BLOB_ID,

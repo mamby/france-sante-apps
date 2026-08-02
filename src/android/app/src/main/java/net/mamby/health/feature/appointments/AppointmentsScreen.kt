@@ -33,10 +33,13 @@ import java.time.ZoneId
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.Appointment
+import net.mamby.health.core.model.CareDirectoryEntry
+import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
+import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SectionCard
@@ -50,6 +53,7 @@ import net.mamby.health.ui.theme.UiTokens
 fun AppointmentsScreen(
     appointments: List<Appointment>,
     documents: List<MedicalDocument>,
+    directory: List<CareDirectoryEntry>,
     profile: HealthProfile,
     zoneId: ZoneId,
     now: Instant,
@@ -106,6 +110,7 @@ fun AppointmentsScreen(
         AppointmentDialog(
             existing = null,
             documents = documents,
+            directory = directory,
             zoneId = zoneId,
             today = now.atZone(zoneId).toLocalDate(),
             onDismiss = { editorVisible = false },
@@ -131,6 +136,7 @@ private fun AppointmentCard(appointment: Appointment, zoneId: ZoneId, onOpen: ()
 fun AppointmentDialog(
     existing: Appointment?,
     documents: List<MedicalDocument>,
+    directory: List<CareDirectoryEntry>,
     zoneId: ZoneId,
     today: LocalDate,
     onDismiss: () -> Unit,
@@ -140,6 +146,8 @@ fun AppointmentDialog(
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
     var clinician by remember { mutableStateOf(existing?.clinician.orEmpty()) }
     var location by remember { mutableStateOf(existing?.location.orEmpty()) }
+    var clinicianEntryId by remember { mutableStateOf(existing?.clinicianEntryId) }
+    var facilityEntryId by remember { mutableStateOf(existing?.facilityEntryId) }
     var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
     var date by remember { mutableStateOf(existingDateTime?.toLocalDate() ?: today) }
     var time by remember { mutableStateOf(existingDateTime?.toLocalTime() ?: LocalTime.of(9, 0)) }
@@ -161,6 +169,8 @@ fun AppointmentDialog(
                     location = location.trim(),
                     startsAt = date.atTime(time).atZone(zoneId).toInstant(),
                     relatedDocumentIds = relatedDocuments.toList(),
+                    clinicianEntryId = clinicianEntryId,
+                    facilityEntryId = facilityEntryId,
                     notes = notes.trim().ifBlank { null },
                     reminderLeadMinutes = reminderValue.takeIf { reminderEnabled },
                     updatedAt = existing?.updatedAt ?: Instant.EPOCH,
@@ -171,7 +181,19 @@ fun AppointmentDialog(
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
             OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.appointment_title)) })
             OutlinedTextField(clinician, { clinician = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.appointment_clinician)) })
+            CareDirectoryPicker(
+                entries = directory.filter { it.kind == CareDirectoryKind.DOCTOR || it.kind == CareDirectoryKind.OTHER },
+                selectedId = clinicianEntryId,
+                onSelected = { clinicianEntryId = it },
+                label = stringResource(R.string.appointment_clinician_directory),
+            )
             OutlinedTextField(location, { location = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.appointment_location)) })
+            CareDirectoryPicker(
+                entries = directory.filter { it.kind != CareDirectoryKind.DOCTOR && it.kind != CareDirectoryKind.PHARMACY },
+                selectedId = facilityEntryId,
+                onSelected = { facilityEntryId = it },
+                label = stringResource(R.string.appointment_facility_directory),
+            )
             DateField(stringResource(R.string.appointment_date), date, { date = it })
             TimeField(stringResource(R.string.appointment_time), time, { time = it })
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.appointment_notes)) }, minLines = 2)

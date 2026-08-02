@@ -16,6 +16,9 @@ import java.time.ZoneId
 import net.mamby.health.R
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.RecurrenceCalculator
+import net.mamby.health.core.model.VaultItem
+import net.mamby.health.core.model.VaultItemKind
+import net.mamby.health.core.model.index
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.MetricCard
@@ -23,6 +26,7 @@ import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.format.localizedDateTime
+import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
@@ -34,6 +38,9 @@ fun DashboardScreen(
     onSettings: () -> Unit,
     onReminders: () -> Unit,
     onDocumentSelected: (String) -> Unit,
+    onRecentItem: (VaultItem) -> Unit = { item ->
+        if (item.kind == VaultItemKind.DOCUMENT) onDocumentSelected(item.id.toString())
+    },
     onAddHealthInfo: () -> Unit,
     onImportDocument: () -> Unit,
     onAddMedication: () -> Unit,
@@ -55,6 +62,7 @@ fun DashboardScreen(
     val enabledReminders = record.reminders.count { it.isEnabled } +
         record.medications.count { it.isActive && it.remindersEnabled } +
         record.appointments.count { it.reminderLeadMinutes != null && it.startsAt.isAfter(now) }
+    val recentItems = record.index().take(4)
 
     AppScreenScaffold(
         title = stringResource(R.string.dashboard_title),
@@ -75,6 +83,9 @@ fun DashboardScreen(
 
             if (record.documents.isEmpty() && record.medications.isEmpty() &&
                 record.appointments.isEmpty() && record.vaccinations.isEmpty() &&
+                record.notes.isEmpty() && record.measurements.isEmpty() &&
+                record.careDirectory.isEmpty() && record.familyHistory.isEmpty() &&
+                record.directives.isEmpty() && record.healthIdentifiers.isEmpty() &&
                 record.profile.bloodType == null && record.profile.allergies.isEmpty() &&
                 record.profile.chronicConditions.isEmpty() && record.profile.surgeries.isEmpty()
             ) {
@@ -129,17 +140,21 @@ fun DashboardScreen(
                 }
             }
 
-            if (record.documents.isNotEmpty()) {
+            if (recentItems.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(stringResource(R.string.recent_documents))
+                    Text(stringResource(R.string.recent_health_items))
                 }
                 items(
-                    items = record.documents.sortedByDescending { it.documentDate }.take(4),
+                    items = recentItems,
                     key = { it.id },
-                ) { document ->
-                    SectionCard(document.title, modifier = Modifier) {
-                        Text(document.documentDate.localizedDate())
-                        Button(onClick = { onDocumentSelected(document.id.toString()) }) {
+                ) { item ->
+                    val title = if (item.kind == VaultItemKind.MEASUREMENT) {
+                        record.measurements.firstOrNull { it.id == item.id }?.type?.localizedLabel(record)
+                            ?: item.title
+                    } else item.title
+                    SectionCard(title, modifier = Modifier) {
+                        Text(item.updatedAt.localizedDateTime(zoneId))
+                        Button(onClick = { onRecentItem(item) }) {
                             Text(stringResource(R.string.common_open))
                         }
                     }

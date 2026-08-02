@@ -49,7 +49,13 @@ class AndroidNotificationPublisher @Inject constructor(
         }
         // permissionState performs the runtime POST_NOTIFICATIONS check before this call.
         ensureChannel()
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification = buildNotification(request)
+        NotificationManagerCompat.from(context).notify(notificationId(request.id), notification)
+        return NotificationPublishResult.Published
+    }
+
+    internal fun buildNotification(request: ReminderRequest) =
+        NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_generic_title))
             .setContentText(context.getString(R.string.notification_generic_body))
@@ -58,9 +64,6 @@ class AndroidNotificationPublisher @Inject constructor(
             .setAutoCancel(true)
             .setContentIntent(contentIntent(request))
             .build()
-        NotificationManagerCompat.from(context).notify(notificationId(request.id), notification)
-        return NotificationPublishResult.Published
-    }
 
     override fun cancel(reminderId: String) {
         NotificationManagerCompat.from(context).cancel(notificationId(reminderId))

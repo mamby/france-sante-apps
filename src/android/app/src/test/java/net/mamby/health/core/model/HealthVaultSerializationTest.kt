@@ -17,11 +17,18 @@ class HealthVaultSerializationTest {
     private val blobId = UUID.fromString("27d14e33-91aa-47d5-bf19-fd7beb082d96")
 
     @Test
-    fun schemaV2RoundTripsMultipleProfilesWithoutDerivedViews() {
+    fun schemaV3RoundTripsMultipleProfilesWithoutDerivedViews() {
+        val doctorId = UUID.fromString("34a502d7-23c0-4be5-a8fd-34b56dca82d0")
+        val noteId = UUID.fromString("096c83e2-7703-49b4-8d24-e5bf5f9c63e4")
+        val measurementId = UUID.fromString("8c918e28-6344-484b-a969-a2d23c109bf3")
+        val directiveId = UUID.fromString("6114ffae-bcbc-43a2-845e-cd3798596a1c")
+        val identifierId = UUID.fromString("74015d24-2f46-4b83-b2bd-fb83ad25d25a")
+        val familyId = UUID.fromString("2c93fa7e-41d8-4ae7-a84d-dd624180b399")
+        val categoryId = UUID.fromString("0d47f8cf-e992-4585-b9cd-2413a9f269c4")
         val document = MedicalDocument(
             id = documentId,
             title = "Lab result",
-            category = DocumentCategory.LAB_RESULTS,
+            category = BuiltInDocumentCategory.LAB_RESULTS.asReference(),
             documentDate = LocalDate.of(2026, 7, 28),
             source = "Laboratory",
             blobId = blobId,
@@ -33,8 +40,58 @@ class HealthVaultSerializationTest {
             revision = 7,
             profiles = listOf(
                 ProfileRecord(
-                    profile = HealthProfile(firstId, "Amina", bloodType = "O+", lastUpdatedAt = now),
-                    documents = listOf(document),
+                    profile = HealthProfile(
+                        firstId,
+                        "Amina",
+                        bloodType = "O+",
+                        primaryDoctorEntryId = doctorId,
+                        lastUpdatedAt = now,
+                    ),
+                    documents = listOf(document.copy(category = DocumentCategoryRef.Custom(categoryId), sourceEntryId = doctorId)),
+                    notes = listOf(HealthNote(noteId, "Follow-up", "Context", now, now)),
+                    measurements = listOf(
+                        HealthMeasurement(
+                            measurementId,
+                            MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT),
+                            MeasurementReading.Scalar(
+                                72.5,
+                                MeasurementUnitRef.BuiltIn(MeasurementUnit.KILOGRAM),
+                            ),
+                            now,
+                            "Morning",
+                            now,
+                        ),
+                    ),
+                    careDirectory = listOf(
+                        CareDirectoryEntry(doctorId, CareDirectoryKind.DOCTOR, "Dr Martin", updatedAt = now),
+                    ),
+                    familyHistory = listOf(FamilyHistoryEntry(familyId, "Parent", "Diabetes", 48, updatedAt = now)),
+                    directives = listOf(
+                        CareDirective(
+                            directiveId,
+                            CareDirectiveKind.CARE_PREFERENCE,
+                            "Preference",
+                            "Personal preference text",
+                            LocalDate.of(2026, 7, 30),
+                            listOf(documentId),
+                            now,
+                        ),
+                    ),
+                    healthIdentifiers = listOf(
+                        HealthIdentifier(
+                            identifierId,
+                            HealthIdentifierKind.SOCIAL_SECURITY,
+                            "Social security",
+                            "secret-value",
+                            "Issuer",
+                            "FR",
+                            updatedAt = now,
+                        ),
+                    ),
+                    customDocumentCategories = listOf(CustomDocumentCategory(categoryId, "Invoices", now)),
+                    builtInDocumentCategoryPreferences = listOf(
+                        BuiltInDocumentCategoryPreference(BuiltInDocumentCategory.OTHER, "Miscellaneous"),
+                    ),
                 ),
                 ProfileRecord(HealthProfile(secondId, "Sam", lastUpdatedAt = now)),
             ),
@@ -44,13 +101,63 @@ class HealthVaultSerializationTest {
         val encoded = VaultCodec.encode(vault)
         val decoded = VaultCodec.decode(encoded)
 
-        assertEquals(2, decoded.sourceVersion)
+        assertEquals(3, decoded.sourceVersion)
         assertEquals(vault, decoded.vault)
         assertEquals("O+", decoded.vault.profiles.first().summary().bloodType)
-        assertEquals(listOf(documentId), decoded.vault.profiles.first().index().map(VaultItem::id))
+        assertEquals(
+            listOf(documentId, noteId, measurementId, doctorId, familyId, directiveId, identifierId),
+            decoded.vault.profiles.first().index().map(VaultItem::id),
+        )
         val text = encoded.decodeToString()
         assertFalse(text.contains("\"summary\""))
         assertFalse(text.contains("\"vaultItems\""))
+    }
+
+    @Test
+    fun exactV2PayloadMigratesToV3PreservingProfilesNotesCategoriesAndBlobs() {
+        val secondDocumentId = UUID.fromString("a5f1105a-586b-4b91-bcb5-15a174f55c13")
+        val secondBlobId = UUID.fromString("4f139214-9a53-4ef8-8cef-5b221b03759e")
+        val payload = """
+            {
+              "version": 2,
+              "revision": 11,
+              "profiles": [
+                {
+                  "profile": {"id":"$firstId","displayName":"Amina","lastUpdatedAt":"$now"},
+                  "documents": [{
+                    "id":"$documentId","title":"Invoice","category":"OTHER",
+                    "documentDate":"2026-07-28","source":"Clinic","notes":"Keep this note",
+                    "tags":["paid"],"blobId":"$blobId","mimeType":"application/pdf",
+                    "sizeBytes":10,"originalFileName":"invoice.pdf","updatedAt":"$now"
+                  }]
+                },
+                {
+                  "profile": {"id":"$secondId","displayName":"Sam","lastUpdatedAt":"$now"},
+                  "documents": [{
+                    "id":"$secondDocumentId","title":"Report","category":"REPORTS",
+                    "documentDate":"2026-07-29","source":"Hospital",
+                    "blobId":"$secondBlobId","mimeType":"application/pdf","sizeBytes":20,"updatedAt":"$now"
+                  }]
+                }
+              ],
+              "updatedAt":"$now"
+            }
+        """.trimIndent().encodeToByteArray()
+
+        val decoded = VaultCodec.decode(payload)
+
+        assertEquals(2, decoded.sourceVersion)
+        assertEquals(3, decoded.vault.version)
+        assertEquals(11L, decoded.vault.revision)
+        assertEquals(listOf(firstId, secondId), decoded.vault.profiles.map { it.profile.id })
+        val firstDocument = decoded.vault.profiles.first().documents.single()
+        assertEquals(documentId, firstDocument.id)
+        assertEquals(blobId, firstDocument.blobId)
+        assertEquals(BuiltInDocumentCategory.OTHER.asReference(), firstDocument.category)
+        assertEquals("Keep this note", firstDocument.notes)
+        assertEquals(listOf("paid"), firstDocument.tags)
+        assertEquals("invoice.pdf", firstDocument.originalFileName)
+        assertEquals(secondBlobId, decoded.vault.profiles[1].documents.single().blobId)
     }
 
     @Test
@@ -82,7 +189,7 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(1, decoded.sourceVersion)
-        assertEquals(2, decoded.vault.version)
+        assertEquals(3, decoded.vault.version)
         assertEquals(3L, decoded.vault.revision)
         assertEquals(firstId, decoded.vault.profiles.single().profile.id)
         assertEquals(documentId, decoded.vault.profiles.single().documents.single().id)
@@ -107,7 +214,7 @@ class HealthVaultSerializationTest {
         val document = MedicalDocument(
             sharedId,
             "Report",
-            DocumentCategory.REPORTS,
+            BuiltInDocumentCategory.REPORTS.asReference(),
             LocalDate.of(2026, 7, 1),
             "Clinic",
             blobId = UUID.randomUUID(),
@@ -141,6 +248,98 @@ class HealthVaultSerializationTest {
     }
 
     @Test
+    fun validationRejectsInvalidMeasurementsAndCrossProfileDirectoryReferences() {
+        val doctorId = UUID.randomUUID()
+        val wrongUnit = HealthMeasurement(
+            id = UUID.randomUUID(),
+            type = MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT),
+            reading = MeasurementReading.Scalar(
+                Double.NaN,
+                MeasurementUnitRef.BuiltIn(MeasurementUnit.CELSIUS),
+            ),
+            measuredAt = now,
+            updatedAt = now,
+        )
+        val first = ProfileRecord(
+            profile = HealthProfile(firstId, "Amina", primaryDoctorEntryId = doctorId, lastUpdatedAt = now),
+            measurements = listOf(wrongUnit),
+        )
+        val second = ProfileRecord(
+            profile = HealthProfile(secondId, "Sam", lastUpdatedAt = now),
+            careDirectory = listOf(
+                CareDirectoryEntry(doctorId, CareDirectoryKind.DOCTOR, "Dr Sam", updatedAt = now),
+            ),
+        )
+        val invalid = HealthVault(revision = 4, profiles = listOf(first, second), updatedAt = now)
+
+        assertThrows(VaultValidationException::class.java) { invalid.requireValid() }
+
+        val finiteButWrongUnit = invalid.copy(
+            profiles = listOf(
+                first.copy(
+                    profile = first.profile.copy(primaryDoctorEntryId = null),
+                    measurements = listOf(
+                        wrongUnit.copy(
+                            reading = MeasurementReading.Scalar(
+                                72.0,
+                                MeasurementUnitRef.BuiltIn(MeasurementUnit.CELSIUS),
+                            ),
+                        ),
+                    ),
+                ),
+                second,
+            ),
+        )
+        assertThrows(VaultValidationException::class.java) { finiteButWrongUnit.requireValid() }
+
+        val nonFinite = finiteButWrongUnit.copy(
+            profiles = listOf(
+                finiteButWrongUnit.profiles.first().copy(
+                    measurements = listOf(
+                        wrongUnit.copy(
+                            reading = MeasurementReading.Scalar(
+                                Double.POSITIVE_INFINITY,
+                                MeasurementUnitRef.BuiltIn(MeasurementUnit.KILOGRAM),
+                            ),
+                        ),
+                    ),
+                ),
+                second,
+            ),
+        )
+        assertThrows(VaultValidationException::class.java) { nonFinite.requireValid() }
+    }
+
+    @Test
+    fun validationRejectsDuplicateNewObjectIdsAcrossProfiles() {
+        val sharedId = UUID.randomUUID()
+        val invalid = HealthVault(
+            revision = 1,
+            profiles = listOf(
+                ProfileRecord(
+                    HealthProfile(firstId, "Amina", lastUpdatedAt = now),
+                    notes = listOf(HealthNote(sharedId, "First", "Body", now, now)),
+                ),
+                ProfileRecord(
+                    HealthProfile(secondId, "Sam", lastUpdatedAt = now),
+                    healthIdentifiers = listOf(
+                        HealthIdentifier(
+                            sharedId,
+                            HealthIdentifierKind.PATIENT,
+                            "Patient number",
+                            "value",
+                            updatedAt = now,
+                        ),
+                    ),
+                ),
+            ),
+            updatedAt = now,
+        )
+
+        assertThrows(VaultValidationException::class.java) { invalid.requireValid() }
+    }
+
+    @Test
     fun backupDocumentFlatteningPreservesProfileThenListOrder() {
         val firstDocument = document(UUID.randomUUID(), UUID.randomUUID(), "First")
         val secondDocument = document(UUID.randomUUID(), UUID.randomUUID(), "Second")
@@ -170,7 +369,7 @@ class HealthVaultSerializationTest {
     private fun document(id: UUID, blobId: UUID, title: String) = MedicalDocument(
         id = id,
         title = title,
-        category = DocumentCategory.REPORTS,
+        category = BuiltInDocumentCategory.REPORTS.asReference(),
         documentDate = LocalDate.of(2026, 7, 1),
         source = "Clinic",
         blobId = blobId,

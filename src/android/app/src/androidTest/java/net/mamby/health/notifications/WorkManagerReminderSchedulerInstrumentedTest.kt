@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import net.mamby.health.core.model.Appointment
-import net.mamby.health.core.model.DocumentCategory
 import net.mamby.health.core.model.EmergencyContact
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
