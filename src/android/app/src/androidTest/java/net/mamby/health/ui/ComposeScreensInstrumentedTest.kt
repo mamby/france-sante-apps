@@ -7,20 +7,29 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -45,6 +54,8 @@ import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.AppNavigationSuite
+import net.mamby.health.ui.components.RemovableInputChip
+import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -199,6 +210,44 @@ class ComposeScreensInstrumentedTest {
             assertEquals(Role.Tab, node.config[SemanticsProperties.Role])
             composeRule.onAllNodesWithText(label).assertCountEquals(0)
         }
+    }
+
+    @Test
+    fun removableInputChipExposesAndPerformsItsRemovalAction() {
+        val value = "Penicillin"
+        composeRule.setContent {
+            var visible by remember { mutableStateOf(true) }
+            HealthVaultTheme {
+                if (visible) {
+                    RemovableInputChip(value, onRemove = { visible = false })
+                }
+            }
+        }
+
+        val node = composeRule.onNodeWithText(value).assertHasClickAction().fetchSemanticsNode()
+        assertEquals(
+            composeRule.activity.getString(R.string.a11y_delete_item, value),
+            node.config[SemanticsActions.OnClick].label,
+        )
+        composeRule.onNodeWithText(value).performClick().assertDoesNotExist()
+    }
+
+    @Test
+    fun switchFieldExposesItsLabelStateAndActionAsOneControl() {
+        val label = composeRule.activity.getString(R.string.medication_reminders)
+        composeRule.setContent {
+            var checked by remember { mutableStateOf(false) }
+            HealthVaultTheme {
+                SwitchField(label, checked, onCheckedChange = { checked = it })
+            }
+        }
+
+        val switch = composeRule.onNodeWithText(label)
+            .assertHasClickAction()
+            .assertIsOff()
+        assertEquals(Role.Switch, switch.fetchSemanticsNode().config[SemanticsProperties.Role])
+        switch.performClick()
+        composeRule.onNodeWithText(label).assertIsOn()
     }
 
     @Test

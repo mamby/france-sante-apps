@@ -36,16 +36,18 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Teal,
-    onPrimary = White,
+    primary = TealLight,
+    onPrimary = TealDark,
     primaryContainer = DarkElevatedSurface,
     onPrimaryContainer = DarkText,
     secondary = DarkSecondaryText,
     onSecondary = DarkBackground,
     secondaryContainer = DarkElevatedSurface,
     onSecondaryContainer = DarkText,
-    tertiary = Info,
-    error = Danger,
+    tertiary = InfoLight,
+    onTertiary = InfoDark,
+    error = DangerLight,
+    onError = DangerDark,
     background = DarkBackground,
     onBackground = DarkText,
     surface = DarkSurface,

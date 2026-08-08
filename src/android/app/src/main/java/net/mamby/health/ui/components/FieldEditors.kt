@@ -4,18 +4,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -23,6 +25,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -34,6 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -154,15 +160,7 @@ fun StringListEditor(
     Column(verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
         Text(label)
         values.forEach { value ->
-            AssistChip(
-                onClick = {},
-                label = { Text(value) },
-                trailingIcon = {
-                    IconButton(onClick = { onValuesChange(values - value) }) {
-                        Icon(Icons.Outlined.Close, stringResource(R.string.remove_item))
-                    }
-                },
-            )
+            RemovableInputChip(value, onRemove = { onValuesChange(values - value) })
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
@@ -192,17 +190,48 @@ fun StringListEditor(
 }
 
 @Composable
+fun RemovableInputChip(
+    label: String,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val removeActionLabel = stringResource(R.string.a11y_delete_item, label)
+    InputChip(
+        selected = true,
+        onClick = onRemove,
+        label = { Text(label) },
+        trailingIcon = {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = null,
+                modifier = Modifier.size(InputChipDefaults.AvatarSize),
+            )
+        },
+        modifier = modifier.semantics {
+            onClick(label = removeActionLabel, action = null)
+        },
+    )
+}
+
+@Composable
 fun SwitchField(
     label: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .minimumInteractiveComponentSize()
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }

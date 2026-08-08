@@ -11,8 +11,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,7 +20,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +47,7 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -230,14 +228,9 @@ fun MedicationDialog(
                 }
                 Text(stringResource(R.string.medication_times))
                 reminderTimes.forEach { time ->
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(time.localizedTime()) },
-                        trailingIcon = {
-                            IconButton(onClick = { reminderTimes = reminderTimes - time }) {
-                                Icon(Icons.Outlined.Close, stringResource(R.string.remove_item))
-                            }
-                        },
+                    RemovableInputChip(
+                        label = time.localizedTime(),
+                        onRemove = { reminderTimes = reminderTimes - time },
                     )
                 }
                 TimeField(stringResource(R.string.add_reminder_time), pendingTime, { pendingTime = it })
