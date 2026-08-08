@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,19 +15,6 @@ import androidx.compose.ui.res.stringResource
 import net.mamby.health.R
 import net.mamby.health.data.UnreadableReason
 import net.mamby.health.ui.theme.UiTokens
-
-@Composable
-fun VaultLoadingScreen() {
-    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
-        ) {
-            CircularProgressIndicator()
-            Text(stringResource(R.string.vault_loading))
-        }
-    }
-}
 
 @Composable
 fun VaultUnreadableScreen(

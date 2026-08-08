@@ -100,10 +100,6 @@ class AppViewModel @Inject constructor(
 
     val zoneId get() = zoneIdProvider.current()
 
-    init {
-        viewModelScope.launch { vaultRepository.initialize() }
-    }
-
     fun clearNotice() {
         mutableNotice.value = null
     }

@@ -92,7 +92,6 @@ import net.mamby.health.data.VaultState
 import net.mamby.health.feature.appointments.AppointmentDetailScreen
 import net.mamby.health.feature.appointments.AppointmentsScreen
 import net.mamby.health.feature.dashboard.DashboardScreen
-import net.mamby.health.feature.error.VaultLoadingScreen
 import net.mamby.health.feature.error.VaultUnreadableScreen
 import net.mamby.health.feature.lock.LockScreen
 import net.mamby.health.feature.medications.MedicationDetailScreen
@@ -258,14 +257,14 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
                     },
             ) {
                 when (lockState) {
-                    AppLockState.Initializing -> VaultLoadingScreen()
+                    AppLockState.Initializing -> Unit
                     AppLockState.Locked, AppLockState.Authenticating -> LockScreen(
                         state = lockState,
                         message = notice?.let { stringResource(it.resourceId) },
                         onUnlock = { activity?.let(viewModel::unlock) },
                     )
                     AppLockState.Disabled, AppLockState.Unlocked -> when (val state = vaultState) {
-                        VaultState.Loading -> VaultLoadingScreen()
+                        VaultState.Loading -> Unit
                         VaultState.Missing -> if (recoverySettingsVisible) {
                             RecoverySettings(
                                 settings = settings,

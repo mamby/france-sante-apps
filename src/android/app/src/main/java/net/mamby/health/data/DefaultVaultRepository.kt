@@ -57,7 +57,7 @@ class DefaultVaultRepository @Inject constructor(
 
     override suspend fun initialize() {
         mutex.withLock {
-            mutableState.value = VaultState.Loading
+            if (mutableState.value !is VaultState.Loading) return@withLock
             try {
                 val vault = vaultStore.load()
                 if (vault == null) {
