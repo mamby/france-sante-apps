@@ -35,7 +35,6 @@ fun DashboardScreen(
     clock: Clock,
     zoneId: ZoneId,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onReminders: () -> Unit,
     onDocumentSelected: (String) -> Unit,
     onRecentItem: (VaultItem) -> Unit = { item ->
@@ -66,7 +65,6 @@ fun DashboardScreen(
 
     AppScreenScaffold(
         title = stringResource(R.string.dashboard_title),
-        onSettings = onSettings,
         profile = record.profile,
         onProfileClick = onProfileClick,
     ) { innerPadding ->

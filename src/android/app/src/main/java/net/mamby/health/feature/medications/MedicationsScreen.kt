@@ -63,7 +63,6 @@ fun MedicationsScreen(
     profile: HealthProfile,
     today: LocalDate,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onUpsert: (Medication) -> Unit,
     onSelected: (String) -> Unit,
     creationRequest: Long = 0,
@@ -74,7 +73,6 @@ fun MedicationsScreen(
     }
     AppScreenScaffold(
         title = stringResource(R.string.medications_title),
-        onSettings = onSettings,
         profile = profile,
         onProfileClick = onProfileClick,
         floatingActionButton = {

@@ -58,7 +58,6 @@ fun AppointmentsScreen(
     zoneId: ZoneId,
     now: Instant,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onUpsert: (Appointment) -> Unit,
     onSelected: (String) -> Unit,
     creationRequest: Long = 0,
@@ -71,7 +70,6 @@ fun AppointmentsScreen(
     val past = appointments.filterNot { it.startsAt.isAfter(now) }.sortedByDescending { it.startsAt }
     AppScreenScaffold(
         title = stringResource(R.string.appointments_title),
-        onSettings = onSettings,
         profile = profile,
         onProfileClick = onProfileClick,
         floatingActionButton = {

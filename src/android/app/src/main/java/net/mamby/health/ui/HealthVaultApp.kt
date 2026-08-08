@@ -45,6 +45,7 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -154,9 +155,11 @@ import net.mamby.health.security.AppLockState
 import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.ThemeMode
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.appNavigationSuiteType
 import net.mamby.health.ui.theme.HealthVaultTheme
 import net.mamby.health.ui.theme.UiTokens
 
@@ -407,6 +410,7 @@ private fun VaultNavigation(
     val currentSelectedProfileId by rememberUpdatedState(selectedProfileId)
     val context = LocalContext.current
     var profileSheetVisible by remember { mutableStateOf(false) }
+    var moreSheetVisible by rememberSaveable { mutableStateOf(false) }
     var addProfileVisible by remember { mutableStateOf(false) }
     var searchQuery by remember(selectedProfileId) { mutableStateOf("") }
     var searchFilter by remember(selectedProfileId) { mutableStateOf(SearchFilter.ALL) }
@@ -438,6 +442,7 @@ private fun VaultNavigation(
         if (previousProfileId != selectedProfileId) {
             navigation.trimToRoots(keepDestination = true)
             profileSheetVisible = false
+            moreSheetVisible = false
             healthCreation = 0
             documentCreation = 0
             noteCreation = 0
@@ -500,6 +505,15 @@ private fun VaultNavigation(
     }
 
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val navigationSuiteType = remember(adaptiveInfo) { appNavigationSuiteType(adaptiveInfo) }
+    val usesMore = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact
+    val currentRoute = navigation.currentBackStack.lastOrNull()
+    val isMoreSelected = usesMore && (
+        navigation.selectedDestination == TopLevelDestination.Appointments ||
+            currentRoute == RemindersRoute ||
+            currentRoute == SettingsRoute ||
+            currentRoute == ManageProfilesRoute
+        )
     val directive = remember(adaptiveInfo) {
         calculatePaneScaffoldDirective(adaptiveInfo).copy(horizontalPartitionSpacerSize = 0.dp)
     }
@@ -507,15 +521,21 @@ private fun VaultNavigation(
     val now = viewModel.clock.instant()
     val zoneId = viewModel.zoneId
     val today = now.atZone(zoneId).toLocalDate()
-    val navigateSettings = dropUnlessResumed { navigation.navigate(SettingsRoute) }
     val openProfileSelector = { profileSheetVisible = true }
     val message = notice?.let { stringResource(it.resourceId) }
+
+    LaunchedEffect(usesMore) {
+        if (!usesMore) moreSheetVisible = false
+    }
 
     Box(Modifier.fillMaxSize()) {
         BackHandler(enabled = navigation.isAtSecondaryRoot, onBack = navigation::goBack)
         AppNavigationSuite(
             selectedDestination = navigation.selectedDestination,
+            layoutType = navigationSuiteType,
+            isMoreSelected = isMoreSelected,
             onDestinationSelected = navigation::select,
+            onMoreSelected = { moreSheetVisible = true },
         ) {
             NavDisplay(
                 backStack = navigation.currentBackStack,
@@ -528,7 +548,6 @@ private fun VaultNavigation(
                             clock = viewModel.clock,
                             zoneId = zoneId,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onReminders = { navigation.navigate(RemindersRoute) },
                             onDocumentSelected = { id ->
                                 navigation.navigate(
@@ -612,7 +631,6 @@ private fun VaultNavigation(
                         HealthRecordsHubScreen(
                             record = record,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onHealthInfo = { navigation.navigate(HealthInfoRoute) },
                             onMeasurements = { navigation.navigate(MeasurementsRoute) },
                             onNotes = { navigation.navigate(NotesRoute) },
@@ -626,7 +644,6 @@ private fun VaultNavigation(
                             today = today,
                             onBack = navigation::goBack,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onUpdateProfile = { viewModel.updateProfile(selectedProfileId, it) },
                             onUpsertVaccination = { viewModel.upsertVaccination(selectedProfileId, it) },
                             onDeleteVaccination = { viewModel.deleteVaccination(selectedProfileId, it) },
@@ -665,7 +682,6 @@ private fun VaultNavigation(
                             today = today,
                             onBack = navigation::goBack,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onManageCategories = { navigation.navigate(ManageDocumentCategoriesRoute) },
                             onImport = { viewModel.importDocument(selectedProfileId, it) },
                             onDocumentSelected = { id ->
@@ -730,7 +746,6 @@ private fun VaultNavigation(
                         SearchScreen(
                             record = record,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onResultSelected = { result ->
                                 navigation.navigate(result.toRoute(selectedProfileId))
                                 viewModel.resetPreview()
@@ -752,7 +767,6 @@ private fun VaultNavigation(
                             profile = record.profile,
                             today = today,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onUpsert = { medication ->
                                 withNotificationPermission(medication.remindersEnabled) {
                                     viewModel.upsertMedication(selectedProfileId, medication)
@@ -777,7 +791,6 @@ private fun VaultNavigation(
                             zoneId = zoneId,
                             now = now,
                             onProfileClick = openProfileSelector,
-                            onSettings = navigateSettings,
                             onUpsert = { appointment ->
                                 withNotificationPermission(appointment.reminderLeadMinutes != null) {
                                     viewModel.upsertAppointment(selectedProfileId, appointment)
@@ -1051,6 +1064,28 @@ private fun VaultNavigation(
                     .padding(UiTokens.ScreenPadding),
             ) { Text(message) }
         }
+    }
+
+    if (moreSheetVisible) {
+        AppMoreSheet(
+            onDismissRequest = { moreSheetVisible = false },
+            onAppointments = {
+                moreSheetVisible = false
+                navigation.select(TopLevelDestination.Appointments)
+            },
+            onReminders = {
+                moreSheetVisible = false
+                if (navigation.currentBackStack.lastOrNull() != RemindersRoute) {
+                    navigation.navigate(RemindersRoute)
+                }
+            },
+            onSettings = {
+                moreSheetVisible = false
+                if (navigation.currentBackStack.lastOrNull() != SettingsRoute) {
+                    navigation.navigate(SettingsRoute)
+                }
+            },
+        )
     }
 
     if (profileSheetVisible) {

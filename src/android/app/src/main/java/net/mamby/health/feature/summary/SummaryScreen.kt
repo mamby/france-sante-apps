@@ -67,7 +67,6 @@ fun SummaryScreen(
     today: LocalDate,
     onBack: () -> Unit,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onUpdateProfile: (HealthProfile) -> Unit,
     onUpsertVaccination: (Vaccination) -> Unit,
     onDeleteVaccination: (UUID) -> Unit,
@@ -106,7 +105,6 @@ fun SummaryScreen(
     AppScreenScaffold(
         title = stringResource(R.string.health_info_title),
         onBack = onBack,
-        onSettings = onSettings,
         profile = profile,
         onProfileClick = onProfileClick,
         floatingActionButton = {

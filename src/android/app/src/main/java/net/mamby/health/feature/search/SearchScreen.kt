@@ -37,7 +37,6 @@ enum class SearchFilter { ALL, HEALTH_RECORDS, MEDICATIONS, APPOINTMENTS }
 fun SearchScreen(
     record: ProfileRecord,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onResultSelected: (HealthSearchResult) -> Unit,
     query: String,
     filter: SearchFilter,
@@ -57,7 +56,6 @@ fun SearchScreen(
 
     AppScreenScaffold(
         title = stringResource(R.string.search_title),
-        onSettings = onSettings,
         profile = record.profile,
         onProfileClick = onProfileClick,
     ) { innerPadding ->

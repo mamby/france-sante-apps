@@ -209,7 +209,6 @@ class HealthRecordsComposeInstrumentedTest {
                     today = LocalDate.of(2026, 7, 30),
                     onBack = {},
                     onProfileClick = {},
-                    onSettings = {},
                     onUpdateProfile = {},
                     onUpsertVaccination = {},
                     onDeleteVaccination = {},

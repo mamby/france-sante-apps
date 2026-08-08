@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,7 +36,6 @@ import net.mamby.health.ui.theme.UiTokens
 fun AppScreenScaffold(
     title: String,
     onBack: (() -> Unit)? = null,
-    onSettings: (() -> Unit)? = null,
     profile: HealthProfile? = null,
     onProfileClick: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
@@ -60,17 +58,7 @@ fun AppScreenScaffold(
                             }
                         }
                     },
-                    actions = {
-                        actions()
-                        if (onSettings != null) {
-                            IconButton(onClick = onSettings) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Settings,
-                                    contentDescription = stringResource(R.string.action_settings),
-                                )
-                            }
-                        }
-                    },
+                    actions = { actions() },
                 )
                 if (profile != null && onProfileClick != null) {
                     Row(

@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +20,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsOff
@@ -53,6 +55,7 @@ import net.mamby.health.navigation.MedicationDetailRoute
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.SwitchField
@@ -78,7 +81,6 @@ class ComposeScreensInstrumentedTest {
                     clock = FIXED_CLOCK,
                     zoneId = ZoneOffset.UTC,
                     onProfileClick = {},
-                    onSettings = {},
                     onReminders = {},
                     onDocumentSelected = {},
                     onAddHealthInfo = {},
@@ -103,7 +105,6 @@ class ComposeScreensInstrumentedTest {
                     today = LocalDate.of(2026, 7, 30),
                     onBack = {},
                     onProfileClick = {},
-                    onSettings = {},
                     onManageCategories = {},
                     onImport = {},
                     onDocumentSelected = {},
@@ -145,7 +146,6 @@ class ComposeScreensInstrumentedTest {
                         clock = FIXED_CLOCK,
                         zoneId = ZoneOffset.UTC,
                         onProfileClick = {},
-                        onSettings = {},
                         onReminders = {},
                         onDocumentSelected = {},
                         onAddHealthInfo = {},
@@ -192,16 +192,23 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun navigationShellUsesFiveIconOnlyLocalizedTabs() {
+    fun compactNavigationUsesFourRootsAndMore() {
+        var moreSelected = false
         composeRule.setContent {
             HealthVaultTheme {
-                AppNavigationSuite(TopLevelDestination.Home, {}) {
+                AppNavigationSuite(
+                    selectedDestination = TopLevelDestination.Home,
+                    layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                    isMoreSelected = false,
+                    onDestinationSelected = {},
+                    onMoreSelected = { moreSelected = true },
+                ) {
                     Box(Modifier.fillMaxSize())
                 }
             }
         }
 
-        TopLevelDestination.entries.forEach { destination ->
+        TopLevelDestination.entries.dropLast(1).forEach { destination ->
             val label = composeRule.activity.getString(destination.label)
             val node = composeRule
                 .onNodeWithContentDescription(label, useUnmergedTree = true)
@@ -210,6 +217,106 @@ class ComposeScreensInstrumentedTest {
             assertEquals(Role.Tab, node.config[SemanticsProperties.Role])
             composeRule.onAllNodesWithText(label).assertCountEquals(0)
         }
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.nav_appointments))
+            .assertDoesNotExist()
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_more))
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.runOnIdle { assertTrue(moreSelected) }
+    }
+
+    @Test
+    fun compactNavigationSelectsOnlyMoreForMoreDestinations() {
+        composeRule.setContent {
+            HealthVaultTheme {
+                AppNavigationSuite(
+                    selectedDestination = TopLevelDestination.Home,
+                    layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                    isMoreSelected = true,
+                    onDestinationSelected = {},
+                    onMoreSelected = {},
+                ) {
+                    Box(Modifier.fillMaxSize())
+                }
+            }
+        }
+
+        composeRule
+            .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
+            .assertCountEquals(1)
+    }
+
+    @Test
+    fun expandedNavigationKeepsAppointmentsAsDirectRoot() {
+        composeRule.setContent {
+            HealthVaultTheme {
+                AppNavigationSuite(
+                    selectedDestination = TopLevelDestination.Home,
+                    layoutType = NavigationSuiteType.NavigationRail,
+                    isMoreSelected = false,
+                    onDestinationSelected = {},
+                    onMoreSelected = {},
+                ) {
+                    Box(Modifier.fillMaxSize())
+                }
+            }
+        }
+
+        TopLevelDestination.entries.forEach { destination ->
+            composeRule
+                .onNodeWithContentDescription(composeRule.activity.getString(destination.label))
+                .assertIsDisplayed()
+        }
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_more))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun moreSheetShowsLocalizedDestinationsAndDispatchesActions() {
+        var selectedAction: String? = null
+        lateinit var showSheet: () -> Unit
+        composeRule.setContent {
+            var visible by remember { mutableStateOf(true) }
+            showSheet = { visible = true }
+            HealthVaultTheme {
+                if (visible) {
+                    AppMoreSheet(
+                        onDismissRequest = { visible = false },
+                        onAppointments = {
+                            selectedAction = "appointments"
+                            visible = false
+                        },
+                        onReminders = {
+                            selectedAction = "reminders"
+                            visible = false
+                        },
+                        onSettings = {
+                            selectedAction = "settings"
+                            visible = false
+                        },
+                    )
+                }
+            }
+        }
+
+        val appointments = composeRule.activity.getString(R.string.nav_appointments)
+        val reminders = composeRule.activity.getString(R.string.reminders_title)
+        val settings = composeRule.activity.getString(R.string.settings_title)
+        composeRule.onNodeWithText(appointments).assertIsDisplayed().performClick()
+        composeRule.runOnIdle {
+            assertEquals("appointments", selectedAction)
+            showSheet()
+        }
+        composeRule.onNodeWithText(reminders).assertIsDisplayed().performClick()
+        composeRule.runOnIdle {
+            assertEquals("reminders", selectedAction)
+            showSheet()
+        }
+        composeRule.onNodeWithText(settings).assertIsDisplayed().performClick()
+        composeRule.runOnIdle { assertEquals("settings", selectedAction) }
     }
 
     @Test

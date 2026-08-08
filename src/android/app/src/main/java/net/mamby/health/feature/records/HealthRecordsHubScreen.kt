@@ -20,7 +20,6 @@ import net.mamby.health.ui.theme.UiTokens
 fun HealthRecordsHubScreen(
     record: ProfileRecord,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onHealthInfo: () -> Unit,
     onMeasurements: () -> Unit,
     onNotes: () -> Unit,
@@ -29,7 +28,6 @@ fun HealthRecordsHubScreen(
 ) {
     AppScreenScaffold(
         title = stringResource(R.string.health_records_title),
-        onSettings = onSettings,
         profile = record.profile,
         onProfileClick = onProfileClick,
     ) { padding ->

@@ -70,7 +70,6 @@ fun VaultScreen(
     today: LocalDate,
     onBack: () -> Unit,
     onProfileClick: () -> Unit,
-    onSettings: () -> Unit,
     onManageCategories: () -> Unit,
     onImport: (DocumentImportDraft) -> Unit,
     onDocumentSelected: (String) -> Unit,
@@ -105,7 +104,6 @@ fun VaultScreen(
     AppScreenScaffold(
         title = stringResource(R.string.documents_tab),
         onBack = onBack,
-        onSettings = onSettings,
         profile = profile,
         onProfileClick = onProfileClick,
         actions = {
