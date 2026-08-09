@@ -42,7 +42,7 @@ class HealthSearchTest {
         val documentResults = HealthSearch.search(record, "LABORATOIRE resultat")
         val healthResults = HealthSearch.search(record, "migraine chronique")
 
-        assertEquals(selectedId, documentResults.single().profileId)
+        assertEquals(HealthSearchScope.Profile(selectedId), documentResults.single().scope)
         assertTrue(documentResults.single().target is HealthSearchTarget.Document)
         assertTrue(healthResults.single().target is HealthSearchTarget.HealthInfo)
         assertTrue(HealthSearch.search(record, "").isEmpty())
@@ -86,5 +86,19 @@ class HealthSearchTest {
         assertEquals(1, HealthSearch.search(record, "public insurer").size)
         assertTrue(HealthSearch.search(record, "SENSITIVE-123456789").isEmpty())
         assertTrue(HealthSearch.search(record, "123456789").isEmpty())
+    }
+
+    @Test
+    fun searchReturnsVaultScopedNotesAlongsideFilteredProfileRecords() {
+        val note = HealthNote(UUID.randomUUID(), "Consultation", "Questions to ask", now, now)
+        val selectedRecord = ProfileRecord(
+            profile = HealthProfile(UUID.randomUUID(), "Selected", lastUpdatedAt = now),
+        )
+
+        val result = HealthSearch.search(listOf(selectedRecord), listOf(note), "questions").single()
+
+        assertEquals(HealthSearchScope.Vault, result.scope)
+        assertEquals(HealthSearchGroup.NOTES, result.group)
+        assertEquals(HealthSearchTarget.Note(note.id), result.target)
     }
 }

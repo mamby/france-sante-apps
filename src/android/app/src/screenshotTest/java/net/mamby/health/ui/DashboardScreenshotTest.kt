@@ -16,6 +16,7 @@ import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.HealthProfile
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
@@ -105,13 +106,16 @@ private fun DashboardPreviewContent(darkTheme: Boolean = false) {
             onDestinationSelected = {},
             onMoreSelected = {},
         ) {
+            val vault = screenshotVault()
             DashboardScreen(
-                record = screenshotVault().profiles.single(),
+                records = vault.profiles,
+                notes = vault.notes,
                 clock = FIXED_CLOCK,
                 zoneId = ZoneOffset.UTC,
-                onProfileClick = {},
-                onReminders = {},
-                onDocumentSelected = {},
+                onMedications = {},
+                onSchedule = {},
+                onDocumentSelected = { _, _ -> },
+                onNoteSelected = {},
                 onAddHealthInfo = {},
                 onImportDocument = {},
                 onAddMedication = {},
@@ -181,6 +185,22 @@ private fun screenshotVault(): HealthVault = HealthVault(
                     updatedAt = FIXED_INSTANT,
                 ),
             ),
+        ),
+        ProfileRecord(
+            profile = HealthProfile(
+                id = id("77777777-7777-4777-8777-777777777777"),
+                displayName = "Sam",
+                lastUpdatedAt = FIXED_INSTANT,
+            ),
+        ),
+    ),
+    notes = listOf(
+        HealthNote(
+            id = id("88888888-8888-4888-8888-888888888888"),
+            title = "Questions for the next visit",
+            body = "Ask about the updated care plan.",
+            notedAt = Instant.parse("2026-07-30T07:30:00Z"),
+            updatedAt = FIXED_INSTANT,
         ),
     ),
     updatedAt = FIXED_INSTANT,

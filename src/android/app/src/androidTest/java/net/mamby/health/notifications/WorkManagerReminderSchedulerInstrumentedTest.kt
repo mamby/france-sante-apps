@@ -176,7 +176,9 @@ class WorkManagerReminderSchedulerInstrumentedTest {
         val request = reminderRequest("reminder:vault-observer", FIXED_NOW.plus(Duration.ofHours(1)))
         reminderSource.requests = listOf(request)
 
-        vaultRepository.mutableState.value = VaultState.Ready(healthVault(revision = 1), PROFILE_ID)
+        vaultRepository.mutableState.value = VaultState.Ready(
+            healthVault(revision = 1),
+        )
 
         assertEquals(listOf(WorkInfo.State.ENQUEUED), workFor(request.id).map(WorkInfo::state))
 

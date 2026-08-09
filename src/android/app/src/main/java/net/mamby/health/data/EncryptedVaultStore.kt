@@ -48,6 +48,7 @@ class EncryptedVaultStore @Inject constructor(
                 try {
                     VaultCodec.decode(plaintext).vault.requireValid().also {
                         runCatching { layout.cleanupInactive(generation.id) }
+                        runCatching { layout.cleanupObsoleteProfilePreferences() }
                     }
                 } finally {
                     plaintext.fill(0)

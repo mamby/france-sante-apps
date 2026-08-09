@@ -28,6 +28,12 @@ class AppNavigationState internal constructor(
         selectedDestination = destination
     }
 
+    fun selectRoot(destination: TopLevelDestination) {
+        val backStack = backStacks.getValue(destination)
+        while (backStack.size > 1) backStack.removeLastOrNull()
+        selectedDestination = destination
+    }
+
     fun navigate(route: AppRoute) {
         currentBackStack.add(route)
     }
@@ -65,28 +71,41 @@ class AppNavigationState internal constructor(
 
 @Composable
 fun rememberAppNavigationState(): AppNavigationState {
-    val selected = rememberSaveable("navigation_state_v2") {
+    val selected = rememberSaveable("navigation_state_v4") {
         androidx.compose.runtime.mutableStateOf(TopLevelDestination.Home)
     }
-    val backStacks = key("navigation_state_v2") {
+    val backStacks = key("navigation_state_v4") {
         listOf(
             rememberNavBackStack(HomeRoute),
-            rememberNavBackStack(HealthRecordsRoute),
             rememberNavBackStack(SearchRoute),
+            rememberNavBackStack(HealthRecordsRoute),
+            rememberNavBackStack(NotesRoute),
             rememberNavBackStack(MedicationsRoute),
-            rememberNavBackStack(AppointmentsRoute),
+            rememberNavBackStack(ScheduleRoute),
+            rememberNavBackStack(DirectoryRoute),
+            rememberNavBackStack(SettingsRoute),
         )
     }
-    val (home, records, search, medications, appointments) = backStacks
-    return remember(home, records, search, medications, appointments) {
+    val home = backStacks[0]
+    val search = backStacks[1]
+    val records = backStacks[2]
+    val notes = backStacks[3]
+    val medications = backStacks[4]
+    val schedule = backStacks[5]
+    val directory = backStacks[6]
+    val settings = backStacks[7]
+    return remember(home, search, records, notes, medications, schedule, directory, settings) {
         AppNavigationState(
             selected,
             mapOf(
                 TopLevelDestination.Home to home,
-                TopLevelDestination.HealthRecords to records,
                 TopLevelDestination.Search to search,
+                TopLevelDestination.HealthRecords to records,
+                TopLevelDestination.Notes to notes,
                 TopLevelDestination.Medications to medications,
-                TopLevelDestination.Appointments to appointments,
+                TopLevelDestination.Schedule to schedule,
+                TopLevelDestination.Directory to directory,
+                TopLevelDestination.Settings to settings,
             ),
         )
     }

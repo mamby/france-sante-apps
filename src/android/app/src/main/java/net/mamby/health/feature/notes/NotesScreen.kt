@@ -32,7 +32,6 @@ import java.time.ZoneId
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthNote
-import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
@@ -46,24 +45,25 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun NotesScreen(
-    record: ProfileRecord,
+    notes: List<HealthNote>,
     now: Instant,
     zoneId: ZoneId,
-    onBack: () -> Unit,
-    onProfileClick: () -> Unit,
     onUpsert: (HealthNote) -> Unit,
     onSelected: (UUID) -> Unit,
     creationRequest: Long = 0,
 ) {
-    var adding by remember(record.profile.id) { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) { if (creationRequest > 0) adding = true }
+    var creationVisible by remember { mutableStateOf(false) }
+    fun startCreation() { creationVisible = true }
+    LaunchedEffect(creationRequest) {
+        if (creationRequest > 0) startCreation()
+    }
+    val sortedNotes = remember(notes) {
+        notes.sortedWith(compareByDescending(HealthNote::notedAt).thenBy(HealthNote::id))
+    }
     AppScreenScaffold(
         title = stringResource(R.string.health_notes_title),
-        onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }) {
+            FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_health_note))
             }
         },
@@ -75,7 +75,7 @@ fun NotesScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (record.notes.isEmpty()) {
+            if (sortedNotes.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         stringResource(R.string.no_health_notes_title),
@@ -83,7 +83,7 @@ fun NotesScreen(
                     )
                 }
             } else {
-                items(record.notes.sortedByDescending(HealthNote::notedAt), key = HealthNote::id) { note ->
+                items(sortedNotes, key = HealthNote::id) { note ->
                     SectionCard(note.title) {
                         Text(note.notedAt.localizedDateTime(zoneId))
                         Text(note.body)
@@ -95,15 +95,15 @@ fun NotesScreen(
             }
         }
     }
-    if (adding) {
+    if (creationVisible) {
         HealthNoteDialog(
             existing = null,
             now = now,
             zoneId = zoneId,
-            onDismiss = { adding = false },
+            onDismiss = { creationVisible = false },
             onSave = {
                 onUpsert(it)
-                adding = false
+                creationVisible = false
             },
         )
     }
@@ -111,12 +111,10 @@ fun NotesScreen(
 
 @Composable
 fun NoteDetailScreen(
-    record: ProfileRecord,
     note: HealthNote,
     now: Instant,
     zoneId: ZoneId,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
     onUpsert: (HealthNote) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -125,8 +123,6 @@ fun NoteDetailScreen(
     AppScreenScaffold(
         title = note.title,
         onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
     ) { padding ->
         Column(
             modifier = Modifier

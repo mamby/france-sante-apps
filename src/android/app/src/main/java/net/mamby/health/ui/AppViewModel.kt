@@ -13,6 +13,7 @@ import java.time.Duration
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -91,6 +92,7 @@ class AppViewModel @Inject constructor(
 
     private val mutablePreview = MutableStateFlow<DocumentPreviewState>(DocumentPreviewState.Idle)
     val preview: StateFlow<DocumentPreviewState> = mutablePreview.asStateFlow()
+    private var previewJob: Job? = null
 
     private val mutableRestorePreview = MutableStateFlow<RestorePreview?>(null)
     val restorePreview: StateFlow<RestorePreview?> = mutableRestorePreview.asStateFlow()
@@ -113,13 +115,8 @@ class AppViewModel @Inject constructor(
         reconcileReminders()
     }
 
-    fun addProfile(displayName: String) = launchOperation {
-        vaultRepository.addProfile(displayName)
-    }
-
-    fun selectProfile(profileId: UUID) = launchOperation {
-        vaultRepository.selectProfile(profileId)
-        mutablePreview.value = DocumentPreviewState.Idle
+    fun addProfile(displayName: String, onCreated: (UUID) -> Unit = {}) = launchOperation {
+        onCreated(vaultRepository.addProfile(displayName))
     }
 
     fun deleteProfile(profileId: UUID) = launchOperation {
@@ -168,25 +165,38 @@ class AppViewModel @Inject constructor(
 
     fun deleteDocument(profileId: UUID, id: UUID) = launchOperation {
         vaultRepository.deleteDocument(profileId, id)
-        mutablePreview.value = DocumentPreviewState.Idle
+        resetPreview()
         mutableNotice.value = UiNotice(R.string.document_deleted)
     }
 
     fun loadPreview(profileId: UUID, document: MedicalDocument, page: Int) {
-        viewModelScope.launch {
-            mutablePreview.value = DocumentPreviewState.Loading
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch {
+            mutablePreview.value = DocumentPreviewState.Loading(profileId, document.id)
             mutablePreview.value = try {
                 val rendered = documentPreviewer.render(profileId, document, page)
-                DocumentPreviewState.Ready(rendered.image, rendered.page, rendered.pageCount)
+                DocumentPreviewState.Ready(
+                    profileId,
+                    document.id,
+                    rendered.image,
+                    rendered.page,
+                    rendered.pageCount,
+                )
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                DocumentPreviewState.Error(context.getString(R.string.preview_unavailable))
+                DocumentPreviewState.Error(
+                    profileId,
+                    document.id,
+                    context.getString(R.string.preview_unavailable),
+                )
             }
         }
     }
 
     fun resetPreview() {
+        previewJob?.cancel()
+        previewJob = null
         mutablePreview.value = DocumentPreviewState.Idle
     }
 
@@ -228,12 +238,12 @@ class AppViewModel @Inject constructor(
         reconcileReminders()
     }
 
-    fun upsertHealthNote(profileId: UUID, note: HealthNote) = launchOperation {
-        vaultRepository.upsertHealthNote(profileId, note)
+    fun upsertHealthNote(note: HealthNote) = launchOperation {
+        vaultRepository.upsertHealthNote(note)
     }
 
-    fun deleteHealthNote(profileId: UUID, id: UUID) = launchOperation {
-        vaultRepository.deleteHealthNote(profileId, id)
+    fun deleteHealthNote(id: UUID) = launchOperation {
+        vaultRepository.deleteHealthNote(id)
     }
 
     fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement) = launchOperation {

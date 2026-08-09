@@ -32,7 +32,9 @@ class VaultReminderSourceTest {
             updatedAt = NOW,
         )
         val repository = object : StubVaultRepository() {
-            override val state: StateFlow<VaultState> = MutableStateFlow(VaultState.Ready(vault, FIRST_PROFILE))
+            override val state: StateFlow<VaultState> = MutableStateFlow(
+                VaultState.Ready(vault),
+            )
         }
         val source = VaultReminderSource(
             repository,

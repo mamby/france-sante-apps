@@ -1,6 +1,10 @@
 package net.mamby.health.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -45,38 +49,40 @@ class HealthRecordsComposeInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun healthRecordsHubExposesTheFiveTypedSections() {
+    fun healthRecordsHubExposesOnlyProfileOwnedHealthSections() {
         composeRule.setContent {
             HealthVaultTheme {
-                HealthRecordsHubScreen(record(), {}, {}, {}, {}, {}, {}, {})
+                HealthRecordsHubScreen(
+                    records = listOf(record()),
+                    onHealthInfo = {},
+                    onMeasurements = {},
+                    onDocuments = {},
+                )
             }
         }
 
         listOf(
             R.string.health_info_title,
             R.string.measurements_title,
-            R.string.health_notes_title,
-            R.string.care_directory_title,
+            R.string.documents_tab,
         ).forEach { resource ->
             composeRule.onNodeWithText(composeRule.activity.getString(resource)).assertIsDisplayed()
         }
-        composeRule.onNode(hasScrollAction()).performScrollToIndex(4)
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.documents_tab)).assertIsDisplayed()
     }
 
     @Test
     fun independentNoteFormCreatesTypedRecord() {
         var savedNote: HealthNote? = null
         composeRule.setContent {
+            var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
                 NotesScreen(
-                    record = record(),
+                    notes = emptyList(),
                     now = NOW,
                     zoneId = ZoneOffset.UTC,
-                    onBack = {},
-                    onProfileClick = {},
-                    onUpsert = { savedNote = it },
+                    onUpsert = { note -> savedNote = note },
                     onSelected = {},
+                    creationRequest = creationRequest,
                 )
             }
         }
@@ -91,16 +97,19 @@ class HealthRecordsComposeInstrumentedTest {
     fun measurementFormCreatesTypedRecord() {
         var savedMeasurement: HealthMeasurement? = null
         composeRule.setContent {
+            val record = remember { record() }
+            var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
                 MeasurementsScreen(
-                    record = record(),
+                    records = listOf(record),
                     now = NOW,
                     zoneId = ZoneOffset.UTC,
                     onBack = {},
-                    onProfileClick = {},
                     onManageTypes = {},
-                    onUpsert = { savedMeasurement = it },
-                    onSelected = {},
+                    onAddProfile = { _, _ -> },
+                    onUpsert = { _, measurement -> savedMeasurement = measurement },
+                    onSelected = { _, _ -> },
+                    creationRequest = creationRequest,
                 )
             }
         }
@@ -136,8 +145,17 @@ class HealthRecordsComposeInstrumentedTest {
     fun directoryFormCreatesInternationalContactRecord() {
         var savedEntry: CareDirectoryEntry? = null
         composeRule.setContent {
+            val record = remember { record() }
+            var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
-                DirectoryScreen(record(), {}, {}, { savedEntry = it }, {})
+                DirectoryScreen(
+                    records = listOf(record),
+                    onBack = {},
+                    onAddProfile = { _, _ -> },
+                    onUpsert = { _, entry -> savedEntry = entry },
+                    onSelected = { _, _ -> },
+                    creationRequest = creationRequest,
+                )
             }
         }
         composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_directory_entry)).performClick()
@@ -175,7 +193,7 @@ class HealthRecordsComposeInstrumentedTest {
         )
         composeRule.setContent {
             HealthVaultTheme {
-                HealthIdentifierDetailScreen(record(), identifier, {}, {})
+                HealthIdentifierDetailScreen(record(), identifier, {})
             }
         }
 
@@ -208,7 +226,6 @@ class HealthRecordsComposeInstrumentedTest {
                     record = record,
                     today = LocalDate.of(2026, 7, 30),
                     onBack = {},
-                    onProfileClick = {},
                     onUpdateProfile = {},
                     onUpsertVaccination = {},
                     onDeleteVaccination = {},

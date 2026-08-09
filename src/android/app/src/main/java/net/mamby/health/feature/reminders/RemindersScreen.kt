@@ -24,11 +24,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import java.time.DayOfWeek
 import java.time.Instant
@@ -39,13 +41,18 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.RecurrenceCalculator
 import net.mamby.health.core.model.Reminder
-import net.mamby.health.core.model.HealthProfile
+import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.ReminderRecurrence
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -56,27 +63,42 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun RemindersScreen(
-    reminders: List<Reminder>,
-    profile: HealthProfile,
+    records: List<ProfileRecord>,
     today: LocalDate,
     notificationsBlocked: Boolean,
     now: Instant,
     zoneId: ZoneId,
-    onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-    onUpsert: (Reminder) -> Unit,
-    onDelete: (UUID) -> Unit,
+    onBack: (() -> Unit)? = null,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onUpsert: (UUID, Reminder) -> Unit,
+    onDelete: (UUID, UUID) -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    creationRequest: Long = 0,
+    @StringRes titleResource: Int = R.string.reminders_title,
+    sectionSelector: @Composable () -> Unit = {},
 ) {
-    var adding by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<Reminder?>(null) }
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    var creationVisible by remember { mutableStateOf(false) }
+    var creationProfileId by remember { mutableStateOf<UUID?>(null) }
+    var editing by remember { mutableStateOf<ProfileOwned<Reminder>?>(null) }
+    fun startCreation() {
+        creationProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
+        creationVisible = true
+    }
+    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
+    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
+    val reminders = remember(filteredRecords) { filteredRecords.ownedItems(ProfileRecord::reminders) }
     AppScreenScaffold(
-        title = stringResource(R.string.reminders_title),
+        title = stringResource(titleResource),
         onBack = onBack,
-        profile = profile,
-        onProfileClick = onProfileClick,
+        contextHeader = {
+            Column(verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                sectionSelector()
+                ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+            }
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }) {
+            FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_reminder))
             }
         },
@@ -103,35 +125,42 @@ fun RemindersScreen(
                     EmptyState(stringResource(R.string.no_reminders_title), stringResource(R.string.no_reminders_body))
                 }
             } else {
-                items(reminders, key = { it.id }) { reminder ->
+                items(reminders, key = { "${it.profileId}:${it.value.id}" }) { owned ->
+                    val reminder = owned.value
                     val next = RecurrenceCalculator.nextOccurrence(reminder, now, zoneId)
                     SectionCard(reminder.title) {
+                        if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(stringResource(reminder.recurrence.labelResource()))
                         Text(next?.localizedDateTime(zoneId) ?: stringResource(R.string.common_not_set))
                         Text(stringResource(if (reminder.isEnabled) R.string.status_enabled else R.string.status_disabled))
-                        Button(onClick = { editing = reminder }) { Text(stringResource(R.string.common_edit)) }
+                        Button(onClick = { editing = owned }) { Text(stringResource(R.string.common_edit)) }
                     }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.reminder_delivery_notice)) }
         }
     }
-    if (adding || editing != null) {
+    if (editing != null || creationVisible) {
+        val ownerId = editing?.profileId ?: creationProfileId
         ReminderDialog(
-            existing = editing,
+            existing = editing?.value,
             today = today,
+            ownerSelected = ownerId != null,
+            profilePicker = if (editing == null) ({
+                ProfilePickerField(records, creationProfileId, { creationProfileId = it }, onAddProfile)
+            }) else null,
             onDismiss = {
-                adding = false
+                creationVisible = false
                 editing = null
             },
             onSave = {
-                onUpsert(it)
-                adding = false
+                onUpsert(requireNotNull(ownerId), it)
+                creationVisible = false
                 editing = null
             },
-            onDelete = editing?.let { reminder ->
+            onDelete = editing?.let { owned ->
                 {
-                    onDelete(reminder.id)
+                    onDelete(owned.profileId, owned.value.id)
                     editing = null
                 }
             },
@@ -147,6 +176,8 @@ private fun ReminderDialog(
     onDismiss: () -> Unit,
     onSave: (Reminder) -> Unit,
     onDelete: (() -> Unit)?,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
     var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
@@ -161,7 +192,7 @@ private fun ReminderDialog(
     var deleteVisible by remember { mutableStateOf(false) }
     FormDialog(
         title = stringResource(if (existing == null) R.string.add_reminder else R.string.edit_reminder),
-        saveEnabled = title.isNotBlank() && (!hasEnd || !end.isBefore(start)),
+        saveEnabled = ownerSelected && title.isNotBlank() && (!hasEnd || !end.isBefore(start)),
         onDismiss = onDismiss,
         onSave = {
             onSave(
@@ -181,6 +212,7 @@ private fun ReminderDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.reminder_title)) })
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.reminder_notes)) }, minLines = 2)
             DateField(stringResource(R.string.reminder_start_date), start, { start = it })

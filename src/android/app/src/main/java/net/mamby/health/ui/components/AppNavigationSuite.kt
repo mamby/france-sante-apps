@@ -8,10 +8,7 @@ import androidx.compose.foundation.layout.GridTrackSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,14 +51,15 @@ fun AppNavigationSuite(
     val usesMore = layoutType == NavigationSuiteType.ShortNavigationBarCompact
     NavigationSuiteScaffold(
         layoutType = layoutType,
+        containerColor = Color.Transparent,
         navigationSuiteColors = NavigationSuiteDefaults.colors(
-            shortNavigationBarContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(
-                alpha = CompactNavigationContainerAlpha,
-            ),
+            shortNavigationBarContainerColor = Color.Transparent,
+            navigationBarContainerColor = Color.Transparent,
+            navigationRailContainerColor = Color.Transparent,
+            navigationDrawerContainerColor = Color.Transparent,
         ),
         navigationSuiteItems = {
-            TopLevelDestination.entries
-                .filterNot { usesMore && it == TopLevelDestination.Appointments }
+            (if (usesMore) TopLevelDestination.compactPrimary else TopLevelDestination.entries)
                 .forEach { destination ->
                 val selected = !isMoreSelected && selectedDestination == destination
                 item(
@@ -106,9 +104,8 @@ internal fun appNavigationSuiteType(adaptiveInfo: WindowAdaptiveInfo): Navigatio
 @Composable
 internal fun AppMoreSheet(
     onDismissRequest: () -> Unit,
-    onAppointments: () -> Unit,
-    onReminders: () -> Unit,
-    onSettings: () -> Unit,
+    destinations: List<TopLevelDestination> = TopLevelDestination.compactOverflow,
+    onDestinationSelected: (TopLevelDestination) -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismissRequest) {
         Grid(
@@ -122,21 +119,13 @@ internal fun AppMoreSheet(
                 .padding(horizontal = UiTokens.ScreenPadding)
                 .padding(bottom = UiTokens.ScreenPadding),
         ) {
-            MoreSheetItem(
-                label = stringResource(R.string.nav_appointments),
-                icon = Icons.Outlined.CalendarMonth,
-                onClick = onAppointments,
-            )
-            MoreSheetItem(
-                label = stringResource(R.string.reminders_title),
-                icon = Icons.Outlined.Notifications,
-                onClick = onReminders,
-            )
-            MoreSheetItem(
-                label = stringResource(R.string.settings_title),
-                icon = Icons.Outlined.Settings,
-                onClick = onSettings,
-            )
+            destinations.forEach { destination ->
+                MoreSheetItem(
+                    label = stringResource(destination.label),
+                    icon = destination.icon,
+                    onClick = { onDestinationSelected(destination) },
+                )
+            }
         }
     }
 }
@@ -184,5 +173,3 @@ private fun MoreSheetItem(label: String, icon: ImageVector, onClick: () -> Unit)
         }
     }
 }
-
-private const val CompactNavigationContainerAlpha = 0.75f

@@ -24,7 +24,6 @@ fun ProfileRecord.index(): List<VaultItem> = buildList {
     appointments.mapTo(this) { VaultItem(it.id, VaultItemKind.APPOINTMENT, it.title, it.updatedAt) }
     vaccinations.mapTo(this) { VaultItem(it.id, VaultItemKind.VACCINATION, it.name, it.updatedAt) }
     reminders.mapTo(this) { VaultItem(it.id, VaultItemKind.REMINDER, it.title, it.updatedAt) }
-    notes.mapTo(this) { VaultItem(it.id, VaultItemKind.NOTE, it.title, it.updatedAt) }
     measurements.mapTo(this) { measurement ->
         VaultItem(
             measurement.id,
@@ -77,7 +76,7 @@ fun HealthVault.requireValid(): HealthVault = apply {
     requireDistinct("appointment", profiles.flatMap(ProfileRecord::appointments).map(Appointment::id))
     requireDistinct("vaccination", profiles.flatMap(ProfileRecord::vaccinations).map(Vaccination::id))
     requireDistinct("reminder", profiles.flatMap(ProfileRecord::reminders).map(Reminder::id))
-    requireDistinct("note", profiles.flatMap(ProfileRecord::notes).map(HealthNote::id))
+    requireDistinct("note", notes.map(HealthNote::id))
     requireDistinct("measurement", profiles.flatMap(ProfileRecord::measurements).map(HealthMeasurement::id))
     requireDistinct(
         "custom measurement type",
@@ -112,7 +111,6 @@ fun HealthVault.requireValid(): HealthVault = apply {
                 addAll(record.appointments.map(Appointment::id))
                 addAll(record.vaccinations.map(Vaccination::id))
                 addAll(record.reminders.map(Reminder::id))
-                addAll(record.notes.map(HealthNote::id))
                 addAll(record.measurements.map(HealthMeasurement::id))
                 addAll(record.customMeasurementTypes.map(CustomMeasurementType::id))
                 addAll(record.careDirectory.map(CareDirectoryEntry::id))
@@ -121,8 +119,14 @@ fun HealthVault.requireValid(): HealthVault = apply {
                 addAll(record.healthIdentifiers.map(HealthIdentifier::id))
                 addAll(record.customDocumentCategories.map(CustomDocumentCategory::id))
             }
+            addAll(notes.map(HealthNote::id))
         },
     )
+
+    notes.forEach { note ->
+        requireVault(note.title.isNotBlank()) { "Health note title is required." }
+        requireVault(note.body.isNotBlank()) { "Health note body is required." }
+    }
 
     profiles.forEach { record ->
         requireVault(record.profile.displayName.isNotBlank()) { "Profile name is required." }
@@ -194,10 +198,6 @@ fun HealthVault.requireValid(): HealthVault = apply {
         record.reminders.forEach { reminder ->
             requireDateRange(reminder.startsOn, reminder.endsOn, "reminder")
         }
-        record.notes.forEach { note ->
-            requireVault(note.title.isNotBlank()) { "Health note title is required." }
-            requireVault(note.body.isNotBlank()) { "Health note body is required." }
-        }
         record.measurements.forEach { measurement -> requireMeasurement(record, measurement) }
         record.familyHistory.forEach { entry ->
             requireVault(entry.relationship.isNotBlank()) { "Family relationship is required." }
@@ -261,17 +261,56 @@ object DocumentSearch {
 object RecurrenceCalculator {
     fun nextOccurrence(reminder: Reminder, now: Instant, zoneId: ZoneId): Instant? {
         if (!reminder.isEnabled) return null
+        return nextOccurrence(
+            recurrence = reminder.recurrence,
+            startsOn = reminder.startsOn,
+            endsOn = reminder.endsOn,
+            timeOfDay = reminder.timeOfDay,
+            daysOfWeek = reminder.daysOfWeek,
+            now = now,
+            zoneId = zoneId,
+        )
+    }
 
-        val first = atZone(reminder.startsOn, reminder.timeOfDay, zoneId)
+    fun nextOccurrence(medication: Medication, now: Instant, zoneId: ZoneId): Instant? {
+        if (!medication.isActive) return null
+        if (
+            medication.schedule.recurrence == ReminderRecurrence.WEEKLY &&
+            medication.schedule.daysOfWeek.isEmpty() &&
+            medication.schedule.startsOn == null
+        ) return null
+        return medication.schedule.reminderTimes.minOfOrNull { timeOfDay ->
+            nextOccurrence(
+                recurrence = medication.schedule.recurrence,
+                startsOn = medication.schedule.startsOn,
+                endsOn = medication.schedule.endsOn,
+                timeOfDay = timeOfDay,
+                daysOfWeek = medication.schedule.daysOfWeek,
+                now = now,
+                zoneId = zoneId,
+            ) ?: Instant.MAX
+        }?.takeUnless { it == Instant.MAX }
+    }
+
+    private fun nextOccurrence(
+        recurrence: ReminderRecurrence,
+        startsOn: LocalDate?,
+        endsOn: LocalDate?,
+        timeOfDay: LocalTime,
+        daysOfWeek: Set<java.time.DayOfWeek>,
+        now: Instant,
+        zoneId: ZoneId,
+    ): Instant? {
         val nowAtZone = now.atZone(zoneId)
-        val candidate = when (reminder.recurrence) {
-            ReminderRecurrence.NONE -> first.takeIf { it.toInstant().isAfter(now) }
+        val firstDate = startsOn ?: nowAtZone.toLocalDate()
+        val first = atZone(firstDate, timeOfDay, zoneId)
+        val candidate = when (recurrence) {
+            ReminderRecurrence.NONE -> startsOn?.let { first.takeIf { it.toInstant().isAfter(now) } }
             ReminderRecurrence.DAILY -> nextDaily(first, nowAtZone)
-            ReminderRecurrence.WEEKLY -> nextWeekly(reminder, first, nowAtZone, zoneId)
-            ReminderRecurrence.MONTHLY -> nextMonthly(first, nowAtZone, zoneId)
+            ReminderRecurrence.WEEKLY -> nextWeekly(daysOfWeek, timeOfDay, first, nowAtZone, zoneId)
+            ReminderRecurrence.MONTHLY -> startsOn?.let { nextMonthly(first, nowAtZone, zoneId) }
         } ?: return null
 
-        val endsOn = reminder.endsOn
         return candidate.takeIf { endsOn == null || !it.toLocalDate().isAfter(endsOn) }?.toInstant()
     }
 
@@ -287,16 +326,17 @@ object RecurrenceCalculator {
     }
 
     private fun nextWeekly(
-        reminder: Reminder,
+        daysOfWeek: Set<java.time.DayOfWeek>,
+        timeOfDay: LocalTime,
         first: ZonedDateTime,
         now: ZonedDateTime,
         zoneId: ZoneId,
     ): ZonedDateTime? {
-        val activeDays = reminder.daysOfWeek.ifEmpty { setOf(first.dayOfWeek) }
+        val activeDays = daysOfWeek.ifEmpty { setOf(first.dayOfWeek) }
         for (offset in 0L..14L) {
             val date = now.toLocalDate().plusDays(offset)
             if (date.dayOfWeek !in activeDays) continue
-            val candidate = atZone(date, reminder.timeOfDay, zoneId)
+            val candidate = atZone(date, timeOfDay, zoneId)
             if (!candidate.isBefore(first) && candidate.isAfter(now)) return candidate
         }
         return null

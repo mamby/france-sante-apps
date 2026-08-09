@@ -6,8 +6,15 @@ import java.util.UUID
 
 enum class HealthSearchGroup {
     HEALTH_RECORDS,
+    NOTES,
     MEDICATIONS,
     APPOINTMENTS,
+}
+
+sealed interface HealthSearchScope {
+    data object Vault : HealthSearchScope
+
+    data class Profile(val profileId: UUID) : HealthSearchScope
 }
 
 sealed interface HealthSearchTarget {
@@ -37,7 +44,7 @@ sealed interface HealthSearchTarget {
 }
 
 data class HealthSearchResult(
-    val profileId: UUID,
+    val scope: HealthSearchScope,
     val group: HealthSearchGroup,
     val primaryText: String,
     val secondaryText: String? = null,
@@ -45,10 +52,23 @@ data class HealthSearchResult(
 )
 
 object HealthSearch {
+    fun search(
+        records: Iterable<ProfileRecord>,
+        notes: Iterable<HealthNote>,
+        query: String,
+    ): List<HealthSearchResult> = buildList {
+        records.flatMapTo(this) { record -> search(record, query) }
+        addAll(searchNotes(notes, query))
+    }
+
+    fun search(records: Iterable<ProfileRecord>, query: String): List<HealthSearchResult> =
+        search(records, emptyList(), query)
+
     fun search(record: ProfileRecord, query: String): List<HealthSearchResult> {
         val terms = query.searchTerms()
         if (terms.isEmpty()) return emptyList()
         val profileId = record.profile.id
+        val scope = HealthSearchScope.Profile(profileId)
 
         return buildList {
             val healthDetails = buildList {
@@ -60,7 +80,7 @@ object HealthSearch {
             if (healthDetails.matches(terms)) {
                 add(
                     HealthSearchResult(
-                        profileId = profileId,
+                        scope = scope,
                         group = HealthSearchGroup.HEALTH_RECORDS,
                         primaryText = record.profile.displayName,
                         secondaryText = healthDetails.joinToString(SEPARATOR).takeIf(String::isNotBlank),
@@ -73,7 +93,7 @@ object HealthSearch {
                 .forEach { contact ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             contact.name,
                             listOf(contact.relationship, contact.phoneNumber)
@@ -91,7 +111,7 @@ object HealthSearch {
                 .forEach { vaccination ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             vaccination.name,
                             vaccination.provider,
@@ -114,7 +134,7 @@ object HealthSearch {
                 .forEach { document ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             document.title,
                             document.source,
@@ -128,7 +148,7 @@ object HealthSearch {
                 .forEach { medication ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.MEDICATIONS,
                             medication.name,
                             medication.dose,
@@ -144,27 +164,13 @@ object HealthSearch {
                 .forEach { appointment ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.APPOINTMENTS,
                             appointment.title,
                             listOf(appointment.clinician, appointment.location)
                                 .filter(String::isNotBlank)
                                 .joinToString(SEPARATOR),
                             HealthSearchTarget.Appointment(appointment.id),
-                        ),
-                    )
-                }
-            record.notes
-                .filter { listOf(it.title, it.body).matches(terms) }
-                .sortedByDescending(HealthNote::notedAt)
-                .forEach { note ->
-                    add(
-                        HealthSearchResult(
-                            profileId,
-                            HealthSearchGroup.HEALTH_RECORDS,
-                            note.title,
-                            note.body,
-                            HealthSearchTarget.Note(note.id),
                         ),
                     )
                 }
@@ -176,7 +182,7 @@ object HealthSearch {
                 .forEach { measurement ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             measurement.type.searchableName(record),
                             measurement.notes,
@@ -204,7 +210,7 @@ object HealthSearch {
                 .forEach { entry ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             entry.name,
                             listOf(entry.specialty.orEmpty(), entry.organization.orEmpty())
@@ -222,7 +228,7 @@ object HealthSearch {
                 .forEach { entry ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             entry.condition,
                             entry.relationship,
@@ -236,7 +242,7 @@ object HealthSearch {
                 .forEach { directive ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             directive.title,
                             directive.text,
@@ -253,7 +259,7 @@ object HealthSearch {
                 .forEach { identifier ->
                     add(
                         HealthSearchResult(
-                            profileId,
+                            scope,
                             HealthSearchGroup.HEALTH_RECORDS,
                             identifier.label,
                             identifier.issuer,
@@ -262,6 +268,23 @@ object HealthSearch {
                     )
                 }
         }
+    }
+
+    private fun searchNotes(notes: Iterable<HealthNote>, query: String): List<HealthSearchResult> {
+        val terms = query.searchTerms()
+        if (terms.isEmpty()) return emptyList()
+        return notes
+            .filter { note -> listOf(note.title, note.body).matches(terms) }
+            .sortedByDescending(HealthNote::notedAt)
+            .map { note ->
+                HealthSearchResult(
+                    scope = HealthSearchScope.Vault,
+                    group = HealthSearchGroup.NOTES,
+                    primaryText = note.title,
+                    secondaryText = note.body,
+                    target = HealthSearchTarget.Note(note.id),
+                )
+            }
     }
 
     private fun String.searchTerms(): List<String> = normalized()

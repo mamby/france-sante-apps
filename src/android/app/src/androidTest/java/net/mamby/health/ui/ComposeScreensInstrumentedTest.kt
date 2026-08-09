@@ -32,6 +32,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -48,10 +49,14 @@ import net.mamby.health.core.model.HealthVault
 import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppNavigationState
+import net.mamby.health.navigation.DirectoryEntryDetailRoute
+import net.mamby.health.navigation.DirectoryRoute
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.HealthRecordsRoute
 import net.mamby.health.navigation.HomeRoute
 import net.mamby.health.navigation.MedicationDetailRoute
+import net.mamby.health.navigation.NoteDetailRoute
+import net.mamby.health.navigation.NotesRoute
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.ui.components.AppScreenScaffold
@@ -77,12 +82,14 @@ class ComposeScreensInstrumentedTest {
         composeRule.setContent {
             HealthVaultTheme {
                 DashboardScreen(
-                    record = emptyVault("Amina").profiles.single(),
+                    records = emptyVault("Amina").profiles,
+                    notes = emptyList(),
                     clock = FIXED_CLOCK,
                     zoneId = ZoneOffset.UTC,
-                    onProfileClick = {},
-                    onReminders = {},
-                    onDocumentSelected = {},
+                    onMedications = {},
+                    onSchedule = {},
+                    onDocumentSelected = { _, _ -> },
+                    onNoteSelected = {},
                     onAddHealthInfo = {},
                     onImportDocument = {},
                     onAddMedication = {},
@@ -91,28 +98,69 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.getting_started_title)).assertIsDisplayed()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.add_medication)).assertIsDisplayed()
+        listOf(
+            R.string.no_scheduled_medication,
+            R.string.no_upcoming_appointment,
+            R.string.no_active_reminder,
+            R.string.getting_started_title,
+            R.string.add_medication,
+        ).forEach { stringId ->
+            composeRule
+                .onNodeWithText(composeRule.activity.getString(stringId))
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
     }
 
     @Test
-    fun emptyDocumentsHasProfileContextAndImportAction() {
-        val record = emptyVault("Amina").profiles.single()
+    fun homePreviewCardsOpenTheirRootDestinations() {
+        var medicationsOpened = false
+        var scheduleOpened = false
         composeRule.setContent {
             HealthVaultTheme {
-                VaultScreen(
-                    record = record,
-                    today = LocalDate.of(2026, 7, 30),
-                    onBack = {},
-                    onProfileClick = {},
-                    onManageCategories = {},
-                    onImport = {},
-                    onDocumentSelected = {},
+                DashboardScreen(
+                    records = emptyVault("Amina").profiles,
+                    notes = emptyList(),
+                    clock = FIXED_CLOCK,
+                    zoneId = ZoneOffset.UTC,
+                    onMedications = { medicationsOpened = true },
+                    onSchedule = { scheduleOpened = true },
+                    onDocumentSelected = { _, _ -> },
+                    onNoteSelected = {},
+                    onAddHealthInfo = {},
+                    onImportDocument = {},
+                    onAddMedication = {},
+                    onAddAppointment = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("Amina").assertIsDisplayed()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.nav_medications)).performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.schedule_title)).performClick()
+        composeRule.runOnIdle {
+            assertTrue(medicationsOpened)
+            assertTrue(scheduleOpened)
+        }
+    }
+
+    @Test
+    fun emptyDocumentsDefaultsToAllProfilesAndShowsEmptyState() {
+        val record = emptyVault("Amina").profiles.single()
+        composeRule.setContent {
+            HealthVaultTheme {
+                VaultScreen(
+                    records = listOf(record),
+                    today = LocalDate.of(2026, 7, 30),
+                    onBack = {},
+                    onManageCategories = {},
+                    onAddProfile = { _, _ -> },
+                    onImport = { _, _ -> },
+                    onDocumentSelected = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.all_profiles)).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.documents_tab)).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.no_documents_title)).assertIsDisplayed()
     }
@@ -142,12 +190,14 @@ class ComposeScreensInstrumentedTest {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(900.dp, 1_000.dp))) {
                 HealthVaultTheme {
                     DashboardScreen(
-                        record = emptyVault("Expanded").profiles.single(),
+                        records = emptyVault("Expanded").profiles,
+                        notes = emptyList(),
                         clock = FIXED_CLOCK,
                         zoneId = ZoneOffset.UTC,
-                        onProfileClick = {},
-                        onReminders = {},
-                        onDocumentSelected = {},
+                        onMedications = {},
+                        onSchedule = {},
+                        onDocumentSelected = { _, _ -> },
+                        onNoteSelected = {},
                         onAddHealthInfo = {},
                         onImportDocument = {},
                         onAddMedication = {},
@@ -162,9 +212,9 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun navigationHasExactFiveRootsAndProfileAwareBackStacks() {
+    fun navigationKeepsIndependentHealthRecordsNotesAndDirectoryBackStacks() {
         assertEquals(
-            listOf("Home", "HealthRecords", "Search", "Medications", "Appointments"),
+            listOf("Home", "Search", "HealthRecords", "Notes", "Medications", "Schedule", "Directory", "Settings"),
             TopLevelDestination.entries.map(Enum<*>::name),
         )
         lateinit var navigation: AppNavigationState
@@ -180,11 +230,27 @@ class ComposeScreensInstrumentedTest {
                 TopLevelDestination.Medications,
                 MedicationDetailRoute(profileId, "medication-id"),
             )
+            navigation.navigate(TopLevelDestination.Notes, NoteDetailRoute("note-id"))
+            navigation.navigate(
+                TopLevelDestination.Directory,
+                DirectoryEntryDetailRoute(profileId, "directory-id"),
+            )
             navigation.select(TopLevelDestination.HealthRecords)
             assertEquals(DocumentDetailRoute(profileId, "document-id"), navigation.currentBackStack.last())
             navigation.goBack()
             assertEquals(HealthRecordsRoute, navigation.currentBackStack.last())
             assertTrue(navigation.isAtSecondaryRoot)
+            navigation.select(TopLevelDestination.Notes)
+            assertEquals(NoteDetailRoute("note-id"), navigation.currentBackStack.last())
+            navigation.goBack()
+            assertEquals(NotesRoute, navigation.currentBackStack.last())
+            navigation.select(TopLevelDestination.Directory)
+            assertEquals(
+                DirectoryEntryDetailRoute(profileId, "directory-id"),
+                navigation.currentBackStack.last(),
+            )
+            navigation.goBack()
+            assertEquals(DirectoryRoute, navigation.currentBackStack.last())
             navigation.goBack()
             assertEquals(TopLevelDestination.Home, navigation.selectedDestination)
             assertEquals(HomeRoute, navigation.currentBackStack.last())
@@ -193,6 +259,15 @@ class ComposeScreensInstrumentedTest {
 
     @Test
     fun compactNavigationUsesFourRootsAndMore() {
+        assertEquals(
+            listOf(
+                TopLevelDestination.Medications,
+                TopLevelDestination.Schedule,
+                TopLevelDestination.Directory,
+                TopLevelDestination.Settings,
+            ),
+            TopLevelDestination.compactOverflow,
+        )
         var moreSelected = false
         composeRule.setContent {
             HealthVaultTheme {
@@ -208,7 +283,7 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        TopLevelDestination.entries.dropLast(1).forEach { destination ->
+        TopLevelDestination.compactPrimary.forEach { destination ->
             val label = composeRule.activity.getString(destination.label)
             val node = composeRule
                 .onNodeWithContentDescription(label, useUnmergedTree = true)
@@ -217,9 +292,11 @@ class ComposeScreensInstrumentedTest {
             assertEquals(Role.Tab, node.config[SemanticsProperties.Role])
             composeRule.onAllNodesWithText(label).assertCountEquals(0)
         }
-        composeRule
-            .onNodeWithContentDescription(composeRule.activity.getString(R.string.nav_appointments))
-            .assertDoesNotExist()
+        TopLevelDestination.compactOverflow.forEach { destination ->
+            composeRule
+                .onNodeWithContentDescription(composeRule.activity.getString(destination.label))
+                .assertDoesNotExist()
+        }
         composeRule
             .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_more))
             .assertIsDisplayed()
@@ -249,7 +326,7 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun expandedNavigationKeepsAppointmentsAsDirectRoot() {
+    fun expandedNavigationKeepsScheduleAsDirectRoot() {
         composeRule.setContent {
             HealthVaultTheme {
                 AppNavigationSuite(
@@ -276,7 +353,7 @@ class ComposeScreensInstrumentedTest {
 
     @Test
     fun moreSheetShowsLocalizedDestinationsAndDispatchesActions() {
-        var selectedAction: String? = null
+        var selectedAction: TopLevelDestination? = null
         lateinit var showSheet: () -> Unit
         composeRule.setContent {
             var visible by remember { mutableStateOf(true) }
@@ -285,16 +362,8 @@ class ComposeScreensInstrumentedTest {
                 if (visible) {
                     AppMoreSheet(
                         onDismissRequest = { visible = false },
-                        onAppointments = {
-                            selectedAction = "appointments"
-                            visible = false
-                        },
-                        onReminders = {
-                            selectedAction = "reminders"
-                            visible = false
-                        },
-                        onSettings = {
-                            selectedAction = "settings"
+                        onDestinationSelected = {
+                            selectedAction = it
                             visible = false
                         },
                     )
@@ -302,21 +371,20 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        val appointments = composeRule.activity.getString(R.string.nav_appointments)
-        val reminders = composeRule.activity.getString(R.string.reminders_title)
-        val settings = composeRule.activity.getString(R.string.settings_title)
-        composeRule.onNodeWithText(appointments).assertIsDisplayed().performClick()
-        composeRule.runOnIdle {
-            assertEquals("appointments", selectedAction)
-            showSheet()
+        TopLevelDestination.compactOverflow.forEach { destination ->
+            composeRule
+                .onNodeWithText(composeRule.activity.getString(destination.label))
+                .assertIsDisplayed()
         }
-        composeRule.onNodeWithText(reminders).assertIsDisplayed().performClick()
+        val schedule = composeRule.activity.getString(R.string.schedule_title)
+        val settings = composeRule.activity.getString(R.string.settings_title)
+        composeRule.onNodeWithText(schedule).assertIsDisplayed().performClick()
         composeRule.runOnIdle {
-            assertEquals("reminders", selectedAction)
+            assertEquals(TopLevelDestination.Schedule, selectedAction)
             showSheet()
         }
         composeRule.onNodeWithText(settings).assertIsDisplayed().performClick()
-        composeRule.runOnIdle { assertEquals("settings", selectedAction) }
+        composeRule.runOnIdle { assertEquals(TopLevelDestination.Settings, selectedAction) }
     }
 
     @Test

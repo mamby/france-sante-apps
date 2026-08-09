@@ -46,7 +46,6 @@ fun interface UuidGenerator {
 class DefaultVaultRepository @Inject constructor(
     private val vaultStore: VaultStore,
     private val documentBlobStore: DocumentBlobStore,
-    private val selectedProfileStore: SelectedProfileStore,
     private val clock: Clock,
     private val uuidGenerator: UuidGenerator,
 ) : VaultRepository {
@@ -61,16 +60,11 @@ class DefaultVaultRepository @Inject constructor(
             try {
                 val vault = vaultStore.load()
                 if (vault == null) {
-                    runCatching { selectedProfileStore.clear() }
                     mutableState.value = VaultState.Missing
                     return@withLock
                 }
                 documentBlobStore.cleanupOrphans(vault.allDocuments().map(MedicalDocument::blobId).toSet())
-                val requested = selectedProfileStore.load()
-                val selected = requested?.takeIf { id -> vault.profiles.any { it.profile.id == id } }
-                    ?: vault.profiles.first().profile.id
-                if (selected != requested) runCatching { selectedProfileStore.save(selected) }
-                mutableState.value = VaultState.Ready(vault, selected)
+                mutableState.value = VaultState.Ready(vault)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: UnsupportedVaultVersionException) {
@@ -103,8 +97,7 @@ class DefaultVaultRepository @Inject constructor(
                 .copy(revision = 1)
                 .requireValid()
             vaultStore.save(vault)
-            runCatching { selectedProfileStore.save(profileId) }
-            mutableState.value = VaultState.Ready(vault, profileId)
+            mutableState.value = VaultState.Ready(vault)
         }
     }
 
@@ -123,19 +116,8 @@ class DefaultVaultRepository @Inject constructor(
         )
         val next = current.vault.copy(profiles = current.vault.profiles + record).nextRevision(now)
         vaultStore.save(next)
-        runCatching { selectedProfileStore.save(profileId) }
-        mutableState.value = VaultState.Ready(next, profileId)
+        mutableState.value = VaultState.Ready(next)
         profileId
-    }
-
-    override suspend fun selectProfile(profileId: UUID) {
-        mutex.withLock {
-            val current = readyState()
-            current.vault.profileRecord(profileId)
-            if (current.selectedProfileId == profileId) return@withLock
-            runCatching { selectedProfileStore.save(profileId) }
-            mutableState.value = VaultState.Ready(current.vault, profileId)
-        }
     }
 
     override suspend fun updateProfile(profileId: UUID, profile: HealthProfile) {
@@ -154,15 +136,9 @@ class DefaultVaultRepository @Inject constructor(
             if (index < 0) throw NoSuchElementException("Profile not found: $profileId")
             val removed = current.vault.profiles[index]
             val remaining = current.vault.profiles.filterNot { it.profile.id == profileId }
-            val selected = if (current.selectedProfileId == profileId) {
-                remaining[index.coerceAtMost(remaining.lastIndex)].profile.id
-            } else {
-                current.selectedProfileId
-            }
             val next = current.vault.copy(profiles = remaining).nextRevision(clock.instant())
             vaultStore.save(next)
-            runCatching { selectedProfileStore.save(selected) }
-            mutableState.value = VaultState.Ready(next, selected)
+            mutableState.value = VaultState.Ready(next)
             removed.documents.forEach { document -> runCatching { documentBlobStore.delete(document.blobId) } }
         }
     }
@@ -227,7 +203,7 @@ class DefaultVaultRepository @Inject constructor(
                 runCatching { documentBlobStore.delete(blobId) }
                 throw error
             }
-            mutableState.value = VaultState.Ready(next, current.selectedProfileId)
+            mutableState.value = VaultState.Ready(next)
             document
         } finally {
             if (!committed && staged != null) runCatching { documentBlobStore.discard(staged) }
@@ -276,7 +252,7 @@ class DefaultVaultRepository @Inject constructor(
             )
             val next = current.vault.replaceProfile(updated).nextRevision(now)
             vaultStore.save(next)
-            mutableState.value = VaultState.Ready(next, current.selectedProfileId)
+            mutableState.value = VaultState.Ready(next)
             runCatching { documentBlobStore.delete(document.blobId) }
         }
     }
@@ -321,14 +297,14 @@ class DefaultVaultRepository @Inject constructor(
             record.copy(reminders = record.reminders.filterNot { it.id == reminderId })
         }
 
-    override suspend fun upsertHealthNote(profileId: UUID, note: HealthNote) =
-        mutateProfile(profileId) { record, now ->
-            record.copy(notes = record.notes.upsert(note.copy(updatedAt = now), HealthNote::id))
+    override suspend fun upsertHealthNote(note: HealthNote) =
+        mutateVault { vault, now ->
+            vault.copy(notes = vault.notes.upsert(note.copy(updatedAt = now), HealthNote::id))
         }
 
-    override suspend fun deleteHealthNote(profileId: UUID, noteId: UUID) =
-        mutateProfile(profileId) { record, _ ->
-            record.copy(notes = record.notes.filterNot { it.id == noteId })
+    override suspend fun deleteHealthNote(noteId: UUID) =
+        mutateVault { vault, _ ->
+            vault.copy(notes = vault.notes.filterNot { it.id == noteId })
         }
 
     override suspend fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement) =
@@ -570,22 +546,17 @@ class DefaultVaultRepository @Inject constructor(
     ) {
         mutex.withLock {
             vault.requireValid()
-            val previousSelection = (mutableState.value as? VaultState.Ready)?.selectedProfileId
             vaultStore.replaceAtomically(vault, documentBlobs)
             val restored = vaultStore.load()
                 ?: throw VaultCorruptionException("Restored vault metadata is missing.")
             documentBlobStore.cleanupOrphans(restored.allDocuments().map(MedicalDocument::blobId).toSet())
-            val selected = previousSelection?.takeIf { id -> restored.profiles.any { it.profile.id == id } }
-                ?: restored.profiles.first().profile.id
-            runCatching { selectedProfileStore.save(selected) }
-            mutableState.value = VaultState.Ready(restored, selected)
+            mutableState.value = VaultState.Ready(restored)
         }
     }
 
     override suspend fun deleteVault() {
         mutex.withLock {
             vaultStore.delete()
-            runCatching { selectedProfileStore.clear() }
             mutableState.value = VaultState.Missing
         }
     }
@@ -601,7 +572,17 @@ class DefaultVaultRepository @Inject constructor(
             require(updated.profile.id == profileId) { "Profile identifier cannot be changed." }
             val next = current.vault.replaceProfile(updated).nextRevision(now)
             vaultStore.save(next)
-            mutableState.value = VaultState.Ready(next, current.selectedProfileId)
+            mutableState.value = VaultState.Ready(next)
+        }
+    }
+
+    private suspend fun mutateVault(transform: (HealthVault, Instant) -> HealthVault) {
+        mutex.withLock {
+            val current = readyState()
+            val now = clock.instant()
+            val next = transform(current.vault, now).nextRevision(now)
+            vaultStore.save(next)
+            mutableState.value = VaultState.Ready(next)
         }
     }
 

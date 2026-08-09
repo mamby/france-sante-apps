@@ -4,13 +4,13 @@ Personal Health Vault is an offline personal record organizer. It does not requi
 
 ## Data kept by the application
 
-The vault may contain multiple profiles, each with profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medication schedules, appointments, reminders, independent notes, health measurements, care-directory entries, family history, personal directives, health identifiers, category preferences, document metadata, and imported PDF or image contents. Invoices, receipts, and reimbursement records are encrypted documents rather than a financial ledger.
+The vault may contain multiple profiles, each with profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medication schedules, appointments, reminders, health measurements, care-directory entries, family history, personal directives, health identifiers, category preferences, document metadata, and imported PDF or image contents. Notes are vault-wide and are not assigned to profiles. Invoices, receipts, and reimbursement records are encrypted documents rather than a financial ledger.
 
-User health information is persisted only as authenticated ciphertext in app-private storage that is excluded from Android platform backup. The selected profile ID is also authenticated ciphertext in separate non-backed-up storage. Theme, language, app-lock preference, timeout, and backup-destination state are non-health preferences stored separately.
+User health information is persisted only as authenticated ciphertext in app-private storage that is excluded from Android platform backup. Profile filters and search state exist only in unlocked UI memory and are not persisted. Theme, language, app-lock preference, timeout, and backup-destination state are non-health preferences stored separately.
 
 Fresh install contains no sample health data. Starting new asks who the first profile is for and creates an empty encrypted profile.
 
-Global search examines only the selected profile. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms. Identifier values are never indexed or displayed in result lists. They remain masked until the user explicitly reveals a detail value, and that reveal state is temporary.
+Global search examines all profiles and vault-wide notes by default and may narrow profile-owned groups with its screen-local profile filter. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms. Profile-owned results retain their owning profile, while note results are explicitly vault-scoped and never display a profile marker. Identifier values are never indexed or displayed in result lists. They remain masked until the user explicitly reveals a detail value, and that reveal state is temporary.
 
 ## Network and third parties
 
@@ -29,7 +29,7 @@ Import uses Android's system picker. Supported source content is copied into enc
 
 App lock uses the device's biometric or credential prompt when the user enables it. It controls access to the user interface and is separate from encryption at rest.
 
-Reminder calculation and notification creation happen on the device for every profile. Notification text is always generic and contains no profile name, medication, dose, appointment, location, or other health detail. Tapping a reminder unlocks the app before selecting its owning profile and opening the target.
+Reminder calculation and notification creation happen on the device for every profile. Notification text is always generic and contains no profile name, medication, dose, appointment, location, or other health detail. Tapping a reminder unlocks the app before opening the target under its owning profile.
 
 ## Backup and restore
 

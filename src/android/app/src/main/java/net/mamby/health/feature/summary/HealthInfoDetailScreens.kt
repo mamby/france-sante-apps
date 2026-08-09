@@ -24,6 +24,7 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.theme.UiTokens
@@ -33,8 +34,7 @@ fun EmergencyContactDetailScreen(
     record: ProfileRecord,
     contact: EmergencyContact,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-) = HealthInfoDetailScaffold(record, contact.name, onBack, onProfileClick) {
+) = HealthInfoDetailScaffold(record, contact.name, onBack) {
     LabeledValue(stringResource(R.string.contact_relationship), contact.relationship)
     LabeledValue(stringResource(R.string.contact_phone), contact.phoneNumber)
     contact.notes?.let { LabeledValue(stringResource(R.string.common_notes), it) }
@@ -45,8 +45,7 @@ fun VaccinationDetailScreen(
     record: ProfileRecord,
     vaccination: Vaccination,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-) = HealthInfoDetailScaffold(record, vaccination.name, onBack, onProfileClick) {
+) = HealthInfoDetailScaffold(record, vaccination.name, onBack) {
     LabeledValue(stringResource(R.string.vaccination_date), vaccination.dateAdministered.localizedDate())
     vaccination.provider?.let { LabeledValue(stringResource(R.string.vaccination_provider), it) }
     vaccination.lotNumber?.let { LabeledValue(stringResource(R.string.vaccination_lot_number), it) }
@@ -59,8 +58,7 @@ fun FamilyHistoryDetailScreen(
     record: ProfileRecord,
     entry: FamilyHistoryEntry,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-) = HealthInfoDetailScaffold(record, entry.condition, onBack, onProfileClick) {
+) = HealthInfoDetailScaffold(record, entry.condition, onBack) {
     LabeledValue(stringResource(R.string.family_relationship), entry.relationship)
     entry.ageAtOnsetYears?.let {
         LabeledValue(stringResource(R.string.family_age_at_onset), it.toString())
@@ -73,8 +71,7 @@ fun CareDirectiveDetailScreen(
     record: ProfileRecord,
     directive: CareDirective,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-) = HealthInfoDetailScaffold(record, directive.title, onBack, onProfileClick) {
+) = HealthInfoDetailScaffold(record, directive.title, onBack) {
     Text(stringResource(R.string.directives_disclaimer))
     LabeledValue(stringResource(R.string.directive_kind), stringResource(directive.kind.labelResource()))
     LabeledValue(stringResource(R.string.directive_date), directive.recordedOn.localizedDate())
@@ -92,10 +89,9 @@ fun HealthIdentifierDetailScreen(
     record: ProfileRecord,
     identifier: HealthIdentifier,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
 ) {
     var revealed by remember(identifier.id) { mutableStateOf(false) }
-    HealthInfoDetailScaffold(record, identifier.label, onBack, onProfileClick) {
+    HealthInfoDetailScaffold(record, identifier.label, onBack) {
         LabeledValue(stringResource(R.string.identifier_kind), stringResource(identifier.kind.labelResource()))
         LabeledValue(
             stringResource(R.string.identifier_value),
@@ -115,14 +111,12 @@ private fun HealthInfoDetailScaffold(
     record: ProfileRecord,
     title: String,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     AppScreenScaffold(
         title = title,
         onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
+        contextHeader = { ProfileOwnerHeader(record.profile) },
     ) { padding ->
         Column(
             modifier = Modifier

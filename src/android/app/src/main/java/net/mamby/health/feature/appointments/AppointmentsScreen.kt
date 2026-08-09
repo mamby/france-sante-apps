@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import java.time.Instant
@@ -35,13 +36,18 @@ import net.mamby.health.R
 import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CareDirectoryKind
-import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
+import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -51,29 +57,40 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun AppointmentsScreen(
-    appointments: List<Appointment>,
-    documents: List<MedicalDocument>,
-    directory: List<CareDirectoryEntry>,
-    profile: HealthProfile,
+    records: List<ProfileRecord>,
     zoneId: ZoneId,
     now: Instant,
-    onProfileClick: () -> Unit,
-    onUpsert: (Appointment) -> Unit,
-    onSelected: (String) -> Unit,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onUpsert: (UUID, Appointment) -> Unit,
+    onSelected: (UUID, String) -> Unit,
     creationRequest: Long = 0,
+    @StringRes titleResource: Int = R.string.appointments_title,
+    sectionSelector: @Composable () -> Unit = {},
 ) {
-    var editorVisible by remember(profile.id) { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) {
-        if (creationRequest > 0) editorVisible = true
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    var editorVisible by remember { mutableStateOf(false) }
+    var editorProfileId by remember { mutableStateOf<UUID?>(null) }
+    fun startCreation() {
+        editorProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
+        editorVisible = true
     }
-    val upcoming = appointments.filter { it.startsAt.isAfter(now) }.sortedBy { it.startsAt }
-    val past = appointments.filterNot { it.startsAt.isAfter(now) }.sortedByDescending { it.startsAt }
+    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
+    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
+    val appointments = remember(filteredRecords) { filteredRecords.ownedItems(ProfileRecord::appointments) }
+    val upcoming = appointments.filter { it.value.startsAt.isAfter(now) }
+        .sortedWith(compareBy<ProfileOwned<Appointment>> { it.value.startsAt }.thenBy { it.profileId })
+    val past = appointments.filterNot { it.value.startsAt.isAfter(now) }
+        .sortedWith(compareByDescending<ProfileOwned<Appointment>> { it.value.startsAt }.thenBy { it.profileId })
     AppScreenScaffold(
-        title = stringResource(R.string.appointments_title),
-        profile = profile,
-        onProfileClick = onProfileClick,
+        title = stringResource(titleResource),
+        contextHeader = {
+            Column(verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                sectionSelector()
+                ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+            }
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { editorVisible = true }) {
+            FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_appointment))
             }
         },
@@ -92,28 +109,37 @@ fun AppointmentsScreen(
                     EmptyState(stringResource(R.string.no_appointments_title), stringResource(R.string.no_appointments_body))
                 }
             } else {
-                items(upcoming, key = { it.id }) { appointment ->
-                    AppointmentCard(appointment, zoneId) { onSelected(appointment.id.toString()) }
+                items(upcoming, key = { "${it.profileId}:${it.value.id}" }) { owned ->
+                    AppointmentCard(owned, zoneId, filterProfileId == null && records.size > 1) {
+                        onSelected(owned.profileId, owned.value.id.toString())
+                    }
                 }
             }
             if (past.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.past)) }
-                items(past, key = { it.id }) { appointment ->
-                    AppointmentCard(appointment, zoneId) { onSelected(appointment.id.toString()) }
+                items(past, key = { "${it.profileId}:${it.value.id}" }) { owned ->
+                    AppointmentCard(owned, zoneId, filterProfileId == null && records.size > 1) {
+                        onSelected(owned.profileId, owned.value.id.toString())
+                    }
                 }
             }
         }
     }
     if (editorVisible) {
+        val owner = records.firstOrNull { it.profile.id == editorProfileId }
         AppointmentDialog(
             existing = null,
-            documents = documents,
-            directory = directory,
+            documents = owner?.documents.orEmpty(),
+            directory = owner?.careDirectory.orEmpty(),
             zoneId = zoneId,
             today = now.atZone(zoneId).toLocalDate(),
+            ownerSelected = owner != null,
+            profilePicker = {
+                ProfilePickerField(records, editorProfileId, { editorProfileId = it }, onAddProfile)
+            },
             onDismiss = { editorVisible = false },
             onSave = {
-                onUpsert(it)
+                onUpsert(requireNotNull(editorProfileId), it)
                 editorVisible = false
             },
         )
@@ -121,8 +147,15 @@ fun AppointmentsScreen(
 }
 
 @Composable
-private fun AppointmentCard(appointment: Appointment, zoneId: ZoneId, onOpen: () -> Unit) {
+private fun AppointmentCard(
+    owned: ProfileOwned<Appointment>,
+    zoneId: ZoneId,
+    showOwner: Boolean,
+    onOpen: () -> Unit,
+) {
+    val appointment = owned.value
     SectionCard(appointment.title) {
+        if (showOwner) ProfileMarker(owned.profile)
         Text(appointment.startsAt.localizedDateTime(zoneId))
         Text(appointment.clinician)
         Text(appointment.location)
@@ -139,6 +172,8 @@ fun AppointmentDialog(
     today: LocalDate,
     onDismiss: () -> Unit,
     onSave: (Appointment) -> Unit,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
     val existingDateTime = existing?.startsAt?.atZone(zoneId)
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
@@ -153,9 +188,14 @@ fun AppointmentDialog(
     var reminderLead by remember { mutableStateOf((existing?.reminderLeadMinutes ?: 60).toString()) }
     var relatedDocuments by remember { mutableStateOf(existing?.relatedDocumentIds?.toSet() ?: emptySet()) }
     val reminderValue = reminderLead.toLongOrNull()
+    LaunchedEffect(documents, directory) {
+        clinicianEntryId = clinicianEntryId?.takeIf { id -> directory.any { it.id == id } }
+        facilityEntryId = facilityEntryId?.takeIf { id -> directory.any { it.id == id } }
+        relatedDocuments = relatedDocuments.intersect(documents.mapTo(mutableSetOf()) { it.id })
+    }
     FormDialog(
         title = stringResource(if (existing == null) R.string.add_appointment else R.string.edit_appointment),
-        saveEnabled = title.isNotBlank() && clinician.isNotBlank() && location.isNotBlank() &&
+        saveEnabled = ownerSelected && title.isNotBlank() && clinician.isNotBlank() && location.isNotBlank() &&
             (!reminderEnabled || reminderValue != null),
         onDismiss = onDismiss,
         onSave = {
@@ -177,6 +217,7 @@ fun AppointmentDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.appointment_title)) })
             OutlinedTextField(clinician, { clinician = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.appointment_clinician)) })
             CareDirectoryPicker(

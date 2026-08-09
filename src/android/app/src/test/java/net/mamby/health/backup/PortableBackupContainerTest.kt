@@ -89,8 +89,8 @@ class PortableBackupContainerTest {
     }
 
     @Test
-    fun formatV1ContainerRoundTripsSchemaV3InvoiceAndDirectiveAttachment(): Unit = runBlocking {
-        val target = temporaryFolder.newFile("schema-v3.phvbackup")
+    fun formatV1ContainerRoundTripsSchemaV4InvoiceAndDirectiveAttachment(): Unit = runBlocking {
+        val target = temporaryFolder.newFile("schema-v4.phvbackup")
         val key = ByteArray(BackupKeyDeriver.KEY_SIZE_BYTES) { (it + 5).toByte() }
         val documentBytes = "encrypted invoice".encodeToByteArray()
         val now = Instant.parse("2026-07-30T12:00:00Z")
@@ -133,7 +133,7 @@ class PortableBackupContainerTest {
         val backupDocument = BackupDocumentEntry(0, blobId.toString(), documentBytes.size.toLong())
         val manifest = BackupManifest(
             sourceEnvironment = "dev",
-            vaultSchemaVersion = 3,
+            vaultSchemaVersion = HealthVault.CURRENT_VERSION,
             revision = vault.revision,
             updatedAt = vault.updatedAt.toString(),
             vaultJsonBase64 = Base64.getEncoder().encodeToString(vaultBytes),
@@ -147,7 +147,7 @@ class PortableBackupContainerTest {
             }
             val restoredManifest = container.readManifest(target, key)
             assertEquals(PortableBackupFormat.VERSION, restoredManifest.formatVersion)
-            assertEquals(3, restoredManifest.vaultSchemaVersion)
+            assertEquals(HealthVault.CURRENT_VERSION, restoredManifest.vaultSchemaVersion)
             val restoredVault = VaultCodec.decode(
                 Base64.getDecoder().decode(restoredManifest.vaultJsonBase64),
             ).vault

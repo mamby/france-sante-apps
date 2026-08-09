@@ -23,8 +23,17 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategory
+import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
+import net.mamby.health.core.model.CareDirective
+import net.mamby.health.core.model.CareDirectoryEntry
+import net.mamby.health.core.model.CustomDocumentCategory
+import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.EmergencyContact
+import net.mamby.health.core.model.FamilyHistoryEntry
+import net.mamby.health.core.model.HealthIdentifier
+import net.mamby.health.core.model.HealthMeasurement
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
@@ -64,11 +73,63 @@ object VaultCodec {
         val vault = when (version) {
             1 -> json.decodeFromString<HealthVaultV1>(source).toCurrent()
             2 -> json.decodeFromString<HealthVaultV2>(source).toCurrent()
+            3 -> json.decodeFromString<HealthVaultV3>(source).toCurrent()
             HealthVault.CURRENT_VERSION -> json.decodeFromString<HealthVault>(source)
             else -> throw UnsupportedVaultVersionException(version)
         }
         return DecodedVault(version, vault.requireValid())
     }
+}
+
+@Serializable
+private data class ProfileRecordV3(
+    val profile: HealthProfile,
+    val documents: List<MedicalDocument> = emptyList(),
+    val medications: List<Medication> = emptyList(),
+    val appointments: List<Appointment> = emptyList(),
+    val vaccinations: List<Vaccination> = emptyList(),
+    val reminders: List<Reminder> = emptyList(),
+    val notes: List<HealthNote> = emptyList(),
+    val measurements: List<HealthMeasurement> = emptyList(),
+    val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
+    val careDirectory: List<CareDirectoryEntry> = emptyList(),
+    val familyHistory: List<FamilyHistoryEntry> = emptyList(),
+    val directives: List<CareDirective> = emptyList(),
+    val healthIdentifiers: List<HealthIdentifier> = emptyList(),
+    val customDocumentCategories: List<CustomDocumentCategory> = emptyList(),
+    val builtInDocumentCategoryPreferences: List<BuiltInDocumentCategoryPreference> = emptyList(),
+) {
+    fun toCurrent() = ProfileRecord(
+        profile = profile,
+        documents = documents,
+        medications = medications,
+        appointments = appointments,
+        vaccinations = vaccinations,
+        reminders = reminders,
+        measurements = measurements,
+        customMeasurementTypes = customMeasurementTypes,
+        careDirectory = careDirectory,
+        familyHistory = familyHistory,
+        directives = directives,
+        healthIdentifiers = healthIdentifiers,
+        customDocumentCategories = customDocumentCategories,
+        builtInDocumentCategoryPreferences = builtInDocumentCategoryPreferences,
+    )
+}
+
+@Serializable
+private data class HealthVaultV3(
+    val version: Int = 3,
+    val revision: Long,
+    val profiles: List<ProfileRecordV3>,
+    val updatedAt: Instant,
+) {
+    fun toCurrent() = HealthVault(
+        revision = revision,
+        profiles = profiles.map(ProfileRecordV3::toCurrent),
+        notes = profiles.flatMap(ProfileRecordV3::notes),
+        updatedAt = updatedAt,
+    )
 }
 
 @Serializable

@@ -39,11 +39,17 @@ import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.core.model.PostalAddress
 import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfileOwnerHeader
+import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.withScreenPadding
@@ -52,22 +58,37 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun DirectoryScreen(
-    record: ProfileRecord,
-    onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-    onUpsert: (CareDirectoryEntry) -> Unit,
-    onSelected: (UUID) -> Unit,
+    records: List<ProfileRecord>,
+    onBack: (() -> Unit)? = null,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onUpsert: (UUID, CareDirectoryEntry) -> Unit,
+    onSelected: (UUID, UUID) -> Unit,
     creationRequest: Long = 0,
 ) {
-    var adding by remember(record.profile.id) { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) { if (creationRequest > 0) adding = true }
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    var creationVisible by remember { mutableStateOf(false) }
+    var creationProfileId by remember { mutableStateOf<UUID?>(null) }
+    fun startCreation() {
+        creationProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
+        creationVisible = true
+    }
+    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
+    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
+    val entries = remember(filteredRecords) {
+        filteredRecords.ownedItems(ProfileRecord::careDirectory).sortedWith(
+            compareBy<ProfileOwned<CareDirectoryEntry>> { it.value.name }
+                .thenBy { it.profileId }
+                .thenBy { it.value.id },
+        )
+    }
     AppScreenScaffold(
         title = stringResource(R.string.care_directory_title),
         onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
+        contextHeader = {
+            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }) {
+            FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_directory_entry))
             }
         },
@@ -79,7 +100,7 @@ fun DirectoryScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (record.careDirectory.isEmpty()) {
+            if (entries.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         stringResource(R.string.no_directory_entries_title),
@@ -87,15 +108,17 @@ fun DirectoryScreen(
                     )
                 }
             } else {
-                items(record.careDirectory.sortedBy(CareDirectoryEntry::name), key = CareDirectoryEntry::id) { entry ->
+                items(entries, key = { "${it.profileId}:${it.value.id}" }) { owned ->
+                    val entry = owned.value
                     SectionCard(entry.name) {
+                        if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(stringResource(entry.kind.labelResource()))
                         entry.specialty?.let { Text(it) }
                         entry.organization?.let { Text(it) }
-                        if (record.profile.primaryDoctorEntryId == entry.id) {
+                        if (owned.profile.primaryDoctorEntryId == entry.id) {
                             Text(stringResource(R.string.primary_doctor))
                         }
-                        Button(onClick = { onSelected(entry.id) }) {
+                        Button(onClick = { onSelected(owned.profileId, entry.id) }) {
                             Text(stringResource(R.string.common_open))
                         }
                     }
@@ -103,13 +126,17 @@ fun DirectoryScreen(
             }
         }
     }
-    if (adding) {
+    if (creationVisible) {
         DirectoryEntryDialog(
             existing = null,
-            onDismiss = { adding = false },
+            ownerSelected = creationProfileId != null,
+            profilePicker = {
+                ProfilePickerField(records, creationProfileId, { creationProfileId = it }, onAddProfile)
+            },
+            onDismiss = { creationVisible = false },
             onSave = {
-                onUpsert(it)
-                adding = false
+                onUpsert(requireNotNull(creationProfileId), it)
+                creationVisible = false
             },
         )
     }
@@ -120,7 +147,6 @@ fun DirectoryEntryDetailScreen(
     record: ProfileRecord,
     entry: CareDirectoryEntry,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
     onUpsert: (CareDirectoryEntry) -> Unit,
     onSetPrimaryDoctor: (UUID?) -> Unit,
     onDelete: () -> Unit,
@@ -131,8 +157,7 @@ fun DirectoryEntryDetailScreen(
     AppScreenScaffold(
         title = entry.name,
         onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
+        contextHeader = { ProfileOwnerHeader(record.profile) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -189,6 +214,8 @@ private fun DirectoryEntryDialog(
     existing: CareDirectoryEntry?,
     onDismiss: () -> Unit,
     onSave: (CareDirectoryEntry) -> Unit,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
     var kind by remember(existing?.id) { mutableStateOf(existing?.kind ?: CareDirectoryKind.DOCTOR) }
     var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
@@ -205,7 +232,7 @@ private fun DirectoryEntryDialog(
     var expanded by remember { mutableStateOf(false) }
     FormDialog(
         title = stringResource(if (existing == null) R.string.add_directory_entry else R.string.edit_directory_entry),
-        saveEnabled = name.isNotBlank(),
+        saveEnabled = ownerSelected && name.isNotBlank(),
         onDismiss = onDismiss,
         onSave = {
             onSave(
@@ -231,6 +258,7 @@ private fun DirectoryEntryDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             ExposedDropdownMenuBox(expanded, { expanded = it }) {
                 OutlinedTextField(
                     value = stringResource(kind.labelResource()),

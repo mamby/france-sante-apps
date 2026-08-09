@@ -38,6 +38,7 @@ import net.mamby.health.core.model.asReference
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.withScreenPadding
@@ -58,7 +59,7 @@ fun ManageDocumentCategoriesScreen(
     AppScreenScaffold(
         title = stringResource(R.string.manage_document_categories),
         onBack = onBack,
-        profile = record.profile,
+        contextHeader = { ProfileOwnerHeader(record.profile) },
         floatingActionButton = {
             FloatingActionButton(onClick = { adding = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_document_category))

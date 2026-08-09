@@ -41,8 +41,7 @@ Personal Health Vault is designed to help users keep a private, structured copy 
 
 - Medical documents
 - Treatments and medications
-- Appointments
-- Reminders
+- A unified schedule for appointments and reminders
 - Vaccinations
 - Emergency contacts
 - Independent health notes

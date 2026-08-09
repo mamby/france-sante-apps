@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.dp
 
 object UiTokens {
     val ProfileAvatarSize = 40.dp
+    val ProfileMarkerAvatarSize = 24.dp
     val ScreenPadding = 16.dp
     val CompactSpacing = 8.dp
     val ContentSpacing = 12.dp

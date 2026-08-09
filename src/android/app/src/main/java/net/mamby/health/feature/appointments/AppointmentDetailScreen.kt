@@ -26,6 +26,7 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.theme.UiTokens
@@ -42,7 +43,6 @@ fun AppointmentDetailScreen(
     onUpsert: (Appointment) -> Unit,
     onDelete: () -> Unit,
     onDocumentSelected: (String) -> Unit,
-    onProfileClick: () -> Unit,
 ) {
     var editorVisible by remember(profile.id) { mutableStateOf(false) }
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
@@ -50,8 +50,7 @@ fun AppointmentDetailScreen(
     AppScreenScaffold(
         appointment.title,
         onBack = onBack,
-        profile = profile,
-        onProfileClick = onProfileClick,
+        contextHeader = { ProfileOwnerHeader(profile) },
     ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).padding(UiTokens.ScreenPadding),

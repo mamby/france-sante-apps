@@ -23,22 +23,22 @@ Repositories expose immutable state through Flow. The root vault state is one of
 
 - `Loading`: encrypted state is being inspected
 - `Missing`: no local vault exists; onboarding may create an empty first profile or restore a backup
-- `Ready(vault, selectedProfileId)`: a schema-v3 multi-profile vault was authenticated and the app-wide selected profile exists
+- `Ready(vault)`: a schema-v4 multi-profile vault was authenticated; profile context is chosen only by local list filters, create forms, and owner-specific routes
 - `Unreadable`: ciphertext exists but cannot be safely decoded or authenticated
 
-User actions flow from Compose to a state holder, through an explicit profile-owned repository mutation, into atomic encrypted persistence, and back through Flow. A failed mutation leaves the last valid state active. There is no production sample provider: starting new creates one genuinely empty profile.
+User actions flow from Compose to a state holder, through an explicit profile-owned or vault-wide repository mutation, into atomic encrypted persistence, and back through Flow. A failed mutation leaves the last valid state active. There is no production sample provider: starting new creates one genuinely empty profile.
 
-Schema v3 stores ordered `ProfileRecord` values. In addition to the existing profile, documents, medications, appointments, vaccinations, and reminders, each record owns independent notes, typed measurements, custom measurement types, a care directory, family history, personal directives, health identifiers, document categories, and category preferences. Exact frozen schema-v1 and schema-v2 wire shapes are decoded and deterministically migrated; only schema v3 is encoded. IDs are globally unique and relationships never cross profile ownership.
+Schema v4 stores ordered `ProfileRecord` values plus vault-wide notes that are independent of profile ownership. Profiles own their documents, medications, appointments, vaccinations, reminders, typed measurements, custom measurement types, care-directory entries, family history, personal directives, health identifiers, document categories, and category preferences. Exact frozen schema-v1, schema-v2, and schema-v3 wire shapes are decoded and deterministically migrated; schema-v3 notes are flattened in profile/list order while preserving their values. Only schema v4 is encoded. IDs are globally unique, and profile-owned relationships never cross profile ownership.
 
-Search, the recent-item index, and dashboard metrics are derived rather than persisted. Search is Unicode-, case-, and diacritic-insensitive, exists only in unlocked process memory, and reads only the selected profile. Health identifier values are deliberately excluded from searchable content.
+Search, the recent-item index, and dashboard metrics are derived rather than persisted. They aggregate every profile while preserving each profile-owned item’s owner and owner-local relationships, and include vault-wide notes without an owner marker. List and search filters are independent unlocked-memory UI state and default to all profiles; vault-wide note results remain visible when profile-owned groups are narrowed. Search is Unicode-, case-, and diacritic-insensitive. Health identifier values are deliberately excluded from searchable content.
 
 ## Local encrypted storage
 
-Vault metadata is serialized with an explicit schema version, encrypted with AES-256-GCM, and stored under `noBackupFilesDir`. Each imported document body is encrypted separately so document updates do not rewrite every blob. The selected profile ID is stored separately in an encrypted `AtomicFile` with dedicated associated data; selection changes do not change the vault revision or schedule a backup.
+Vault metadata is serialized with an explicit schema version, encrypted with AES-256-GCM, and stored under `noBackupFilesDir`. Each imported document body is encrypted separately so document updates do not rewrite every blob. Obsolete encrypted profile-selection preference files are removed after a successful vault load; no replacement profile filter is persisted.
 
 Android Keystore owns the non-exportable local AES key. Every encryption operation uses a fresh random nonce. Associated data binds ciphertext to its schema version, purpose, and record or blob identifier.
 
-Writes use atomic replacement. Import commits an authenticated blob before publishing metadata that references it. Interrupted temporary files and unreferenced blobs are cleaned without changing a valid snapshot. An authentication or decoding error becomes `Unreadable`; it is never treated as missing. Missing, corrupt, or stale profile-selection state safely falls back to the first profile.
+Writes use atomic replacement. Import commits an authenticated blob before publishing metadata that references it. Interrupted temporary files and unreferenced blobs are cleaned without changing a valid snapshot. An authentication or decoding error in vault data becomes `Unreadable`; it is never treated as missing.
 
 PDF and image contents are authenticated before preview. Preview data remains in bounded process memory and is never written to a plaintext cache file.
 
@@ -50,9 +50,9 @@ No broad storage or media permission is required.
 
 ## Navigation and adaptive UI
 
-Navigation 3 owns type-safe destinations and saved top-level back stacks. Home, Health records, Search, Medications, and Appointments are the five icon-only top-level destinations. Health records is an adaptive hub for Health information, Measurements, Notes, Care directory, and Documents. Each collection uses typed list/detail destinations; category and measurement-type management have dedicated routes. Settings and profile management are vault-wide destinations.
+Navigation 3 owns type-safe destinations and independent saved top-level back stacks. Home, Search, Health records, Notes, Medications, Schedule, Care directory, and Settings are the top-level destinations. Schedule combines appointments and reminders behind one root while retaining their distinct entry types and editing behavior. Health records is an adaptive hub for Health information, Measurements, and Documents. Each collection uses typed list/detail destinations; category and measurement-type management have dedicated routes. Profile management and Notes remain vault-wide.
 
-Compact windows use bottom navigation and full-screen detail destinations. Expanded windows use a navigation rail and list/detail scenes where useful. Layout decisions come from official window-size and adaptive APIs rather than device names or hardcoded screen dimensions.
+Compact windows expose Home, Search, Health records, and Notes in the short navigation bar, with Medications, Schedule, Care directory, and Settings in More. Expanded navigation rails expose all eight destinations directly. Navigation-suite scaffold and navigation containers are transparent while the Material selected-item indicator remains visible. Layout decisions come from official window-size and adaptive APIs rather than device names or hardcoded screen dimensions.
 
 ## App lock
 
@@ -66,11 +66,11 @@ The user chooses a destination with the Storage Access Framework. The portable c
 
 Scheduled backup stores only a Keystore-wrapped copy of the backup data key and the persisted destination permission. The passphrase is never retained. WorkManager coalesces changes and records success or a user-action-required state.
 
-Every backup contains every profile in one encrypted snapshot, with documents flattened in profile/list order. The portable container remains format v1 while its manifest identifies the embedded vault schema. Restore accepts schema-v1, schema-v2, or schema-v3 snapshots, migrates historical schemas through the same strict codec, validates the complete manifest and every entry, and atomically replaces the active snapshot. Restore is full-snapshot replacement, not a record merge or synchronization protocol.
+Every backup contains every profile and every vault-wide note in one encrypted snapshot, with documents flattened in profile/list order. The portable container remains format v1 while its manifest identifies the embedded vault schema. Restore accepts schema-v1, schema-v2, schema-v3, or schema-v4 snapshots, migrates historical schemas through the same strict codec, validates the complete manifest and every entry, and atomically replaces the active snapshot. Restore is full-snapshot replacement, not a record merge or synchronization protocol.
 
 ## Reminders
 
-Medication, appointment, and general reminders for every profile are persisted in the encrypted snapshot. WorkManager identities include profile ownership and schedules the next future occurrence after delivery, edits, reboot, clock changes, and time-zone changes.
+Medication, appointment, and general reminders for every profile are persisted in the encrypted snapshot. The pure scheduling rules calculate next medication and reminder occurrences with deterministic occurrence/profile/ID ordering; notification scheduling reuses the same recurrence behavior. WorkManager identities include profile ownership and schedules the next future occurrence after delivery, edits, reboot, clock changes, and time-zone changes.
 
 Notification permission is requested in context when the user enables delivery. Notification titles and bodies are always generic and localized; profile names and health details appear only after unlock. A denied permission does not delete the reminder. Exact-alarm access is not requested, so delivery may be delayed by Android power and scheduling policies.
 

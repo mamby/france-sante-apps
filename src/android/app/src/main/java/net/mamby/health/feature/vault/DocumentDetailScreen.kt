@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import android.text.format.Formatter
+import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -41,6 +42,7 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.format.localizedLabel
@@ -49,9 +51,15 @@ import net.mamby.health.ui.theme.UiTokens
 
 sealed interface DocumentPreviewState {
     data object Idle : DocumentPreviewState
-    data object Loading : DocumentPreviewState
-    data class Ready(val image: ImageBitmap, val page: Int, val pageCount: Int) : DocumentPreviewState
-    data class Error(val message: String) : DocumentPreviewState
+    data class Loading(val profileId: UUID, val documentId: UUID) : DocumentPreviewState
+    data class Ready(
+        val profileId: UUID,
+        val documentId: UUID,
+        val image: ImageBitmap,
+        val page: Int,
+        val pageCount: Int,
+    ) : DocumentPreviewState
+    data class Error(val profileId: UUID, val documentId: UUID, val message: String) : DocumentPreviewState
 }
 
 @Composable
@@ -63,17 +71,26 @@ fun DocumentDetailScreen(
     onLoadPreview: (Int) -> Unit,
     onEdit: (MedicalDocument) -> Unit,
     onDelete: () -> Unit,
-    onProfileClick: () -> Unit,
 ) {
     val profile = record.profile
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
     var editorVisible by remember(profile.id) { mutableStateOf(false) }
     val context = LocalContext.current
+    val visiblePreview = preview.takeIf { state ->
+        when (state) {
+            DocumentPreviewState.Idle -> true
+            is DocumentPreviewState.Loading ->
+                state.profileId == profile.id && state.documentId == document.id
+            is DocumentPreviewState.Ready ->
+                state.profileId == profile.id && state.documentId == document.id
+            is DocumentPreviewState.Error ->
+                state.profileId == profile.id && state.documentId == document.id
+        }
+    } ?: DocumentPreviewState.Idle
     AppScreenScaffold(
         title = document.title,
         onBack = onBack,
-        profile = profile,
-        onProfileClick = onProfileClick,
+        contextHeader = { ProfileOwnerHeader(profile) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -93,31 +110,37 @@ fun DocumentDetailScreen(
                 LabeledValue(stringResource(R.string.document_tags), document.tags.joinToString())
             }
             SectionCard(stringResource(R.string.document_preview)) {
-                when (preview) {
+                when (visiblePreview) {
                     DocumentPreviewState.Idle -> Button(onClick = { onLoadPreview(0) }) {
                         Text(stringResource(R.string.document_preview))
                     }
-                    DocumentPreviewState.Loading -> CircularProgressIndicator()
-                    is DocumentPreviewState.Error -> Text(preview.message)
+                    is DocumentPreviewState.Loading -> CircularProgressIndicator()
+                    is DocumentPreviewState.Error -> Text(visiblePreview.message)
                     is DocumentPreviewState.Ready -> {
                         Image(
-                            bitmap = preview.image,
+                            bitmap = visiblePreview.image,
                             contentDescription = stringResource(R.string.document_preview),
                             modifier = Modifier.fillMaxWidth(),
                             contentScale = ContentScale.Fit,
                         )
-                        if (preview.pageCount > 1) {
-                            Text(stringResource(R.string.page_number, preview.page + 1, preview.pageCount))
+                        if (visiblePreview.pageCount > 1) {
+                            Text(
+                                stringResource(
+                                    R.string.page_number,
+                                    visiblePreview.page + 1,
+                                    visiblePreview.pageCount,
+                                ),
+                            )
                             androidx.compose.foundation.layout.Row(
                                 horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
                             ) {
                                 OutlinedButton(
-                                    onClick = { onLoadPreview(preview.page - 1) },
-                                    enabled = preview.page > 0,
+                                    onClick = { onLoadPreview(visiblePreview.page - 1) },
+                                    enabled = visiblePreview.page > 0,
                                 ) { Text(stringResource(R.string.previous_page)) }
                                 OutlinedButton(
-                                    onClick = { onLoadPreview(preview.page + 1) },
-                                    enabled = preview.page + 1 < preview.pageCount,
+                                    onClick = { onLoadPreview(visiblePreview.page + 1) },
+                                    enabled = visiblePreview.page + 1 < visiblePreview.pageCount,
                                 ) { Text(stringResource(R.string.next_page)) }
                             }
                         }

@@ -35,17 +35,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
+import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.DocumentSearch
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.asReference
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.withScreenPadding
@@ -66,18 +72,21 @@ data class DocumentImportDraft(
 
 @Composable
 fun VaultScreen(
-    record: ProfileRecord,
+    records: List<ProfileRecord>,
     today: LocalDate,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-    onManageCategories: () -> Unit,
-    onImport: (DocumentImportDraft) -> Unit,
-    onDocumentSelected: (String) -> Unit,
+    onManageCategories: (UUID?) -> Unit,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onImport: (UUID, DocumentImportDraft) -> Unit,
+    onDocumentSelected: (UUID, String) -> Unit,
     creationRequest: Long = 0,
 ) {
-    val profile = record.profile
-    val documents = record.documents
-    val availableCategories = remember(record) {
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    val selectedRecord = filterProfileId?.let { profileId ->
+        records.firstOrNull { it.profile.id == profileId }
+    }
+    val availableCategories = remember(selectedRecord) {
+        val record = selectedRecord ?: return@remember emptyList()
         BuiltInDocumentCategory.entries
             .filter { builtIn ->
                 record.builtInDocumentCategoryPreferences
@@ -87,36 +96,44 @@ fun VaultScreen(
             .map(BuiltInDocumentCategory::asReference) +
             record.customDocumentCategories.map { DocumentCategoryRef.Custom(it.id) }
     }
-    var category by remember(profile.id) { mutableStateOf<DocumentCategoryRef?>(null) }
-    var pendingUri by remember(profile.id) { mutableStateOf<Uri?>(null) }
-    val filtered = remember(documents, category) {
-        DocumentSearch.search(documents, "", category)
+    var category by remember(filterProfileId) { mutableStateOf<DocumentCategoryRef?>(null) }
+    var pendingUri by remember { mutableStateOf<Uri?>(null) }
+    var importProfileId by remember { mutableStateOf<UUID?>(null) }
+    val filtered = remember(records, selectedRecord, category) {
+        if (selectedRecord != null) {
+            DocumentSearch.search(selectedRecord.documents, "", category)
+                .map { document -> ProfileOwned(selectedRecord, document) }
+        } else {
+            records.ownedItems(ProfileRecord::documents).sortedWith(
+                compareByDescending<ProfileOwned<net.mamby.health.core.model.MedicalDocument>> {
+                    it.value.documentDate
+                }.thenBy { it.value.title }.thenBy { it.profileId },
+            )
+        }
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         pendingUri = uri
+        if (uri == null) importProfileId = null
     }
-    LaunchedEffect(creationRequest) {
-        if (creationRequest > 0) {
-            picker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp"))
-        }
+    fun startImport() {
+        importProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
+        picker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp"))
     }
+    LaunchedEffect(creationRequest) { if (creationRequest > 0) startImport() }
 
     AppScreenScaffold(
         title = stringResource(R.string.documents_tab),
         onBack = onBack,
-        profile = profile,
-        onProfileClick = onProfileClick,
+        contextHeader = {
+            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+        },
         actions = {
-            IconButton(onClick = onManageCategories) {
+            IconButton(onClick = { onManageCategories(filterProfileId) }) {
                 Icon(Icons.Outlined.Tune, stringResource(R.string.manage_document_categories))
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    picker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp"))
-                },
-            ) {
+            FloatingActionButton(onClick = ::startImport) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.import_document))
             }
         },
@@ -128,7 +145,7 @@ fun VaultScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            if (selectedRecord != null) item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
                     item {
                         FilterChip(
@@ -142,7 +159,7 @@ fun VaultScreen(
                         FilterChip(
                             selected = category == candidate,
                             onClick = { category = candidate },
-                            label = { Text(candidate.localizedLabel(record)) },
+                            label = { Text(candidate.localizedLabel(selectedRecord)) },
                         )
                     }
                 }
@@ -155,13 +172,15 @@ fun VaultScreen(
                     )
                 }
             } else {
-                items(filtered, key = { it.id }) { document ->
+                items(filtered, key = { "${it.profileId}:${it.value.id}" }) { owned ->
+                    val document = owned.value
                     SectionCard(document.title) {
-                        Text(document.category.localizedLabel(record))
+                        if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
+                        Text(document.category.localizedLabel(owned.record))
                         Text(document.documentDate.localizedDate())
                         Text(document.source)
                         androidx.compose.material3.TextButton(
-                            onClick = { onDocumentSelected(document.id.toString()) },
+                            onClick = { onDocumentSelected(owned.profileId, document.id.toString()) },
                         ) {
                             Text(stringResource(R.string.common_open))
                         }
@@ -172,14 +191,23 @@ fun VaultScreen(
     }
 
     pendingUri?.let { uri ->
+        val owner = records.firstOrNull { it.profile.id == importProfileId }
         DocumentImportDialog(
             uri = uri,
-            record = record,
+            record = owner ?: records.first(),
             today = today,
-            onDismiss = { pendingUri = null },
-            onImport = {
-                onImport(it)
+            ownerSelected = owner != null,
+            profilePicker = {
+                ProfilePickerField(records, importProfileId, { importProfileId = it }, onAddProfile)
+            },
+            onDismiss = {
                 pendingUri = null
+                importProfileId = null
+            },
+            onImport = {
+                onImport(requireNotNull(importProfileId), it)
+                pendingUri = null
+                importProfileId = null
             },
         )
     }
@@ -193,6 +221,8 @@ private fun DocumentImportDialog(
     today: LocalDate,
     onDismiss: () -> Unit,
     onImport: (DocumentImportDraft) -> Unit,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
     var title by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("") }
@@ -214,10 +244,14 @@ private fun DocumentImportDialog(
         mutableStateOf(availableCategories.firstOrNull() ?: BuiltInDocumentCategory.OTHER.asReference())
     }
     var categoryExpanded by remember { mutableStateOf(false) }
+    LaunchedEffect(record.profile.id) {
+        category = availableCategories.firstOrNull() ?: BuiltInDocumentCategory.OTHER.asReference()
+        sourceEntryId = null
+    }
 
     FormDialog(
         title = stringResource(R.string.import_document),
-        saveEnabled = title.isNotBlank() && source.isNotBlank() && category in availableCategories,
+        saveEnabled = ownerSelected && title.isNotBlank() && source.isNotBlank() && category in availableCategories,
         onDismiss = onDismiss,
         onSave = {
             onImport(
@@ -235,6 +269,7 @@ private fun DocumentImportDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             Text(stringResource(R.string.import_limit))
             OutlinedTextField(
                 value = title,

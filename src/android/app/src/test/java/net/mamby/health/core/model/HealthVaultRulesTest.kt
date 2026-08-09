@@ -78,6 +78,39 @@ class HealthVaultRulesTest {
         )
     }
 
+    @Test
+    fun medicationRecurrenceReturnsTheEarliestActiveDoseWithoutRequiringNotifications() {
+        val medication = Medication(
+            id = UUID.randomUUID(),
+            name = "Medication",
+            dose = "5 mg",
+            instructions = "Daily",
+            schedule = MedicationSchedule(
+                recurrence = ReminderRecurrence.DAILY,
+                reminderTimes = listOf(LocalTime.of(18, 0), LocalTime.of(8, 0)),
+                startsOn = LocalDate.of(2026, 7, 1),
+            ),
+            remindersEnabled = false,
+            updatedAt = Instant.EPOCH,
+        )
+
+        assertEquals(
+            Instant.parse("2026-07-31T08:00:00Z"),
+            RecurrenceCalculator.nextOccurrence(
+                medication,
+                Instant.parse("2026-07-30T19:00:00Z"),
+                ZoneId.of("UTC"),
+            ),
+        )
+        assertNull(
+            RecurrenceCalculator.nextOccurrence(
+                medication.copy(isActive = false),
+                Instant.parse("2026-07-30T19:00:00Z"),
+                ZoneId.of("UTC"),
+            ),
+        )
+    }
+
     private fun document(
         title: String,
         category: DocumentCategoryRef,

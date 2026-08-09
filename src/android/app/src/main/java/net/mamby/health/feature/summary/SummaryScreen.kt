@@ -53,6 +53,7 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.SwitchField
@@ -66,7 +67,6 @@ fun SummaryScreen(
     record: ProfileRecord,
     today: LocalDate,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
     onUpdateProfile: (HealthProfile) -> Unit,
     onUpsertVaccination: (Vaccination) -> Unit,
     onDeleteVaccination: (UUID) -> Unit,
@@ -105,8 +105,7 @@ fun SummaryScreen(
     AppScreenScaffold(
         title = stringResource(R.string.health_info_title),
         onBack = onBack,
-        profile = profile,
-        onProfileClick = onProfileClick,
+        contextHeader = { ProfileOwnerHeader(profile) },
         floatingActionButton = {
             FloatingActionButton(onClick = { addingVaccination = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_vaccination))
@@ -266,7 +265,7 @@ fun SummaryScreen(
     }
 
     if (profileEditorVisible) {
-        ProfileDialog(
+        HealthProfileDialog(
             profile = profile,
             onDismiss = { profileEditorVisible = false },
             onSave = {
@@ -659,19 +658,21 @@ private fun HealthIdentifierDialog(
 }
 
 @Composable
-private fun ProfileDialog(
+fun HealthProfileDialog(
     profile: HealthProfile,
     onDismiss: () -> Unit,
     onSave: (HealthProfile) -> Unit,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
-    var displayName by remember { mutableStateOf(profile.displayName) }
-    var bloodType by remember { mutableStateOf(profile.bloodType.orEmpty()) }
-    var allergies by remember { mutableStateOf(profile.allergies) }
-    var conditions by remember { mutableStateOf(profile.chronicConditions) }
-    var surgeries by remember { mutableStateOf(profile.surgeries) }
+    var displayName by remember(profile.id) { mutableStateOf(profile.displayName) }
+    var bloodType by remember(profile.id) { mutableStateOf(profile.bloodType.orEmpty()) }
+    var allergies by remember(profile.id) { mutableStateOf(profile.allergies) }
+    var conditions by remember(profile.id) { mutableStateOf(profile.chronicConditions) }
+    var surgeries by remember(profile.id) { mutableStateOf(profile.surgeries) }
     FormDialog(
         title = stringResource(R.string.edit_profile),
-        saveEnabled = displayName.isNotBlank(),
+        saveEnabled = ownerSelected && displayName.isNotBlank(),
         onDismiss = onDismiss,
         onSave = {
             onSave(
@@ -686,6 +687,7 @@ private fun ProfileDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             OutlinedTextField(displayName, { displayName = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.display_name)) })
             OutlinedTextField(bloodType, { bloodType = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.blood_type)) })
             StringListEditor(stringResource(R.string.allergies), allergies, { allergies = it })

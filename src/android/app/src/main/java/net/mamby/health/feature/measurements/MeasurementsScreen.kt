@@ -51,11 +51,17 @@ import net.mamby.health.core.model.MeasurementTypeRef
 import net.mamby.health.core.model.MeasurementUnit
 import net.mamby.health.core.model.MeasurementUnitRef
 import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfileOwnerHeader
+import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
 import net.mamby.health.ui.components.withScreenPadding
@@ -67,30 +73,45 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun MeasurementsScreen(
-    record: ProfileRecord,
+    records: List<ProfileRecord>,
     now: Instant,
     zoneId: ZoneId,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
-    onManageTypes: () -> Unit,
-    onUpsert: (HealthMeasurement) -> Unit,
-    onSelected: (UUID) -> Unit,
+    onManageTypes: (UUID?) -> Unit,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onUpsert: (UUID, HealthMeasurement) -> Unit,
+    onSelected: (UUID, UUID) -> Unit,
     creationRequest: Long = 0,
 ) {
-    var adding by remember(record.profile.id) { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) { if (creationRequest > 0) adding = true }
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    var creationVisible by remember { mutableStateOf(false) }
+    var creationProfileId by remember { mutableStateOf<UUID?>(null) }
+    fun startCreation() {
+        creationProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
+        creationVisible = true
+    }
+    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
+    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
+    val measurements = remember(filteredRecords) {
+        filteredRecords.ownedItems(ProfileRecord::measurements).sortedWith(
+            compareByDescending<ProfileOwned<HealthMeasurement>> { it.value.measuredAt }
+                .thenBy { it.profileId }
+                .thenBy { it.value.id },
+        )
+    }
     AppScreenScaffold(
         title = stringResource(R.string.measurements_title),
         onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
+        contextHeader = {
+            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+        },
         actions = {
-            IconButton(onClick = onManageTypes) {
+            IconButton(onClick = { onManageTypes(filterProfileId) }) {
                 Icon(Icons.Outlined.Tune, stringResource(R.string.manage_measurement_types))
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }) {
+            FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_measurement))
             }
         },
@@ -102,7 +123,7 @@ fun MeasurementsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            if (record.measurements.isEmpty()) {
+            if (measurements.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         stringResource(R.string.no_measurements_title),
@@ -111,14 +132,16 @@ fun MeasurementsScreen(
                 }
             } else {
                 items(
-                    record.measurements.sortedByDescending(HealthMeasurement::measuredAt),
-                    key = HealthMeasurement::id,
-                ) { measurement ->
-                    SectionCard(measurement.type.localizedLabel(record)) {
+                    measurements,
+                    key = { "${it.profileId}:${it.value.id}" },
+                ) { owned ->
+                    val measurement = owned.value
+                    SectionCard(measurement.type.localizedLabel(owned.record)) {
+                        if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(measurement.reading.localizedValue())
                         Text(measurement.measuredAt.localizedDateTime(zoneId))
                         measurement.notes?.let { Text(it) }
-                        Button(onClick = { onSelected(measurement.id) }) {
+                        Button(onClick = { onSelected(owned.profileId, measurement.id) }) {
                             Text(stringResource(R.string.common_open))
                         }
                     }
@@ -126,16 +149,21 @@ fun MeasurementsScreen(
             }
         }
     }
-    if (adding) {
+    if (creationVisible) {
+        val owner = records.firstOrNull { it.profile.id == creationProfileId }
         MeasurementDialog(
-            record = record,
+            record = owner ?: records.first(),
             existing = null,
             now = now,
             zoneId = zoneId,
-            onDismiss = { adding = false },
+            ownerSelected = owner != null,
+            profilePicker = {
+                ProfilePickerField(records, creationProfileId, { creationProfileId = it }, onAddProfile)
+            },
+            onDismiss = { creationVisible = false },
             onSave = {
-                onUpsert(it)
-                adding = false
+                onUpsert(requireNotNull(creationProfileId), it)
+                creationVisible = false
             },
         )
     }
@@ -148,7 +176,6 @@ fun MeasurementDetailScreen(
     now: Instant,
     zoneId: ZoneId,
     onBack: () -> Unit,
-    onProfileClick: () -> Unit,
     onUpsert: (HealthMeasurement) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -157,8 +184,7 @@ fun MeasurementDetailScreen(
     AppScreenScaffold(
         title = measurement.type.localizedLabel(record),
         onBack = onBack,
-        profile = record.profile,
-        onProfileClick = onProfileClick,
+        contextHeader = { ProfileOwnerHeader(record.profile) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -215,7 +241,7 @@ fun ManageMeasurementTypesScreen(
     AppScreenScaffold(
         title = stringResource(R.string.manage_measurement_types),
         onBack = onBack,
-        profile = record.profile,
+        contextHeader = { ProfileOwnerHeader(record.profile) },
         floatingActionButton = {
             FloatingActionButton(onClick = { adding = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_measurement_type))
@@ -303,6 +329,8 @@ private fun MeasurementDialog(
     zoneId: ZoneId,
     onDismiss: () -> Unit,
     onSave: (HealthMeasurement) -> Unit,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
     val types = remember(record) {
         BuiltInMeasurementType.entries.map { MeasurementTypeRef.BuiltIn(it) } +
@@ -333,6 +361,12 @@ private fun MeasurementDialog(
     var time by remember(existing?.id) { mutableStateOf(initialInstant.atZone(zoneId).toLocalTime()) }
     var typeExpanded by remember { mutableStateOf(false) }
     var unitExpanded by remember { mutableStateOf(false) }
+    LaunchedEffect(record.profile.id) {
+        if (existing == null) {
+            type = MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT)
+            unit = defaultUnit(type, record)
+        }
+    }
     val locale = LocalConfiguration.current.locales[0]
     val isBloodPressure = type == MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.BLOOD_PRESSURE)
     val allowedUnits = allowedUnits(type, record)
@@ -362,7 +396,7 @@ private fun MeasurementDialog(
     }
     FormDialog(
         title = stringResource(if (existing == null) R.string.add_measurement else R.string.edit_measurement),
-        saveEnabled = reading != null,
+        saveEnabled = ownerSelected && reading != null,
         onDismiss = onDismiss,
         onSave = {
             reading?.let {
@@ -380,6 +414,7 @@ private fun MeasurementDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             ExposedDropdownMenuBox(typeExpanded, { typeExpanded = it }) {
                 OutlinedTextField(
                     value = type.localizedLabel(record),

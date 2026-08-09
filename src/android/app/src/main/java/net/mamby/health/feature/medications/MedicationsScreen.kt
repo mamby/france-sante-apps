@@ -39,14 +39,19 @@ import net.mamby.health.R
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CareDirectoryKind
-import net.mamby.health.core.model.HealthProfile
+import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.MedicationSchedule
 import net.mamby.health.core.model.ReminderRecurrence
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
@@ -58,25 +63,36 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun MedicationsScreen(
-    medications: List<Medication>,
-    directory: List<CareDirectoryEntry>,
-    profile: HealthProfile,
+    records: List<ProfileRecord>,
     today: LocalDate,
-    onProfileClick: () -> Unit,
-    onUpsert: (Medication) -> Unit,
-    onSelected: (String) -> Unit,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onUpsert: (UUID, Medication) -> Unit,
+    onSelected: (UUID, String) -> Unit,
     creationRequest: Long = 0,
 ) {
-    var editorVisible by remember(profile.id) { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) {
-        if (creationRequest > 0) editorVisible = true
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    var editorVisible by remember { mutableStateOf(false) }
+    var editorProfileId by remember { mutableStateOf<UUID?>(null) }
+    fun startCreation() {
+        editorProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
+        editorVisible = true
+    }
+    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
+    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
+    val medications = remember(filteredRecords) {
+        filteredRecords.ownedItems(ProfileRecord::medications).sortedWith(
+            compareByDescending<ProfileOwned<Medication>> { it.value.isActive }
+                .thenBy { it.value.name }
+                .thenBy { it.profileId },
+        )
     }
     AppScreenScaffold(
         title = stringResource(R.string.medications_title),
-        profile = profile,
-        onProfileClick = onProfileClick,
+        contextHeader = {
+            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { editorVisible = true }) {
+            FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_medication))
             }
         },
@@ -98,14 +114,16 @@ fun MedicationsScreen(
                 }
             } else {
                 items(
-                    items = medications.sortedWith(compareByDescending<Medication> { it.isActive }.thenBy { it.name }),
-                    key = { it.id },
-                ) { medication ->
+                    items = medications,
+                    key = { "${it.profileId}:${it.value.id}" },
+                ) { owned ->
+                    val medication = owned.value
                     SectionCard(medication.name) {
+                        if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(medication.dose)
                         Text(stringResource(if (medication.isActive) R.string.status_active else R.string.status_inactive))
                         Text(medication.instructions)
-                        Button(onClick = { onSelected(medication.id.toString()) }) {
+                        Button(onClick = { onSelected(owned.profileId, medication.id.toString()) }) {
                             Text(stringResource(R.string.common_open))
                         }
                     }
@@ -114,13 +132,18 @@ fun MedicationsScreen(
         }
     }
     if (editorVisible) {
+        val owner = records.firstOrNull { it.profile.id == editorProfileId }
         MedicationDialog(
             existing = null,
-            directory = directory,
+            directory = owner?.careDirectory.orEmpty(),
             today = today,
+            ownerSelected = owner != null,
+            profilePicker = {
+                ProfilePickerField(records, editorProfileId, { editorProfileId = it }, onAddProfile)
+            },
             onDismiss = { editorVisible = false },
             onSave = {
-                onUpsert(it)
+                onUpsert(requireNotNull(editorProfileId), it)
                 editorVisible = false
             },
         )
@@ -135,6 +158,8 @@ fun MedicationDialog(
     today: LocalDate,
     onDismiss: () -> Unit,
     onSave: (Medication) -> Unit,
+    ownerSelected: Boolean = true,
+    profilePicker: (@Composable () -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var dose by remember { mutableStateOf(existing?.dose.orEmpty()) }
@@ -153,10 +178,14 @@ fun MedicationDialog(
     var start by remember { mutableStateOf(existing?.schedule?.startsOn ?: today) }
     var hasEnd by remember { mutableStateOf(existing?.schedule?.endsOn != null) }
     var end by remember { mutableStateOf(existing?.schedule?.endsOn ?: today.plusMonths(1)) }
+    LaunchedEffect(directory) {
+        prescriberEntryId = prescriberEntryId?.takeIf { id -> directory.any { it.id == id } }
+        pharmacyEntryId = pharmacyEntryId?.takeIf { id -> directory.any { it.id == id } }
+    }
 
     FormDialog(
         title = stringResource(if (existing == null) R.string.add_medication else R.string.edit_medication),
-        saveEnabled = name.isNotBlank() && dose.isNotBlank() && instructions.isNotBlank() &&
+        saveEnabled = ownerSelected && name.isNotBlank() && dose.isNotBlank() && instructions.isNotBlank() &&
             (!remindersEnabled || reminderTimes.isNotEmpty()),
         onDismiss = onDismiss,
         onSave = {
@@ -184,6 +213,7 @@ fun MedicationDialog(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+            profilePicker?.invoke()
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_name)) })
             OutlinedTextField(dose, { dose = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_dose)) })
             OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_instructions)) }, minLines = 2)

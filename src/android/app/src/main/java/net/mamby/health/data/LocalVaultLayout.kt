@@ -99,6 +99,11 @@ internal class LocalVaultLayout(noBackupFilesDir: File) {
         }
     }
 
+    fun cleanupObsoleteProfilePreferences() {
+        listOf(OBSOLETE_PROFILE_FILTER_FILE_NAME, OBSOLETE_SELECTED_PROFILE_FILE_NAME)
+            .forEach { name -> File(root, name).delete() }
+    }
+
     fun deleteAll() {
         if (root.exists() && !root.deleteRecursively()) {
             throw VaultStorageException("Local vault files could not be deleted.")
@@ -117,6 +122,8 @@ internal class LocalVaultLayout(noBackupFilesDir: File) {
         private const val BLOBS_DIRECTORY_NAME = "blobs"
         private const val STAGING_DIRECTORY_NAME = ".staging"
         private const val STAGED_FILE_SUFFIX = ".part"
+        private const val OBSOLETE_PROFILE_FILTER_FILE_NAME = "profile-filter.phvf"
+        private const val OBSOLETE_SELECTED_PROFILE_FILE_NAME = "selected-profile.phvs"
     }
 }
 

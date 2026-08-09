@@ -15,39 +15,51 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthSearch
 import net.mamby.health.core.model.HealthSearchGroup
 import net.mamby.health.core.model.HealthSearchResult
+import net.mamby.health.core.model.HealthSearchScope
 import net.mamby.health.core.model.HealthSearchTarget
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.theme.UiTokens
 import net.mamby.health.ui.format.localizedLabel
 
-enum class SearchFilter { ALL, HEALTH_RECORDS, MEDICATIONS, APPOINTMENTS }
+enum class SearchFilter { ALL, HEALTH_RECORDS, NOTES, MEDICATIONS, APPOINTMENTS }
 
 @Composable
 fun SearchScreen(
-    record: ProfileRecord,
-    onProfileClick: () -> Unit,
+    records: List<ProfileRecord>,
+    notes: List<HealthNote>,
     onResultSelected: (HealthSearchResult) -> Unit,
     query: String,
     filter: SearchFilter,
     onQueryChanged: (String) -> Unit,
     onFilterChanged: (SearchFilter) -> Unit,
 ) {
-    val results = remember(record, query, filter) {
-        HealthSearch.search(record, query).filter { result ->
+    var filterProfileId by remember { mutableStateOf<UUID?>(null) }
+    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
+    val recordsById = remember(records) { records.associateBy { it.profile.id } }
+    val results = remember(filteredRecords, notes, query, filter) {
+        HealthSearch.search(filteredRecords, notes, query).filter { result ->
             when (filter) {
                 SearchFilter.ALL -> true
                 SearchFilter.HEALTH_RECORDS -> result.group == HealthSearchGroup.HEALTH_RECORDS
+                SearchFilter.NOTES -> result.group == HealthSearchGroup.NOTES
                 SearchFilter.MEDICATIONS -> result.group == HealthSearchGroup.MEDICATIONS
                 SearchFilter.APPOINTMENTS -> result.group == HealthSearchGroup.APPOINTMENTS
             }
@@ -56,8 +68,9 @@ fun SearchScreen(
 
     AppScreenScaffold(
         title = stringResource(R.string.search_title),
-        profile = record.profile,
-        onProfileClick = onProfileClick,
+        contextHeader = {
+            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
+        },
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
@@ -73,7 +86,13 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                    label = { Text(stringResource(R.string.search_hint)) },
+                    label = {
+                        Text(
+                            stringResource(
+                                if (filterProfileId == null) R.string.search_hint_all else R.string.search_hint,
+                            ),
+                        )
+                    },
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -91,26 +110,48 @@ fun SearchScreen(
             when {
                 query.isBlank() -> item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
-                        stringResource(R.string.search_initial_title, record.profile.displayName),
+                        if (filterProfileId == null) {
+                            stringResource(R.string.search_initial_title_all)
+                        } else {
+                            stringResource(
+                                R.string.search_initial_title,
+                                recordsById.getValue(requireNotNull(filterProfileId)).profile.displayName,
+                            )
+                        },
                         stringResource(R.string.search_initial_body),
                     )
                 }
                 results.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         stringResource(R.string.search_no_results_title),
-                        stringResource(R.string.search_no_results_body, record.profile.displayName),
+                        if (filterProfileId == null) {
+                            stringResource(R.string.search_no_results_body_all)
+                        } else {
+                            stringResource(
+                                R.string.search_no_results_body,
+                                recordsById.getValue(requireNotNull(filterProfileId)).profile.displayName,
+                            )
+                        },
                     )
                 }
-                else -> items(results, key = { "${it.target}:${it.primaryText}" }) { result ->
+                else -> items(results, key = { "${it.scope}:${it.target}" }) { result ->
+                    val owner = (result.scope as? HealthSearchScope.Profile)
+                        ?.profileId
+                        ?.let(recordsById::getValue)
                     val primaryText = when (val target = result.target) {
-                        is HealthSearchTarget.Measurement -> record.measurements
-                            .firstOrNull { it.id == target.id }
-                            ?.type
-                            ?.localizedLabel(record)
+                        is HealthSearchTarget.Measurement -> owner?.let { record ->
+                            record.measurements
+                                .firstOrNull { it.id == target.id }
+                                ?.type
+                                ?.localizedLabel(record)
+                        }
                             ?: result.primaryText
                         else -> result.primaryText
                     }
                     SectionCard(primaryText) {
+                        if (owner != null && filterProfileId == null && records.size > 1) {
+                            ProfileMarker(owner.profile)
+                        }
                         result.secondaryText?.takeIf(String::isNotBlank)?.let { Text(it) }
                         androidx.compose.material3.TextButton(onClick = { onResultSelected(result) }) {
                             Text(stringResource(R.string.common_open))
@@ -125,6 +166,7 @@ fun SearchScreen(
 private fun SearchFilter.labelResource(): Int = when (this) {
     SearchFilter.ALL -> R.string.search_filter_all
     SearchFilter.HEALTH_RECORDS -> R.string.nav_health_records
+    SearchFilter.NOTES -> R.string.nav_notes
     SearchFilter.MEDICATIONS -> R.string.nav_medications
     SearchFilter.APPOINTMENTS -> R.string.nav_appointments
 }

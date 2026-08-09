@@ -1,27 +1,42 @@
 package net.mamby.health.feature.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import java.time.Clock
+import java.time.Instant
 import java.time.ZoneId
+import java.util.UUID
 import net.mamby.health.R
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.RecurrenceCalculator
 import net.mamby.health.core.model.VaultItem
 import net.mamby.health.core.model.VaultItemKind
 import net.mamby.health.core.model.index
+import net.mamby.health.feature.ProfileOwned
+import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.MetricCard
+import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.format.localizedDate
@@ -31,42 +46,68 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun DashboardScreen(
-    record: ProfileRecord,
+    records: List<ProfileRecord>,
+    notes: List<HealthNote>,
     clock: Clock,
     zoneId: ZoneId,
-    onProfileClick: () -> Unit,
-    onReminders: () -> Unit,
-    onDocumentSelected: (String) -> Unit,
-    onRecentItem: (VaultItem) -> Unit = { item ->
-        if (item.kind == VaultItemKind.DOCUMENT) onDocumentSelected(item.id.toString())
+    onMedications: () -> Unit,
+    onSchedule: () -> Unit,
+    onDocumentSelected: (UUID, String) -> Unit,
+    onRecentItem: (UUID, VaultItem) -> Unit = { profileId, item ->
+        if (item.kind == VaultItemKind.DOCUMENT) onDocumentSelected(profileId, item.id.toString())
     },
+    onNoteSelected: (UUID) -> Unit,
     onAddHealthInfo: () -> Unit,
     onImportDocument: () -> Unit,
     onAddMedication: () -> Unit,
     onAddAppointment: () -> Unit,
 ) {
     val now = clock.instant()
-    val nextAppointment = record.appointments
+    val nextMedication = records.ownedItems(ProfileRecord::medications)
         .asSequence()
-        .filter { it.startsAt.isAfter(now) }
-        .minByOrNull { it.startsAt }
-    val nextReminder = record.reminders
-        .asSequence()
-        .mapNotNull { reminder ->
-            RecurrenceCalculator.nextOccurrence(reminder, now, zoneId)?.let { it to reminder }
+        .mapNotNull { owned ->
+            RecurrenceCalculator.nextOccurrence(owned.value, now, zoneId)?.let { occurrence ->
+                MedicationPreview(occurrence, owned)
+            }
         }
-        .minByOrNull { it.first }
-    val activeMedications = record.medications.count { it.isActive }
-    val upcomingAppointments = record.appointments.count { it.startsAt.isAfter(now) }
-    val enabledReminders = record.reminders.count { it.isEnabled } +
-        record.medications.count { it.isActive && it.remindersEnabled } +
-        record.appointments.count { it.reminderLeadMinutes != null && it.startsAt.isAfter(now) }
-    val recentItems = record.index().take(4)
+        .minWithOrNull(
+            compareBy<MedicationPreview> { it.occurrence }
+                .thenBy { it.owned.profileId }
+                .thenBy { it.owned.value.id },
+        )
+    val nextAppointment = records.ownedItems(ProfileRecord::appointments)
+        .asSequence()
+        .filter { it.value.startsAt.isAfter(now) }
+        .minWithOrNull(compareBy<ProfileOwned<net.mamby.health.core.model.Appointment>> { it.value.startsAt }
+            .thenBy { it.profileId }
+            .thenBy { it.value.id })
+    val nextReminder = records.ownedItems(ProfileRecord::reminders)
+        .asSequence()
+        .mapNotNull { owned ->
+            RecurrenceCalculator.nextOccurrence(owned.value, now, zoneId)?.let { occurrence ->
+                Triple(occurrence, owned.profile, owned.value)
+            }
+        }
+        .minWithOrNull(compareBy<Triple<java.time.Instant, net.mamby.health.core.model.HealthProfile, net.mamby.health.core.model.Reminder>> { it.first }
+            .thenBy { it.second.id }
+            .thenBy { it.third.id })
+    val activeMedications = records.sumOf { record -> record.medications.count { it.isActive } }
+    val upcomingAppointments = records.sumOf { record -> record.appointments.count { it.startsAt.isAfter(now) } }
+    val enabledReminders = records.sumOf { record -> record.reminders.count { it.isEnabled } }
+    val recentItems = (
+        records.ownedItems(ProfileRecord::index).map(RecentDashboardItem::ProfileItem) +
+            notes.map(RecentDashboardItem::NoteItem)
+        )
+        .sortedWith(
+            compareByDescending<RecentDashboardItem> { it.item.updatedAt }
+                .thenBy(RecentDashboardItem::scopeKey)
+                .thenBy { it.item.id },
+        )
+        .take(4)
+    val isEmpty = notes.isEmpty() && records.all(ProfileRecord::isHealthDataEmpty)
 
     AppScreenScaffold(
         title = stringResource(R.string.dashboard_title),
-        profile = record.profile,
-        onProfileClick = onProfileClick,
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
@@ -76,17 +117,75 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(stringResource(R.string.dashboard_greeting, record.profile.displayName))
+                Text(stringResource(R.string.dashboard_greeting_all))
             }
 
-            if (record.documents.isEmpty() && record.medications.isEmpty() &&
-                record.appointments.isEmpty() && record.vaccinations.isEmpty() &&
-                record.notes.isEmpty() && record.measurements.isEmpty() &&
-                record.careDirectory.isEmpty() && record.familyHistory.isEmpty() &&
-                record.directives.isEmpty() && record.healthIdentifiers.isEmpty() &&
-                record.profile.bloodType == null && record.profile.allergies.isEmpty() &&
-                record.profile.chronicConditions.isEmpty() && record.profile.surgeries.isEmpty()
-            ) {
+            item {
+                DashboardPreviewCard(
+                    title = stringResource(R.string.nav_medications),
+                    onClick = onMedications,
+                ) {
+                    LabeledValue(
+                        stringResource(R.string.medications_metric),
+                        activeMedications.toString(),
+                    )
+                    Text(
+                        stringResource(R.string.next_medication_dose),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (nextMedication == null) {
+                        Text(stringResource(R.string.no_scheduled_medication))
+                    } else {
+                        if (records.size > 1) ProfileMarker(nextMedication.owned.profile)
+                        Text(nextMedication.owned.value.name)
+                        nextMedication.owned.value.dose.takeIf(String::isNotBlank)?.let { Text(it) }
+                        Text(nextMedication.occurrence.localizedDateTime(zoneId))
+                    }
+                }
+            }
+            item {
+                DashboardPreviewCard(
+                    title = stringResource(R.string.schedule_title),
+                    onClick = onSchedule,
+                ) {
+                    LabeledValue(
+                        stringResource(R.string.appointments_metric),
+                        upcomingAppointments.toString(),
+                    )
+                    LabeledValue(
+                        stringResource(R.string.reminders_metric),
+                        enabledReminders.toString(),
+                    )
+                    Text(
+                        stringResource(R.string.next_appointment),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (nextAppointment == null) {
+                        Text(stringResource(R.string.no_upcoming_appointment))
+                    } else {
+                        if (records.size > 1) ProfileMarker(nextAppointment.profile)
+                        Text(nextAppointment.value.title)
+                        Text(nextAppointment.value.startsAt.localizedDateTime(zoneId))
+                        nextAppointment.value.clinician.takeIf(String::isNotBlank)?.let { Text(it) }
+                    }
+                    Text(
+                        stringResource(R.string.next_reminder),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (nextReminder == null) {
+                        Text(stringResource(R.string.no_active_reminder))
+                    } else {
+                        if (records.size > 1) ProfileMarker(nextReminder.second)
+                        Text(nextReminder.third.title)
+                        Text(nextReminder.first.localizedDateTime(zoneId))
+                    }
+                }
+            }
+
+            if (isEmpty) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     SectionCard(stringResource(R.string.getting_started_title)) {
                         Button(onClick = onAddHealthInfo) { Text(stringResource(R.string.getting_started_health)) }
@@ -97,38 +196,15 @@ fun DashboardScreen(
                 }
             }
 
-            item { MetricCard(stringResource(R.string.documents_metric), record.documents.size.toString()) }
-            item { MetricCard(stringResource(R.string.medications_metric), activeMedications.toString()) }
-            item { MetricCard(stringResource(R.string.appointments_metric), upcomingAppointments.toString()) }
-            item { MetricCard(stringResource(R.string.reminders_metric), enabledReminders.toString()) }
+            item { MetricCard(stringResource(R.string.documents_metric), records.sumOf { it.documents.size }.toString()) }
 
-            item {
-                SectionCard(stringResource(R.string.next_appointment)) {
-                    if (nextAppointment == null) {
-                        Text(stringResource(R.string.no_upcoming_appointment))
-                    } else {
-                        Text(nextAppointment.title)
-                        Text(nextAppointment.startsAt.localizedDateTime(zoneId))
-                        Text(nextAppointment.clinician)
-                    }
-                }
-            }
-            item {
-                SectionCard(stringResource(R.string.next_reminder)) {
-                    if (nextReminder == null) {
-                        Text(stringResource(R.string.no_active_reminder))
-                    } else {
-                        Text(nextReminder.second.title)
-                        Text(nextReminder.first.localizedDateTime(zoneId))
-                    }
-                    Button(onClick = onReminders) {
-                        Text(stringResource(R.string.manage_reminders))
-                    }
-                }
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            items(
+                items = records,
+                key = { "summary:${it.profile.id}" },
+                span = { GridItemSpan(maxLineSpan) },
+            ) { record ->
                 SectionCard(stringResource(R.string.quick_health_summary)) {
+                    if (records.size > 1) ProfileMarker(record.profile)
                     LabeledValue(stringResource(R.string.blood_type), record.profile.bloodType.orEmpty())
                     LabeledValue(stringResource(R.string.allergies), record.profile.allergies.joinToString())
                     LabeledValue(
@@ -144,15 +220,30 @@ fun DashboardScreen(
                 }
                 items(
                     items = recentItems,
-                    key = { it.id },
-                ) { item ->
-                    val title = if (item.kind == VaultItemKind.MEASUREMENT) {
-                        record.measurements.firstOrNull { it.id == item.id }?.type?.localizedLabel(record)
-                            ?: item.title
-                    } else item.title
+                    key = { "${it.scopeKey}:${it.item.id}" },
+                ) { recent ->
+                    val item = recent.item
+                    val title = when (recent) {
+                        is RecentDashboardItem.NoteItem -> recent.note.title
+                        is RecentDashboardItem.ProfileItem -> if (item.kind == VaultItemKind.MEASUREMENT) {
+                            recent.owned.record.measurements
+                                .firstOrNull { it.id == item.id }
+                                ?.type
+                                ?.localizedLabel(recent.owned.record)
+                                ?: item.title
+                        } else item.title
+                    }
                     SectionCard(title, modifier = Modifier) {
+                        if (recent is RecentDashboardItem.ProfileItem && records.size > 1) {
+                            ProfileMarker(recent.owned.profile)
+                        }
                         Text(item.updatedAt.localizedDateTime(zoneId))
-                        Button(onClick = { onRecentItem(item) }) {
+                        Button(onClick = {
+                            when (recent) {
+                                is RecentDashboardItem.NoteItem -> onNoteSelected(recent.note.id)
+                                is RecentDashboardItem.ProfileItem -> onRecentItem(recent.owned.profileId, item)
+                            }
+                        }) {
                             Text(stringResource(R.string.common_open))
                         }
                     }
@@ -163,5 +254,55 @@ fun DashboardScreen(
                 Text(stringResource(R.string.health_disclaimer))
             }
         }
+    }
+}
+
+private fun ProfileRecord.isHealthDataEmpty(): Boolean =
+    documents.isEmpty() && medications.isEmpty() && appointments.isEmpty() && reminders.isEmpty() &&
+        vaccinations.isEmpty() && measurements.isEmpty() &&
+        careDirectory.isEmpty() && familyHistory.isEmpty() && directives.isEmpty() &&
+        healthIdentifiers.isEmpty() && profile.emergencyContacts.isEmpty() && profile.bloodType == null &&
+        profile.allergies.isEmpty() &&
+        profile.chronicConditions.isEmpty() && profile.surgeries.isEmpty()
+
+@Composable
+private fun DashboardPreviewCard(
+    title: String,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiTokens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            content()
+        }
+    }
+}
+
+private data class MedicationPreview(
+    val occurrence: Instant,
+    val owned: ProfileOwned<net.mamby.health.core.model.Medication>,
+)
+
+private sealed interface RecentDashboardItem {
+    val item: VaultItem
+    val scopeKey: String
+
+    data class ProfileItem(val owned: ProfileOwned<VaultItem>) : RecentDashboardItem {
+        override val item: VaultItem = owned.value
+        override val scopeKey: String = owned.profileId.toString()
+    }
+
+    data class NoteItem(val note: HealthNote) : RecentDashboardItem {
+        override val item = VaultItem(note.id, VaultItemKind.NOTE, note.title, note.updatedAt)
+        override val scopeKey: String = "vault"
     }
 }

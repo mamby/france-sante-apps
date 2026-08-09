@@ -388,7 +388,6 @@ data class ProfileRecord(
     val appointments: List<Appointment> = emptyList(),
     val vaccinations: List<Vaccination> = emptyList(),
     val reminders: List<Reminder> = emptyList(),
-    val notes: List<HealthNote> = emptyList(),
     val measurements: List<HealthMeasurement> = emptyList(),
     val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
     val careDirectory: List<CareDirectoryEntry> = emptyList(),
@@ -404,10 +403,11 @@ data class HealthVault(
     val version: Int = CURRENT_VERSION,
     val revision: Long,
     val profiles: List<ProfileRecord>,
+    val notes: List<HealthNote> = emptyList(),
     val updatedAt: Instant,
 ) {
     companion object {
-        const val CURRENT_VERSION: Int = 3
+        const val CURRENT_VERSION: Int = 4
 
         fun empty(
             now: Instant,

@@ -29,16 +29,7 @@ sealed interface VaultState {
 
     data object Missing : VaultState
 
-    data class Ready(
-        val vault: HealthVault,
-        val selectedProfileId: UUID,
-    ) : VaultState {
-        init {
-            require(vault.profiles.any { it.profile.id == selectedProfileId }) {
-                "The selected profile must belong to the ready vault."
-            }
-        }
-    }
+    data class Ready(val vault: HealthVault) : VaultState
 
     data class Unreadable(
         val reason: UnreadableReason,
@@ -51,14 +42,6 @@ enum class UnreadableReason {
     UNSUPPORTED_VERSION,
     KEY_UNAVAILABLE,
     IO_FAILURE,
-}
-
-interface SelectedProfileStore {
-    suspend fun load(): UUID?
-
-    suspend fun save(profileId: UUID)
-
-    suspend fun clear()
 }
 
 data class RestoreDocumentBlob(
@@ -130,8 +113,6 @@ interface VaultRepository {
 
     suspend fun addProfile(displayName: String): UUID
 
-    suspend fun selectProfile(profileId: UUID)
-
     suspend fun updateProfile(profileId: UUID, profile: HealthProfile)
 
     suspend fun deleteProfile(profileId: UUID)
@@ -166,9 +147,9 @@ interface VaultRepository {
 
     suspend fun deleteReminder(profileId: UUID, reminderId: UUID)
 
-    suspend fun upsertHealthNote(profileId: UUID, note: HealthNote)
+    suspend fun upsertHealthNote(note: HealthNote)
 
-    suspend fun deleteHealthNote(profileId: UUID, noteId: UUID)
+    suspend fun deleteHealthNote(noteId: UUID)
 
     suspend fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement)
 
