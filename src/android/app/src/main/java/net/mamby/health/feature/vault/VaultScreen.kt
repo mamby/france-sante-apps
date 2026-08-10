@@ -50,7 +50,7 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
@@ -125,9 +125,6 @@ fun VaultScreen(
     AppScreenScaffold(
         title = stringResource(R.string.documents_tab),
         onBack = onBack,
-        contextHeader = {
-            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
-        },
         actions = {
             IconButton(onClick = { onManageCategories(filterProfileId) }) {
                 Icon(Icons.Outlined.Tune, stringResource(R.string.manage_document_categories))
@@ -146,6 +143,12 @@ fun VaultScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
+            }
             if (selectedRecord != null) item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
                     item {

@@ -12,20 +12,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -46,7 +53,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodes
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -54,13 +61,19 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -76,6 +89,7 @@ import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.feature.schedule.ScheduleScreen
 import net.mamby.health.feature.search.SearchFilter
 import net.mamby.health.feature.search.SearchScreen
+import net.mamby.health.feature.settings.SettingsScreen
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppNavigationState
 import net.mamby.health.navigation.DirectoryEntryDetailRoute
@@ -88,12 +102,15 @@ import net.mamby.health.navigation.NoteDetailRoute
 import net.mamby.health.navigation.NotesRoute
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
+import net.mamby.health.settings.AppSettings
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.RemovableInputChip
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.appContentWindowInsets
+import net.mamby.health.ui.components.listDetailAwareBack
 import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
@@ -102,7 +119,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalTestApi::class)
+@OptIn(ExperimentalTestApi::class, ExperimentalMaterial3AdaptiveApi::class)
 @RunWith(AndroidJUnit4::class)
 class ComposeScreensInstrumentedTest {
     @get:Rule
@@ -226,7 +243,9 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.all_profiles)).assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.all_profiles))
+            .assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.documents_tab)).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.no_documents_title)).assertIsDisplayed()
     }
@@ -236,7 +255,16 @@ class ComposeScreensInstrumentedTest {
         composeRule.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 HealthVaultTheme {
-                    AppScreenScaffold(title = "RTL", onBack = {}) { Box(Modifier.fillMaxSize()) }
+                    AppScreenScaffold(title = "RTL", onBack = {}) { padding ->
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .padding(16.dp),
+                        ) {
+                            PageHeader()
+                        }
+                    }
                 }
             }
         }
@@ -248,6 +276,152 @@ class ComposeScreensInstrumentedTest {
             .fetchSemanticsNode()
             .boundsInRoot
         assertTrue(back.center.x > root.center.x)
+    }
+
+    @Test
+    fun pageTitleScrollsAwayWhileFloatingBackRemainsFixedAndClickable() {
+        var backClicks = 0
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppScreenScaffold(
+                        title = "Scrolling title",
+                        onBack = { backClicks += 1 },
+                    ) { padding ->
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .consumeWindowInsets(padding)
+                                .testTag(SCROLLING_PAGE_TAG),
+                            contentPadding = padding.withScreenPadding(),
+                        ) {
+                            item { PageHeader() }
+                            item {
+                                ProfileFilterChip(
+                                    label = "All profiles",
+                                    profileId = null,
+                                    onClick = {},
+                                    accessibleLabel = "Page profile filter",
+                                )
+                            }
+                            items((0 until 60).toList()) { index ->
+                                Text(
+                                    text = "Row $index",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(64.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Scrolling title").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Page profile filter").assertIsDisplayed()
+        val back = composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.action_back),
+        )
+        val initialBackBounds = back.assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+
+        val list = composeRule.onNodeWithTag(SCROLLING_PAGE_TAG)
+        list.performScrollToIndex(30)
+        composeRule.onNodeWithText("Scrolling title").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Page profile filter").assertDoesNotExist()
+        assertEquals(initialBackBounds, back.fetchSemanticsNode().boundsInRoot)
+
+        list.performTouchInput {
+            swipe(
+                start = center,
+                end = center + Offset(0f, 50f),
+                durationMillis = 100,
+            )
+        }
+        composeRule.onNodeWithText("Scrolling title").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Page profile filter").assertDoesNotExist()
+        back.performClick()
+        composeRule.runOnIdle { assertEquals(1, backClicks) }
+
+        list.performScrollToIndex(0)
+        composeRule.onNodeWithText("Scrolling title").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Page profile filter").assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsRootHasNoVisualBackWhileRecoveryPresentationRetainsIt() {
+        lateinit var showRecovery: () -> Unit
+        composeRule.setContent {
+            var recovery by remember { mutableStateOf(false) }
+            showRecovery = { recovery = true }
+            HealthVaultTheme {
+                TestSettingsScreen(onBack = if (recovery) ({}) else null)
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_back))
+            .assertDoesNotExist()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.settings_title)).assertIsDisplayed()
+
+        composeRule.runOnIdle(showRecovery)
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_back))
+            .assertIsDisplayed()
+            .assertHasClickAction()
+    }
+
+    @Test
+    fun compactDetailSceneShowsVisualBack() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme { ListDetailBackHarness() }
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_back))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun expandedListDetailSceneSuppressesVisualBack() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(900.dp, 1_000.dp))) {
+                HealthVaultTheme { ListDetailBackHarness() }
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_back))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun standaloneWideSubpageKeepsVisualBack() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(900.dp, 1_000.dp))) {
+                HealthVaultTheme {
+                    AppScreenScaffold(
+                        title = "Standalone detail",
+                        onBack = listDetailAwareBack {},
+                    ) { padding ->
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .padding(16.dp),
+                        ) {
+                            PageHeader()
+                        }
+                    }
+                }
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_back))
+            .assertIsDisplayed()
     }
 
     @Test
@@ -390,7 +564,11 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val rootBounds = composeRule
+            .onAllNodes(isRoot())
+            .fetchSemanticsNodes()
+            .maxBy { it.boundsInRoot.width * it.boundsInRoot.height }
+            .boundsInRoot
         val contentBounds = composeRule
             .onNodeWithTag(NAVIGATION_CONTENT_TAG, useUnmergedTree = true)
             .fetchSemanticsNode()
@@ -462,9 +640,11 @@ class ComposeScreensInstrumentedTest {
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .consumeWindowInsets(padding),
+                                    .consumeWindowInsets(padding)
+                                    .testTag(CLEARANCE_LIST_TAG),
                                 contentPadding = padding.withScreenPadding(),
                             ) {
+                                item { PageHeader() }
                                 items((0 until 30).toList()) { index ->
                                     Box(
                                         Modifier
@@ -486,7 +666,7 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(FINAL_ITEM_TAG).performScrollTo()
+        composeRule.onNodeWithTag(CLEARANCE_LIST_TAG).performScrollToIndex(30)
         val finalItemBounds = composeRule.onNodeWithTag(FINAL_ITEM_TAG).fetchSemanticsNode().boundsInRoot
         val floatingActionBounds = composeRule
             .onNodeWithTag(FLOATING_ACTION_TAG)
@@ -545,9 +725,11 @@ class ComposeScreensInstrumentedTest {
     @Test
     fun searchViewportFitsInsideImeInsetAndRemainsEditable() {
         var submittedQuery = ""
+        var imeBottomPx = 0
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
                 val imeBottom = with(LocalDensity.current) { 300.dp.roundToPx() }
+                imeBottomPx = imeBottom
                 DeviceConfigurationOverride(
                     DeviceConfigurationOverride.WindowInsets(
                         WindowInsetsCompat.Builder()
@@ -555,16 +737,20 @@ class ComposeScreensInstrumentedTest {
                             .setVisible(WindowInsetsCompat.Type.ime(), true)
                             .build(),
                     ),
-                ) {
+                    ) {
                     HealthVaultTheme {
+                        var query by remember { mutableStateOf("") }
                         SearchScreen(
                             records = emptyVault("Amina").profiles,
                             notes = emptyList(),
                             schedules = emptyList(),
                             onResultSelected = {},
-                            query = "",
+                            query = query,
                             filter = SearchFilter.ALL,
-                            onQueryChanged = { submittedQuery = it },
+                            onQueryChanged = {
+                                query = it
+                                submittedQuery = it
+                            },
                             onFilterChanged = {},
                         )
                     }
@@ -572,24 +758,23 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
-        val searchViewportBounds = composeRule
-            .onAllNodes(
-                SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollBy),
-                useUnmergedTree = true,
-            )
+        val rootBounds = composeRule
+            .onAllNodes(isRoot())
             .fetchSemanticsNodes()
             .maxBy { it.boundsInRoot.width * it.boundsInRoot.height }
             .boundsInRoot
-        val rootHeight = rootBounds.bottom - rootBounds.top
-
-        assertTrue(searchViewportBounds.bottom <= rootBounds.bottom - rootHeight * 0.25f)
-        composeRule
+        val searchField = composeRule
             .onAllNodes(
                 SemanticsMatcher.keyIsDefined(SemanticsActions.SetText),
                 useUnmergedTree = true,
             )[0]
-            .performTextInput("A")
+        val searchFieldBounds = searchField.fetchSemanticsNode().boundsInRoot
+
+        assertTrue(
+            "Search field $searchFieldBounds does not clear the IME in root $rootBounds",
+            searchFieldBounds.bottom <= rootBounds.bottom - imeBottomPx,
+        )
+        searchField.performTextInput("A")
         composeRule.runOnIdle { assertEquals("A", submittedQuery) }
     }
 
@@ -774,10 +959,79 @@ class ComposeScreensInstrumentedTest {
         displayName = displayName,
     )
 
+    @Composable
+    private fun TestSettingsScreen(onBack: (() -> Unit)?) {
+        SettingsScreen(
+            settings = AppSettings(),
+            zoneId = ZoneOffset.UTC,
+            restorePreview = null,
+            message = null,
+            onBack = onBack,
+            onThemeChanged = {},
+            onLocaleChanged = {},
+            onAppLockChanged = {},
+            onAppLockTimeoutChanged = {},
+            onLockNow = {},
+            onConfigureBackup = { _, _, _ -> },
+            onBackupNow = {},
+            onClearBackup = {},
+            onPrepareRestore = { _, _ -> },
+            onCommitRestore = { _, _ -> },
+            onDiscardRestore = {},
+            onDeleteVault = {},
+        )
+    }
+
+    @Composable
+    private fun ListDetailBackHarness() {
+        val adaptiveInfo = currentWindowAdaptiveInfoV2()
+        val directive = remember(adaptiveInfo) {
+            calculatePaneScaffoldDirective(adaptiveInfo).copy(horizontalPartitionSpacerSize = 0.dp)
+        }
+        val strategy = rememberListDetailSceneStrategy<NavKey>(directive = directive)
+        val backStack = remember {
+            mutableStateListOf<NavKey>(NotesRoute, NoteDetailRoute("detail"))
+        }
+
+        NavDisplay(
+            backStack = backStack,
+            onBack = {
+                if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+            },
+            sceneStrategies = listOf(strategy),
+            entryProvider = entryProvider {
+                entry<NotesRoute>(
+                    metadata = ListDetailSceneStrategy.listPane(
+                        detailPlaceholder = { Text("Select a detail") },
+                    ),
+                ) {
+                    Text("List")
+                }
+                entry<NoteDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) {
+                    AppScreenScaffold(
+                        title = "Detail",
+                        onBack = listDetailAwareBack {},
+                    ) { padding ->
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .padding(16.dp),
+                        ) {
+                            PageHeader()
+                        }
+                    }
+                }
+            },
+        )
+    }
+
     private companion object {
         const val FINAL_ITEM_TAG = "final-item"
+        const val CLEARANCE_LIST_TAG = "clearance-list"
         const val FLOATING_ACTION_TAG = "floating-action"
         const val NAVIGATION_CONTENT_TAG = "navigation-content"
+        const val SCROLLING_PAGE_TAG = "scrolling-page"
         const val SNACKBAR_TAG = "root-snackbar"
         val PROFILE_ID: UUID = UUID.fromString("44e15584-8158-4bf8-bf26-dd7358f392cf")
         val FIXED_INSTANT: Instant = Instant.parse("2026-07-30T08:00:00Z")

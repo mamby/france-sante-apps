@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -60,7 +61,6 @@ fun ManageDocumentCategoriesScreen(
     AppScreenScaffold(
         title = stringResource(R.string.manage_document_categories),
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(record.profile) },
         floatingActionButton = {
             FloatingActionButton(onClick = { adding = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_document_category))
@@ -74,6 +74,12 @@ fun ManageDocumentCategoriesScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileOwnerHeader(record.profile)
+            }
             items(BuiltInDocumentCategory.entries, key = BuiltInDocumentCategory::name) { category ->
                 val preference = record.builtInDocumentCategoryPreferences
                     .firstOrNull { it.category == category }

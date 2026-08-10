@@ -150,7 +150,6 @@ class HealthRecordsComposeInstrumentedTest {
             HealthVaultTheme {
                 DirectoryScreen(
                     records = listOf(record),
-                    onBack = {},
                     onAddProfile = { _, _ -> },
                     onUpsert = { _, entry -> savedEntry = entry },
                     onSelected = { _, _ -> },
@@ -173,8 +172,12 @@ class HealthRecordsComposeInstrumentedTest {
             }
         }
         composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_measurement_type)).performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.measurement_type_name)).performTextInput("Waist")
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.measurement_type_unit)).performTextInput("cm")
+        val nameLabel = composeRule.activity.getString(R.string.measurement_type_name)
+        val unitLabel = composeRule.activity.getString(R.string.measurement_type_unit)
+        composeRule.onNodeWithText(nameLabel).performClick()
+        composeRule.onNodeWithText(nameLabel).performTextInput("Waist")
+        composeRule.onNodeWithText(unitLabel).performClick()
+        composeRule.onNodeWithText(unitLabel).performTextInput("cm")
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).performClick()
         composeRule.runOnIdle {
             assertEquals("Waist", savedType?.name)

@@ -3,9 +3,12 @@ package net.mamby.health.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHasClickAction
@@ -20,7 +23,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
 import java.util.UUID
 import net.mamby.health.core.model.HealthProfile
-import net.mamby.health.ui.components.ProfileFilterHeader
+import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.ui.components.LocalProfileDisplayLabels
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.disambiguatedProfileLabels
 import net.mamby.health.ui.theme.HealthVaultTheme
@@ -37,21 +42,21 @@ class ProfileComponentsInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun filterHeadersExposeAllAndSingleProfileIdentityAndDispatchClicks() {
+    fun filterChipsExposeAllAndSingleProfileIdentityAndDispatchClicks() {
         var allClicks = 0
         var profileClicks = 0
 
         composeRule.setContent {
             HealthVaultTheme {
                 Column {
-                    ProfileFilterHeader(
+                    ProfileFilterChip(
                         label = "All profiles",
                         profileId = null,
                         onClick = { allClicks += 1 },
                         accessibleLabel = "All profile data",
                         actionLabel = "Change profile filter",
                     )
-                    ProfileFilterHeader(
+                    ProfileFilterChip(
                         label = "Amina Said",
                         profileId = PROFILE_ID,
                         onClick = { profileClicks += 1 },
@@ -71,9 +76,11 @@ class ProfileComponentsInstrumentedTest {
             .assertIsDisplayed()
             .assertHasClickAction()
 
+        assertEquals(false, allProfiles.fetchSemanticsNode().config[SemanticsProperties.Selected])
+        assertEquals(true, selectedProfile.fetchSemanticsNode().config[SemanticsProperties.Selected])
+
         listOf(allProfiles, selectedProfile).forEach { header ->
             val semantics = header.fetchSemanticsNode().config
-            assertEquals(Role.Button, semantics[SemanticsProperties.Role])
             assertEquals("Change profile filter", semantics[SemanticsActions.OnClick].label)
         }
 
@@ -83,6 +90,37 @@ class ProfileComponentsInstrumentedTest {
             assertEquals(1, allClicks)
             assertEquals(1, profileClicks)
         }
+    }
+
+    @Test
+    fun inlineProfileFilterChipOpensChooserAndUpdatesSelection() {
+        val amina = profile(PROFILE_ID, "Amina Said")
+        val noor = profile(UUID.fromString("6da42279-10f6-4e3a-8e10-73cb60417661"), "Noor Said")
+        val records = listOf(ProfileRecord(amina), ProfileRecord(noor))
+        var selected: UUID? = null
+
+        composeRule.setContent {
+            var selectedProfileId by remember { mutableStateOf<UUID?>(null) }
+            CompositionLocalProvider(
+                LocalProfileDisplayLabels provides records.associate { it.profile.id to it.profile.displayName },
+            ) {
+                HealthVaultTheme {
+                    ProfileFilterChip(
+                        records = records,
+                        selectedProfileId = selectedProfileId,
+                        onSelected = {
+                            selectedProfileId = it
+                            selected = it
+                        },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("All profiles").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Amina Said").assertIsDisplayed().performClick()
+        composeRule.onNodeWithContentDescription("Amina Said").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(PROFILE_ID, selected) }
     }
 
     @Test
@@ -133,7 +171,7 @@ class ProfileComponentsInstrumentedTest {
     }
 
     @Test
-    fun filterHeaderRemainsAccessibleInRtlAtLargeText() {
+    fun filterChipRemainsAccessibleInRtlAtLargeText() {
         var clicked = false
 
         composeRule.setContent {
@@ -143,7 +181,7 @@ class ProfileComponentsInstrumentedTest {
                 LocalDensity provides Density(density.density, fontScale = 1.5f),
             ) {
                 HealthVaultTheme {
-                    ProfileFilterHeader(
+                    ProfileFilterChip(
                         label = "كل الملفات الشخصية",
                         profileId = null,
                         onClick = { clicked = true },
@@ -158,8 +196,6 @@ class ProfileComponentsInstrumentedTest {
             .onNodeWithContentDescription("تصفية: كل الملفات الشخصية")
             .assertIsDisplayed()
             .assertHasClickAction()
-        composeRule.onNodeWithText("كل الملفات الشخصية").assertIsDisplayed()
-
         val bounds = header.fetchSemanticsNode().boundsInRoot
         assertTrue(bounds.width > 0f)
         assertTrue(bounds.height > 0f)

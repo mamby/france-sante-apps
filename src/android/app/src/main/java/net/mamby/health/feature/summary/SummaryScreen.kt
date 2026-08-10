@@ -106,7 +106,6 @@ fun SummaryScreen(
     AppScreenScaffold(
         title = stringResource(R.string.health_info_title),
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(profile) },
         floatingActionButton = {
             FloatingActionButton(onClick = { addingVaccination = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_vaccination))
@@ -120,6 +119,12 @@ fun SummaryScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileOwnerHeader(profile)
+            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionCard(stringResource(R.string.summary_title)) {
                     LabeledValue(stringResource(R.string.display_name), profile.displayName)

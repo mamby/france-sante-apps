@@ -52,6 +52,7 @@ fun ProfileManagementScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
             profiles.forEach { record ->
                 SectionCard(profileLabels[record.profile.id] ?: record.profile.displayName) {
                     Button(onClick = { renaming = record.profile }) {

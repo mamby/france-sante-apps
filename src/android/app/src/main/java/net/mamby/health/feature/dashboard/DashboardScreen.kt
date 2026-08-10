@@ -113,6 +113,9 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(stringResource(R.string.dashboard_greeting_all))
             }
 

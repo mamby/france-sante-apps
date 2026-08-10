@@ -34,7 +34,7 @@ import net.mamby.health.ui.theme.UiTokens
 fun EmergencyContactDetailScreen(
     record: ProfileRecord,
     contact: EmergencyContact,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
 ) = HealthInfoDetailScaffold(record, contact.name, onBack) {
     LabeledValue(stringResource(R.string.contact_relationship), contact.relationship)
     LabeledValue(stringResource(R.string.contact_phone), contact.phoneNumber)
@@ -45,7 +45,7 @@ fun EmergencyContactDetailScreen(
 fun VaccinationDetailScreen(
     record: ProfileRecord,
     vaccination: Vaccination,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
 ) = HealthInfoDetailScaffold(record, vaccination.name, onBack) {
     LabeledValue(stringResource(R.string.vaccination_date), vaccination.dateAdministered.localizedDate())
     vaccination.provider?.let { LabeledValue(stringResource(R.string.vaccination_provider), it) }
@@ -58,7 +58,7 @@ fun VaccinationDetailScreen(
 fun FamilyHistoryDetailScreen(
     record: ProfileRecord,
     entry: FamilyHistoryEntry,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
 ) = HealthInfoDetailScaffold(record, entry.condition, onBack) {
     LabeledValue(stringResource(R.string.family_relationship), entry.relationship)
     entry.ageAtOnsetYears?.let {
@@ -71,7 +71,7 @@ fun FamilyHistoryDetailScreen(
 fun CareDirectiveDetailScreen(
     record: ProfileRecord,
     directive: CareDirective,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
 ) = HealthInfoDetailScaffold(record, directive.title, onBack) {
     Text(stringResource(R.string.directives_disclaimer))
     LabeledValue(stringResource(R.string.directive_kind), stringResource(directive.kind.labelResource()))
@@ -89,7 +89,7 @@ fun CareDirectiveDetailScreen(
 fun HealthIdentifierDetailScreen(
     record: ProfileRecord,
     identifier: HealthIdentifier,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
 ) {
     var revealed by remember(identifier.id) { mutableStateOf(false) }
     HealthInfoDetailScaffold(record, identifier.label, onBack) {
@@ -111,13 +111,12 @@ fun HealthIdentifierDetailScreen(
 private fun HealthInfoDetailScaffold(
     record: ProfileRecord,
     title: String,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     AppScreenScaffold(
         title = title,
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(record.profile) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -128,6 +127,8 @@ private fun HealthInfoDetailScaffold(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
+            ProfileOwnerHeader(record.profile)
             content()
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -172,6 +173,7 @@ import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.appContentWindowInsets
 import net.mamby.health.ui.components.appNavigationSuiteType
 import net.mamby.health.ui.components.disambiguatedProfileLabels
+import net.mamby.health.ui.components.listDetailAwareBack
 import net.mamby.health.ui.theme.HealthVaultTheme
 import net.mamby.health.ui.theme.UiTokens
 
@@ -833,13 +835,14 @@ private fun VaultNavigation(
                         )
                     }
                     entry<DocumentDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val document = record?.documents?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || document == null) MissingRecordScreen(navigation::goBack) else DocumentDetailScreen(
+                        if (record == null || document == null) MissingRecordScreen(detailBack) else DocumentDetailScreen(
                             document = document,
                             record = record,
                             preview = preview,
-                            onBack = navigation::goBack,
+                            onBack = detailBack,
                             onLoadPreview = { viewModel.loadPreview(record.profile.id, document, it) },
                             onEdit = { viewModel.updateDocument(record.profile.id, it) },
                             onDelete = {
@@ -849,12 +852,13 @@ private fun VaultNavigation(
                         )
                     }
                     entry<NoteDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val note = vault.notes.firstOrNull { it.id.toString() == route.id }
-                        if (note == null) MissingRecordScreen(navigation::goBack) else NoteDetailScreen(
+                        if (note == null) MissingRecordScreen(detailBack) else NoteDetailScreen(
                             note = note,
                             now = now,
                             zoneId = zoneId,
-                            onBack = navigation::goBack,
+                            onBack = detailBack,
                             onUpsert = viewModel::upsertHealthNote,
                             onDelete = {
                                 viewModel.deleteHealthNote(note.id)
@@ -863,14 +867,15 @@ private fun VaultNavigation(
                         )
                     }
                     entry<MeasurementDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val measurement = record?.measurements?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || measurement == null) MissingRecordScreen(navigation::goBack) else MeasurementDetailScreen(
+                        if (record == null || measurement == null) MissingRecordScreen(detailBack) else MeasurementDetailScreen(
                             record = record,
                             measurement = measurement,
                             now = now,
                             zoneId = zoneId,
-                            onBack = navigation::goBack,
+                            onBack = detailBack,
                             onUpsert = { viewModel.upsertMeasurement(record.profile.id, it) },
                             onDelete = {
                                 viewModel.deleteMeasurement(record.profile.id, measurement.id)
@@ -879,12 +884,13 @@ private fun VaultNavigation(
                         )
                     }
                     entry<DirectoryEntryDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val directoryEntry = record?.careDirectory?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || directoryEntry == null) MissingRecordScreen(navigation::goBack) else DirectoryEntryDetailScreen(
+                        if (record == null || directoryEntry == null) MissingRecordScreen(detailBack) else DirectoryEntryDetailScreen(
                             record = record,
                             entry = directoryEntry,
-                            onBack = navigation::goBack,
+                            onBack = detailBack,
                             onUpsert = { viewModel.upsertCareDirectoryEntry(record.profile.id, it) },
                             onSetPrimaryDoctor = { viewModel.setPrimaryDoctor(record.profile.id, it) },
                             onDelete = {
@@ -894,38 +900,43 @@ private fun VaultNavigation(
                         )
                     }
                     entry<EmergencyContactDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val contact = record?.profile?.emergencyContacts?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || contact == null) MissingRecordScreen(navigation::goBack) else EmergencyContactDetailScreen(
-                            record, contact, navigation::goBack,
+                        if (record == null || contact == null) MissingRecordScreen(detailBack) else EmergencyContactDetailScreen(
+                            record, contact, detailBack,
                         )
                     }
                     entry<VaccinationDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val vaccination = record?.vaccinations?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || vaccination == null) MissingRecordScreen(navigation::goBack) else VaccinationDetailScreen(
-                            record, vaccination, navigation::goBack,
+                        if (record == null || vaccination == null) MissingRecordScreen(detailBack) else VaccinationDetailScreen(
+                            record, vaccination, detailBack,
                         )
                     }
                     entry<FamilyHistoryDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val history = record?.familyHistory?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || history == null) MissingRecordScreen(navigation::goBack) else FamilyHistoryDetailScreen(
-                            record, history, navigation::goBack,
+                        if (record == null || history == null) MissingRecordScreen(detailBack) else FamilyHistoryDetailScreen(
+                            record, history, detailBack,
                         )
                     }
                     entry<CareDirectiveDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val careDirective = record?.directives?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || careDirective == null) MissingRecordScreen(navigation::goBack) else CareDirectiveDetailScreen(
-                            record, careDirective, navigation::goBack,
+                        if (record == null || careDirective == null) MissingRecordScreen(detailBack) else CareDirectiveDetailScreen(
+                            record, careDirective, detailBack,
                         )
                     }
                     entry<HealthIdentifierDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val identifier = record?.healthIdentifiers?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || identifier == null) MissingRecordScreen(navigation::goBack) else HealthIdentifierDetailScreen(
-                            record, identifier, navigation::goBack,
+                        if (record == null || identifier == null) MissingRecordScreen(detailBack) else HealthIdentifierDetailScreen(
+                            record, identifier, detailBack,
                         )
                     }
                     entry<ManageMeasurementTypesRoute> { route ->
@@ -952,14 +963,15 @@ private fun VaultNavigation(
                         )
                     }
                     entry<MedicationDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val record = vault.profileRecordOrNull(route.profileId)
                         val medication = record?.medications?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || medication == null) MissingRecordScreen(navigation::goBack) else MedicationDetailScreen(
+                        if (record == null || medication == null) MissingRecordScreen(detailBack) else MedicationDetailScreen(
                             medication = medication,
                             directory = record.careDirectory,
                             profile = record.profile,
                             today = today,
-                            onBack = navigation::goBack,
+                            onBack = detailBack,
                             onUpsert = { updated ->
                                 withNotificationPermission(updated.remindersEnabled) {
                                     viewModel.upsertMedication(record.profile.id, updated)
@@ -972,13 +984,14 @@ private fun VaultNavigation(
                         )
                     }
                     entry<ScheduleDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val detailBack = listDetailAwareBack(navigation::goBack)
                         val schedule = vault.schedules.firstOrNull { it.id.toString() == route.id }
-                        if (schedule == null) MissingRecordScreen(navigation::goBack) else ScheduleDetailScreen(
+                        if (schedule == null) MissingRecordScreen(detailBack) else ScheduleDetailScreen(
                             schedule = schedule,
                             profileNames = vault.profiles.map { it.profile.displayName },
                             zoneId = zoneId,
                             today = today,
-                            onBack = navigation::goBack,
+                            onBack = detailBack,
                             onUpsert = { updated ->
                                 withNotificationPermission(updated.alert != null) {
                                     viewModel.upsertSchedule(updated)
@@ -996,7 +1009,6 @@ private fun VaultNavigation(
                             zoneId = zoneId,
                             restorePreview = restorePreview,
                             message = null,
-                            onBack = navigation::goBack,
                             onThemeChanged = viewModel::setThemeMode,
                             onLocaleChanged = onLocaleChanged,
                             onAppLockChanged = { enabled ->
@@ -1181,17 +1193,19 @@ private fun DetailPlaceholder(messageResource: Int) {
 }
 
 @Composable
-private fun MissingRecordScreen(onBack: () -> Unit) {
-    Box(
-        Modifier.fillMaxSize().windowInsetsPadding(appContentWindowInsets()),
-        contentAlignment = Alignment.Center,
-    ) {
+private fun MissingRecordScreen(onBack: (() -> Unit)?) {
+    AppScreenScaffold(
+        title = stringResource(R.string.record_unavailable),
+        onBack = onBack,
+    ) { padding ->
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .padding(UiTokens.ScreenPadding),
         ) {
-            Text(stringResource(R.string.record_unavailable))
-            Button(onClick = onBack) { Text(stringResource(R.string.action_back)) }
+            PageHeader()
         }
     }
 }

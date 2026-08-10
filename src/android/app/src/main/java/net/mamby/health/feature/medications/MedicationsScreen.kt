@@ -50,7 +50,7 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.RemovableInputChip
@@ -89,9 +89,6 @@ fun MedicationsScreen(
     }
     AppScreenScaffold(
         title = stringResource(R.string.medications_title),
-        contextHeader = {
-            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_medication))
@@ -105,6 +102,12 @@ fun MedicationsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
+            }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.medications_intro)) }
             if (medications.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {

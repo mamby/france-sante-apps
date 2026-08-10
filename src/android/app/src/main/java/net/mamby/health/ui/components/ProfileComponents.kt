@@ -12,11 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -53,7 +57,7 @@ val LocalProfileDisplayLabels = staticCompositionLocalOf<Map<UUID, String>> { em
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileListFilterHeader(
+fun ProfileFilterChip(
     records: List<ProfileRecord>,
     selectedProfileId: UUID?,
     onSelected: (UUID?) -> Unit,
@@ -61,7 +65,7 @@ fun ProfileListFilterHeader(
 ) {
     var chooserVisible by remember { mutableStateOf(false) }
     val labels = LocalProfileDisplayLabels.current
-    ProfileFilterHeader(
+    ProfileFilterChip(
         label = selectedProfileId?.let { labels[it] } ?: stringResource(R.string.all_profiles),
         profileId = selectedProfileId,
         onClick = { chooserVisible = true },
@@ -161,11 +165,11 @@ fun ProfilePickerField(
 }
 
 /**
- * The interactive context header used by profile-filtered collection screens.
+ * The compact inline filter used by profile-filtered collection screens.
  * A null [profileId] represents the all-profiles filter.
  */
 @Composable
-fun ProfileFilterHeader(
+fun ProfileFilterChip(
     label: String,
     profileId: UUID?,
     onClick: () -> Unit,
@@ -174,42 +178,45 @@ fun ProfileFilterHeader(
     actionLabel: String? = null,
 ) {
     val resolvedActionLabel = actionLabel ?: stringResource(R.string.profile_filter)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                onClickLabel = resolvedActionLabel,
-                role = Role.Button,
-                onClick = onClick,
-            )
-            .semantics(mergeDescendants = true) {
-                contentDescription = accessibleLabel
+    Box(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = accessibleLabel
+            role = Role.Checkbox
+            selected = profileId != null
+            onClick(label = resolvedActionLabel) {
+                onClick()
+                true
             }
-            .padding(
-                horizontal = UiTokens.ScreenPadding,
-                vertical = UiTokens.CompactSpacing,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
+        },
     ) {
-        if (profileId == null) {
-            AllProfilesAvatar()
-        } else {
-            ProfileAvatar(
-                profileId = profileId,
-                monogram = profileMonogram(label),
-                size = UiTokens.ProfileAvatarSize,
-            )
-        }
-        Text(
-            text = label,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = UiTokens.ContentSpacing),
-            fontWeight = FontWeight.Medium,
-        )
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-            contentDescription = null,
+        FilterChip(
+            selected = profileId != null,
+            onClick = onClick,
+            modifier = Modifier.clearAndSetSemantics {},
+            label = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = label, fontWeight = FontWeight.Medium)
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowDropDown,
+                        contentDescription = null,
+                    )
+                }
+            },
+            leadingIcon = {
+                if (profileId == null) {
+                    AllProfilesAvatar(UiTokens.ProfileMarkerAvatarSize)
+                } else {
+                    ProfileAvatar(
+                        profileId = profileId,
+                        monogram = profileMonogram(label),
+                        size = UiTokens.ProfileMarkerAvatarSize,
+                        compact = true,
+                    )
+                }
+            },
         )
     }
 }
@@ -231,10 +238,7 @@ fun ProfileOwnerHeader(
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibleLabel ?: resolvedLabel
             }
-            .padding(
-                horizontal = UiTokens.ScreenPadding,
-                vertical = UiTokens.CompactSpacing,
-            ),
+            .padding(vertical = UiTokens.CompactSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ProfileAvatar(
@@ -340,10 +344,10 @@ private fun ProfileAvatar(
 }
 
 @Composable
-private fun AllProfilesAvatar() {
+private fun AllProfilesAvatar(size: Dp = UiTokens.ProfileAvatarSize) {
     Box(
         modifier = Modifier
-            .size(UiTokens.ProfileAvatarSize)
+            .size(size)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clearAndSetSemantics {},

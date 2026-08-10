@@ -47,7 +47,7 @@ import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
-import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.ProfilePickerField
@@ -60,7 +60,6 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun DirectoryScreen(
     records: List<ProfileRecord>,
-    onBack: (() -> Unit)? = null,
     onAddProfile: (String, (UUID) -> Unit) -> Unit,
     onUpsert: (UUID, CareDirectoryEntry) -> Unit,
     onSelected: (UUID, UUID) -> Unit,
@@ -84,10 +83,6 @@ fun DirectoryScreen(
     }
     AppScreenScaffold(
         title = stringResource(R.string.care_directory_title),
-        onBack = onBack,
-        contextHeader = {
-            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = ::startCreation) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_directory_entry))
@@ -101,6 +96,12 @@ fun DirectoryScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
+            }
             if (entries.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
@@ -147,7 +148,7 @@ fun DirectoryScreen(
 fun DirectoryEntryDetailScreen(
     record: ProfileRecord,
     entry: CareDirectoryEntry,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onUpsert: (CareDirectoryEntry) -> Unit,
     onSetPrimaryDoctor: (UUID?) -> Unit,
     onDelete: () -> Unit,
@@ -158,7 +159,6 @@ fun DirectoryEntryDetailScreen(
     AppScreenScaffold(
         title = entry.name,
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(record.profile) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -169,6 +169,8 @@ fun DirectoryEntryDetailScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
+            ProfileOwnerHeader(record.profile)
             SectionCard(stringResource(R.string.directory_details)) {
                 LabeledValue(stringResource(R.string.directory_kind), stringResource(entry.kind.labelResource()))
                 LabeledValue(stringResource(R.string.directory_specialty), entry.specialty.orEmpty())

@@ -1,82 +1,171 @@
 package net.mamby.health.ui.components
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import net.mamby.health.R
 import net.mamby.health.ui.theme.UiTokens
+
+interface AppScreenContentScope {
+    @Composable
+    fun PageHeader(modifier: Modifier = Modifier)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppScreenScaffold(
     title: String,
     onBack: (() -> Unit)? = null,
-    contextHeader: (@Composable () -> Unit)? = null,
-    actions: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
-    content: @Composable (PaddingValues) -> Unit,
+    content: @Composable AppScreenContentScope.(PaddingValues) -> Unit,
 ) {
     var floatingActionButtonHeightPx by remember { mutableIntStateOf(0) }
     val floatingActionButtonHeight = with(LocalDensity.current) {
         floatingActionButtonHeightPx.toDp()
     }
 
-    Scaffold(
-        contentWindowInsets = appContentWindowInsets(),
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text(title) },
-                    navigationIcon = {
-                        if (onBack != null) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = stringResource(R.string.action_back),
-                                )
-                            }
-                        }
-                    },
-                    actions = { actions() },
-                )
-                contextHeader?.invoke()
-            }
-        },
-        floatingActionButton = {
-            Box(
-                modifier = Modifier.onSizeChanged {
-                    floatingActionButtonHeightPx = it.height
-                },
+    val pageScope = object : AppScreenContentScope {
+        @Composable
+        override fun PageHeader(modifier: Modifier) {
+            Row(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .heightIn(min = UiTokens.FloatingBackButtonSize),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                floatingActionButton()
-            }
-        },
-        content = { padding ->
-            val contentPadding = if (floatingActionButtonHeightPx == 0) {
-                padding
-            } else {
-                padding.withAdditionalBottomPadding(
-                    floatingActionButtonHeight + UiTokens.ContentSpacing,
+                if (onBack != null) {
+                    Spacer(
+                        Modifier.width(
+                            UiTokens.FloatingBackButtonSize + UiTokens.ContentSpacing,
+                        ),
+                    )
+                }
+                Text(
+                    text = title,
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
                 )
+                actions()
             }
-            content(contentPadding)
-        },
-    )
+        }
+    }
+
+    Box {
+        Scaffold(
+            contentWindowInsets = appContentWindowInsets(),
+            floatingActionButton = {
+                Box(
+                    modifier = Modifier.onSizeChanged {
+                        floatingActionButtonHeightPx = it.height
+                    },
+                ) {
+                    floatingActionButton()
+                }
+            },
+            content = { padding ->
+                val contentPadding = if (floatingActionButtonHeightPx == 0) {
+                    padding
+                } else {
+                    padding.withAdditionalBottomPadding(
+                        floatingActionButtonHeight + UiTokens.ContentSpacing,
+                    )
+                }
+                pageScope.content(contentPadding)
+            },
+        )
+        if (onBack != null) {
+            FloatingBackButton(
+                onBack = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top + WindowInsetsSides.Start,
+                        ),
+                    )
+                    .padding(
+                        start = UiTokens.ScreenPadding,
+                        top = UiTokens.ScreenPadding,
+                    ),
+            )
+        }
+    }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FloatingBackButton(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val label = stringResource(R.string.action_back)
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Below,
+        ),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = rememberTooltipState(),
+        modifier = modifier,
+    ) {
+        FilledTonalIconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .size(UiTokens.FloatingBackButtonSize)
+                .shadow(UiTokens.FloatingBackButtonElevation, CircleShape),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                contentDescription = label,
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+fun listDetailAwareBack(onBack: () -> Unit): (() -> Unit)? =
+    onBack.takeIf { LocalListDetailSceneScope.current == null }

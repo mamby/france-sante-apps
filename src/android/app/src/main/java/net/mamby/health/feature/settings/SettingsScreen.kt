@@ -54,7 +54,7 @@ fun SettingsScreen(
     zoneId: ZoneId,
     restorePreview: RestorePreview?,
     message: String?,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onThemeChanged: (ThemeMode) -> Unit,
     onLocaleChanged: (String) -> Unit,
     onAppLockChanged: (Boolean) -> Unit,
@@ -104,6 +104,7 @@ fun SettingsScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
             message?.let { Text(it) }
             if (onManageProfiles != null) {
                 SectionCard(stringResource(R.string.profiles_title)) {

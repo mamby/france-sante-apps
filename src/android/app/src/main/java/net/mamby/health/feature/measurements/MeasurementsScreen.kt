@@ -59,7 +59,7 @@ import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.ProfilePickerField
@@ -103,9 +103,6 @@ fun MeasurementsScreen(
     AppScreenScaffold(
         title = stringResource(R.string.measurements_title),
         onBack = onBack,
-        contextHeader = {
-            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
-        },
         actions = {
             IconButton(onClick = { onManageTypes(filterProfileId) }) {
                 Icon(Icons.Outlined.Tune, stringResource(R.string.manage_measurement_types))
@@ -124,6 +121,12 @@ fun MeasurementsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
+            }
             if (measurements.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
@@ -176,7 +179,7 @@ fun MeasurementDetailScreen(
     measurement: HealthMeasurement,
     now: Instant,
     zoneId: ZoneId,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onUpsert: (HealthMeasurement) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -185,7 +188,6 @@ fun MeasurementDetailScreen(
     AppScreenScaffold(
         title = measurement.type.localizedLabel(record),
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(record.profile) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -196,6 +198,8 @@ fun MeasurementDetailScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
+            ProfileOwnerHeader(record.profile)
             SectionCard(stringResource(R.string.measurement_value)) {
                 Text(measurement.reading.localizedValue())
                 Text(measurement.measuredAt.localizedDateTime(zoneId))
@@ -243,7 +247,6 @@ fun ManageMeasurementTypesScreen(
     AppScreenScaffold(
         title = stringResource(R.string.manage_measurement_types),
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(record.profile) },
         floatingActionButton = {
             FloatingActionButton(onClick = { adding = true }) {
                 Icon(Icons.Outlined.Add, stringResource(R.string.add_measurement_type))
@@ -257,6 +260,12 @@ fun ManageMeasurementTypesScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileOwnerHeader(record.profile)
+            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(stringResource(R.string.built_in_measurement_types_body))
             }

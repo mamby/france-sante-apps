@@ -36,7 +36,7 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
-import net.mamby.health.ui.components.ProfileListFilterHeader
+import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withScreenPadding
@@ -73,9 +73,6 @@ fun SearchScreen(
 
     AppScreenScaffold(
         title = stringResource(R.string.search_title),
-        contextHeader = {
-            ProfileListFilterHeader(records, filterProfileId, { filterProfileId = it })
-        },
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
@@ -87,6 +84,12 @@ fun SearchScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
+            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 OutlinedTextField(
                     value = query,

@@ -68,7 +68,7 @@ fun DocumentDetailScreen(
     document: MedicalDocument,
     record: ProfileRecord,
     preview: DocumentPreviewState,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onLoadPreview: (Int) -> Unit,
     onEdit: (MedicalDocument) -> Unit,
     onDelete: () -> Unit,
@@ -91,7 +91,6 @@ fun DocumentDetailScreen(
     AppScreenScaffold(
         title = document.title,
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(profile) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -102,6 +101,8 @@ fun DocumentDetailScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
+            ProfileOwnerHeader(profile)
             SectionCard(stringResource(R.string.document_file)) {
                 LabeledValue(stringResource(R.string.document_category), document.category.localizedLabel(record))
                 LabeledValue(stringResource(R.string.document_date), document.documentDate.localizedDate())

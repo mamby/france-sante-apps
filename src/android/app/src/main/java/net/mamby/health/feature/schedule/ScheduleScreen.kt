@@ -105,6 +105,9 @@ fun ScheduleScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.schedule_intro)) }
             if (notificationsBlocked && schedules.any { it.alert != null }) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -155,7 +158,7 @@ fun ScheduleDetailScreen(
     profileNames: List<String>,
     today: LocalDate,
     zoneId: ZoneId,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onUpsert: (Schedule) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -171,6 +174,7 @@ fun ScheduleDetailScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
             SectionCard(stringResource(R.string.schedule_details)) {
                 LabeledValue(stringResource(R.string.schedule_when), schedule.timing.localized(zoneId))
                 LabeledValue(stringResource(R.string.schedule_recurrence), schedule.recurrence.localized())

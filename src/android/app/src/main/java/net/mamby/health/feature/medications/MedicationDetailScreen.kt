@@ -37,7 +37,7 @@ fun MedicationDetailScreen(
     directory: List<CareDirectoryEntry>,
     profile: HealthProfile,
     today: LocalDate,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onUpsert: (Medication) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -46,7 +46,6 @@ fun MedicationDetailScreen(
     AppScreenScaffold(
         medication.name,
         onBack = onBack,
-        contextHeader = { ProfileOwnerHeader(profile) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -57,6 +56,8 @@ fun MedicationDetailScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
+            ProfileOwnerHeader(profile)
             SectionCard(stringResource(R.string.medication_schedule)) {
                 LabeledValue(stringResource(R.string.medication_dose), medication.dose)
                 LabeledValue(stringResource(R.string.medication_instructions), medication.instructions)

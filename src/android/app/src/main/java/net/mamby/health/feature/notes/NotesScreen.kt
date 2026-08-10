@@ -76,6 +76,9 @@ fun NotesScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PageHeader()
+            }
             if (sortedNotes.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
@@ -115,7 +118,7 @@ fun NoteDetailScreen(
     note: HealthNote,
     now: Instant,
     zoneId: ZoneId,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onUpsert: (HealthNote) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -134,6 +137,7 @@ fun NoteDetailScreen(
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
+            PageHeader()
             SectionCard(stringResource(R.string.health_note)) {
                 Text(note.notedAt.localizedDateTime(zoneId))
                 Text(note.body)
