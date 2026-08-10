@@ -63,8 +63,6 @@
     <string name="documents_tab">Documents</string>
     <string name="profile_switch">Changer de profil</string>
     <string name="profiles_title">Profils</string>
-    <string name="profiles_settings_body">Ajoutez, renommez ou supprimez les personnes dont les données de santé sont enregistrées sur cet appareil.</string>
-    <string name="manage_profiles">Gérer les profils</string>
     <string name="add_profile">Ajouter un profil</string>
     <string name="rename_profile">Renommer le profil</string>
     <string name="rename_profile_named">Renommer %1$s</string>

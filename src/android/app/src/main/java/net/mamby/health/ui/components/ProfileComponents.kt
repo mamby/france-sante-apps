@@ -11,10 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -34,6 +30,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -130,7 +127,12 @@ fun ProfilePickerField(
                 item {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.add_profile)) },
-                        leadingContent = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                        leadingContent = {
+                            Icon(
+                                painterResource(R.drawable.ic_lucide_plus),
+                                contentDescription = null,
+                            )
+                        },
                         modifier = Modifier.clickable {
                             chooserVisible = false
                             addVisible = true
@@ -200,7 +202,7 @@ fun ProfileFilterChip(
                 ) {
                     Text(text = label, fontWeight = FontWeight.Medium)
                     Icon(
-                        imageVector = Icons.Outlined.ArrowDropDown,
+                        painter = painterResource(R.drawable.ic_lucide_chevron_down),
                         contentDescription = null,
                     )
                 }
@@ -354,7 +356,7 @@ private fun AllProfilesAvatar(size: Dp = UiTokens.ProfileAvatarSize) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Group,
+            painter = painterResource(R.drawable.ic_lucide_users),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )

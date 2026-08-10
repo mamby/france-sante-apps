@@ -1,5 +1,6 @@
 package net.mamby.health.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,11 +8,14 @@ import androidx.compose.foundation.layout.ExperimentalGridApi
 import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.GridTrackSize
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +39,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -56,10 +60,15 @@ fun AppNavigationSuite(
     content: @Composable () -> Unit,
 ) {
     val usesMore = layoutType == NavigationSuiteType.ShortNavigationBarCompact
+    val compactNavigationContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(
+        alpha = UiTokens.CompactNavigationContainerAlpha,
+    )
     val navigationSuiteColors = NavigationSuiteDefaults.colors(
-        shortNavigationBarContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(
-            alpha = UiTokens.CompactNavigationContainerAlpha,
-        ),
+        shortNavigationBarContainerColor = if (usesMore) {
+            Color.Transparent
+        } else {
+            compactNavigationContainerColor
+        },
         shortNavigationBarContentColor = MaterialTheme.colorScheme.onSurface,
         navigationBarContainerColor = Color.Transparent,
         navigationRailContainerColor = Color.Transparent,
@@ -81,11 +90,22 @@ fun AppNavigationSuite(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                NavigationSuite(
-                    navigationSuiteType = layoutType,
-                    colors = navigationSuiteColors,
-                    content = navigationItems,
-                )
+                Surface(color = compactNavigationContainerColor) {
+                    Box(
+                        modifier = Modifier.windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                            ),
+                        ),
+                    ) {
+                        NavigationSuite(
+                            navigationSuiteType = layoutType,
+                            modifier = Modifier.height(UiTokens.CompactNavigationBarHeight),
+                            colors = navigationSuiteColors,
+                            content = navigationItems,
+                        )
+                    }
+                }
             },
         ) { padding ->
             CompositionLocalProvider(
@@ -124,7 +144,7 @@ private fun AppNavigationItems(
                 onClick = { onDestinationSelected(destination) },
                 icon = {
                     NavigationIcon(
-                        imageVector = if (selected) destination.selectedIcon else destination.icon,
+                        icon = destination.icon,
                         label = stringResource(destination.label),
                     )
                 },
@@ -138,7 +158,7 @@ private fun AppNavigationItems(
             onClick = onMoreSelected,
             icon = {
                 NavigationIcon(
-                    imageVector = Icons.Outlined.MoreHoriz,
+                    icon = R.drawable.ic_lucide_ellipsis,
                     label = stringResource(R.string.action_more),
                 )
             },
@@ -168,7 +188,7 @@ internal fun AppMoreSheet(
         Grid(
             config = {
                 repeat(3) { column(1.fr) }
-                row(GridTrackSize.Auto)
+                repeat((destinations.size + 2) / 3) { row(GridTrackSize.Auto) }
                 columnGap(UiTokens.CompactSpacing)
             },
             modifier = Modifier
@@ -189,7 +209,7 @@ internal fun AppMoreSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NavigationIcon(imageVector: ImageVector, label: String) {
+private fun NavigationIcon(@DrawableRes icon: Int, label: String) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Above,
@@ -198,7 +218,7 @@ private fun NavigationIcon(imageVector: ImageVector, label: String) {
         state = androidx.compose.material3.rememberTooltipState(),
     ) {
         Icon(
-            imageVector = imageVector,
+            painter = painterResource(icon),
             contentDescription = label,
             modifier = Modifier.semantics { role = Role.Tab },
         )
@@ -206,7 +226,7 @@ private fun NavigationIcon(imageVector: ImageVector, label: String) {
 }
 
 @Composable
-private fun MoreSheetItem(label: String, icon: ImageVector, onClick: () -> Unit) {
+private fun MoreSheetItem(label: String, @DrawableRes icon: Int, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -221,7 +241,7 @@ private fun MoreSheetItem(label: String, icon: ImageVector, onClick: () -> Unit)
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
         ) {
-            Icon(icon, contentDescription = null)
+            Icon(painterResource(icon), contentDescription = null)
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,

@@ -63,8 +63,6 @@
     <string name="documents_tab">المستندات</string>
     <string name="profile_switch">تبديل الملف الشخصي</string>
     <string name="profiles_title">الملفات الشخصية</string>
-    <string name="profiles_settings_body">أضف أو أعد تسمية أو احذف الأشخاص الذين تُحفظ بياناتهم الصحية على هذا الجهاز.</string>
-    <string name="manage_profiles">إدارة الملفات الشخصية</string>
     <string name="add_profile">إضافة ملف شخصي</string>
     <string name="rename_profile">إعادة تسمية الملف الشخصي</string>
     <string name="rename_profile_named">إعادة تسمية %1$s</string>

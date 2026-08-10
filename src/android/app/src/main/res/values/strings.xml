@@ -63,8 +63,6 @@
     <string name="documents_tab">Documents</string>
     <string name="profile_switch">Switch profile</string>
     <string name="profiles_title">Profiles</string>
-    <string name="profiles_settings_body">Add, rename, or remove people whose health data is stored on this device.</string>
-    <string name="manage_profiles">Manage profiles</string>
     <string name="add_profile">Add profile</string>
     <string name="rename_profile">Rename profile</string>
     <string name="rename_profile_named">Rename %1$s</string>

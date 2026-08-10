@@ -9,14 +9,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -30,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.time.Instant
 import java.time.LocalDate
@@ -52,6 +50,7 @@ import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
@@ -108,7 +107,7 @@ fun SummaryScreen(
         onBack = onBack,
         floatingActionButton = {
             FloatingActionButton(onClick = { addingVaccination = true }) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.add_vaccination))
+                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_vaccination))
             }
         },
     ) { innerPadding ->
@@ -529,7 +528,7 @@ private fun CareDirectiveDialog(
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     readOnly = true,
                     label = { Text(stringResource(R.string.directive_kind)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    trailingIcon = { DropdownTrailingIcon(expanded) },
                 )
                 ExposedDropdownMenu(expanded, { expanded = false }) {
                     CareDirectiveKind.entries.forEach { candidate ->
@@ -624,7 +623,7 @@ private fun HealthIdentifierDialog(
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     readOnly = true,
                     label = { Text(stringResource(R.string.identifier_kind)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    trailingIcon = { DropdownTrailingIcon(expanded) },
                 )
                 ExposedDropdownMenu(expanded, { expanded = false }) {
                     HealthIdentifierKind.entries.forEach { candidate ->

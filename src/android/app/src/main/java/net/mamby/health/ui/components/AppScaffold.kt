@@ -16,11 +16,10 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
@@ -30,6 +29,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -72,13 +73,13 @@ fun AppScreenScaffold(
             Row(
                 modifier = modifier
                     .fillMaxWidth()
-                    .heightIn(min = UiTokens.FloatingBackButtonSize),
+                    .heightIn(min = UiTokens.FloatingBackButtonTouchTargetSize),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (onBack != null) {
                     Spacer(
                         Modifier.width(
-                            UiTokens.FloatingBackButtonSize + UiTokens.ContentSpacing,
+                            UiTokens.FloatingBackButtonTouchTargetSize + UiTokens.ContentSpacing,
                         ),
                     )
                 }
@@ -154,11 +155,21 @@ fun FloatingBackButton(
         FilledTonalIconButton(
             onClick = onBack,
             modifier = Modifier
-                .size(UiTokens.FloatingBackButtonSize)
-                .shadow(UiTokens.FloatingBackButtonElevation, CircleShape),
+                .minimumInteractiveComponentSize()
+                .size(UiTokens.FloatingBackButtonVisualSize)
+                .shadow(
+                    elevation = UiTokens.FloatingBackButtonElevation,
+                    shape = CircleShape,
+                    ambientColor = MaterialTheme.colorScheme.outline,
+                    spotColor = MaterialTheme.colorScheme.outline,
+                ),
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                painter = painterResource(R.drawable.ic_lucide_arrow_left),
                 contentDescription = label,
             )
         }

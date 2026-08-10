@@ -28,10 +28,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -1031,13 +1027,11 @@ private fun VaultNavigation(
                                 viewModel.deleteVault()
                                 navigation.resetTo()
                             },
-                            onManageProfiles = { navigation.navigate(ManageProfilesRoute) },
                         )
                     }
                     entry<ManageProfilesRoute> {
                         ProfileManagementScreen(
                             profiles = vault.profiles,
-                            onBack = navigation::goBack,
                             onAdd = {
                                 viewModel.addProfile(it)
                             },

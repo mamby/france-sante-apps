@@ -67,7 +67,6 @@ fun SettingsScreen(
     onCommitRestore: (RestorePreview, Boolean) -> Unit,
     onDiscardRestore: (RestorePreview) -> Unit,
     onDeleteVault: () -> Unit,
-    onManageProfiles: (() -> Unit)? = null,
 ) {
     val configuration = LocalConfiguration.current
     val selectedLocaleTag = remember(configuration) {
@@ -106,14 +105,6 @@ fun SettingsScreen(
         ) {
             PageHeader()
             message?.let { Text(it) }
-            if (onManageProfiles != null) {
-                SectionCard(stringResource(R.string.profiles_title)) {
-                    Text(stringResource(R.string.profiles_settings_body))
-                    Button(onClick = onManageProfiles) {
-                        Text(stringResource(R.string.manage_profiles))
-                    }
-                }
-            }
             SectionCard(stringResource(R.string.appearance_title)) {
                 Text(stringResource(R.string.theme_system))
                 ThemeMode.entries.forEach { mode ->

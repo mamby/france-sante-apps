@@ -13,15 +13,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import java.text.NumberFormat
@@ -58,6 +55,7 @@ import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
@@ -105,12 +103,15 @@ fun MeasurementsScreen(
         onBack = onBack,
         actions = {
             IconButton(onClick = { onManageTypes(filterProfileId) }) {
-                Icon(Icons.Outlined.Tune, stringResource(R.string.manage_measurement_types))
+                Icon(
+                    painterResource(R.drawable.ic_lucide_sliders_horizontal),
+                    stringResource(R.string.manage_measurement_types),
+                )
             }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = ::startCreation) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.add_measurement))
+                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_measurement))
             }
         },
     ) { padding ->
@@ -249,7 +250,10 @@ fun ManageMeasurementTypesScreen(
         onBack = onBack,
         floatingActionButton = {
             FloatingActionButton(onClick = { adding = true }) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.add_measurement_type))
+                Icon(
+                    painterResource(R.drawable.ic_lucide_plus),
+                    stringResource(R.string.add_measurement_type),
+                )
             }
         },
     ) { padding ->
@@ -433,7 +437,7 @@ private fun MeasurementDialog(
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     readOnly = true,
                     label = { Text(stringResource(R.string.measurement_type)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(typeExpanded) },
+                    trailingIcon = { DropdownTrailingIcon(typeExpanded) },
                 )
                 ExposedDropdownMenu(typeExpanded, { typeExpanded = false }) {
                     types.forEach { candidate ->
@@ -468,7 +472,7 @@ private fun MeasurementDialog(
                         modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         readOnly = true,
                         label = { Text(stringResource(R.string.measurement_unit)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(unitExpanded) },
+                        trailingIcon = { DropdownTrailingIcon(unitExpanded) },
                     )
                     ExposedDropdownMenu(unitExpanded, { unitExpanded = false }) {
                         allowedUnits.forEach { candidate ->

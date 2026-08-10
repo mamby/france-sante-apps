@@ -15,7 +15,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -42,6 +41,7 @@ import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
@@ -235,7 +235,7 @@ private fun DocumentEditDialog(
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     readOnly = true,
                     label = { Text(stringResource(R.string.document_category)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoryExpanded) },
+                    trailingIcon = { DropdownTrailingIcon(categoryExpanded) },
                 )
                 ExposedDropdownMenu(categoryExpanded, { categoryExpanded = false }) {
                     availableCategories.forEach { candidate ->

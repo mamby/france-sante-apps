@@ -12,8 +12,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -27,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.time.Instant
 import java.time.ZoneId
@@ -65,7 +64,7 @@ fun NotesScreen(
         title = stringResource(R.string.health_notes_title),
         floatingActionButton = {
             FloatingActionButton(onClick = ::startCreation) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.add_health_note))
+                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_health_note))
             }
         },
     ) { padding ->

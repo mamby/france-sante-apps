@@ -97,6 +97,7 @@ import net.mamby.health.navigation.DirectoryRoute
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.HealthRecordsRoute
 import net.mamby.health.navigation.HomeRoute
+import net.mamby.health.navigation.ManageProfilesRoute
 import net.mamby.health.navigation.MedicationDetailRoute
 import net.mamby.health.navigation.NoteDetailRoute
 import net.mamby.health.navigation.NotesRoute
@@ -454,9 +455,19 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun navigationKeepsIndependentHealthRecordsNotesAndDirectoryBackStacks() {
+    fun navigationKeepsIndependentBackStacksAndProfilesAsTopLevel() {
         assertEquals(
-            listOf("Home", "Search", "HealthRecords", "Notes", "Medications", "Schedule", "Directory", "Settings"),
+            listOf(
+                "Home",
+                "Search",
+                "HealthRecords",
+                "Notes",
+                "Medications",
+                "Schedule",
+                "Directory",
+                "Settings",
+                "Profiles",
+            ),
             TopLevelDestination.entries.map(Enum<*>::name),
         )
         lateinit var navigation: AppNavigationState
@@ -493,6 +504,9 @@ class ComposeScreensInstrumentedTest {
             )
             navigation.goBack()
             assertEquals(DirectoryRoute, navigation.currentBackStack.last())
+            navigation.select(TopLevelDestination.Profiles)
+            assertEquals(ManageProfilesRoute, navigation.currentBackStack.last())
+            assertTrue(navigation.isAtSecondaryRoot)
             navigation.goBack()
             assertEquals(TopLevelDestination.Home, navigation.selectedDestination)
             assertEquals(HomeRoute, navigation.currentBackStack.last())
@@ -507,6 +521,7 @@ class ComposeScreensInstrumentedTest {
                 TopLevelDestination.Schedule,
                 TopLevelDestination.Directory,
                 TopLevelDestination.Settings,
+                TopLevelDestination.Profiles,
             ),
             TopLevelDestination.compactOverflow,
         )
@@ -783,7 +798,7 @@ class ComposeScreensInstrumentedTest {
         composeRule.setContent {
             HealthVaultTheme {
                 AppNavigationSuite(
-                    selectedDestination = TopLevelDestination.Home,
+                    selectedDestination = TopLevelDestination.Profiles,
                     layoutType = NavigationSuiteType.ShortNavigationBarCompact,
                     isMoreSelected = true,
                     onDestinationSelected = {},
@@ -800,7 +815,7 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun expandedNavigationKeepsScheduleAsDirectRoot() {
+    fun expandedNavigationShowsAllRootsDirectly() {
         composeRule.setContent {
             HealthVaultTheme {
                 AppNavigationSuite(
@@ -887,13 +902,30 @@ class ComposeScreensInstrumentedTest {
         }
         val schedule = composeRule.activity.getString(R.string.schedule_title)
         val settings = composeRule.activity.getString(R.string.settings_title)
+        val profiles = composeRule.activity.getString(R.string.profiles_title)
         composeRule.onNodeWithText(schedule).assertIsDisplayed().performClick()
         composeRule.runOnIdle {
             assertEquals(TopLevelDestination.Schedule, selectedAction)
             showSheet()
         }
         composeRule.onNodeWithText(settings).assertIsDisplayed().performClick()
-        composeRule.runOnIdle { assertEquals(TopLevelDestination.Settings, selectedAction) }
+        composeRule.runOnIdle {
+            assertEquals(TopLevelDestination.Settings, selectedAction)
+            showSheet()
+        }
+        composeRule.onNodeWithText(profiles).assertIsDisplayed().performClick()
+        composeRule.runOnIdle { assertEquals(TopLevelDestination.Profiles, selectedAction) }
+    }
+
+    @Test
+    fun settingsDoesNotExposeProfileManagement() {
+        composeRule.setContent {
+            HealthVaultTheme { TestSettingsScreen(onBack = null) }
+        }
+
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.profiles_title))
+            .assertDoesNotExist()
     }
 
     @Test

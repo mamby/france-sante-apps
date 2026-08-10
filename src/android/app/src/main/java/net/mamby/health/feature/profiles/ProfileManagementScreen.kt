@@ -32,7 +32,7 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun ProfileManagementScreen(
     profiles: List<ProfileRecord>,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onAdd: (String) -> Unit,
     onRename: (UUID, HealthProfile) -> Unit,
     onDelete: (UUID) -> Unit,

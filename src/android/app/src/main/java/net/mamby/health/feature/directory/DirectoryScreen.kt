@@ -12,14 +12,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
@@ -32,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.time.Instant
 import java.util.UUID
@@ -45,6 +43,7 @@ import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileFilterChip
@@ -85,7 +84,10 @@ fun DirectoryScreen(
         title = stringResource(R.string.care_directory_title),
         floatingActionButton = {
             FloatingActionButton(onClick = ::startCreation) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.add_directory_entry))
+                Icon(
+                    painterResource(R.drawable.ic_lucide_plus),
+                    stringResource(R.string.add_directory_entry),
+                )
             }
         },
     ) { padding ->
@@ -270,7 +272,7 @@ private fun DirectoryEntryDialog(
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     readOnly = true,
                     label = { Text(stringResource(R.string.directory_kind)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    trailingIcon = { DropdownTrailingIcon(expanded) },
                 )
                 ExposedDropdownMenu(expanded, { expanded = false }) {
                     CareDirectoryKind.entries.forEach { candidate ->

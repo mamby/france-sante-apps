@@ -84,6 +84,7 @@ fun rememberAppNavigationState(): AppNavigationState {
             rememberNavBackStack(ScheduleRoute),
             rememberNavBackStack(DirectoryRoute),
             rememberNavBackStack(SettingsRoute),
+            rememberNavBackStack(ManageProfilesRoute),
         )
     }
     val home = backStacks[0]
@@ -94,7 +95,8 @@ fun rememberAppNavigationState(): AppNavigationState {
     val schedule = backStacks[5]
     val directory = backStacks[6]
     val settings = backStacks[7]
-    return remember(home, search, records, notes, medications, schedule, directory, settings) {
+    val profiles = backStacks[8]
+    return remember(home, search, records, notes, medications, schedule, directory, settings, profiles) {
         AppNavigationState(
             selected,
             mapOf(
@@ -106,6 +108,7 @@ fun rememberAppNavigationState(): AppNavigationState {
                 TopLevelDestination.Schedule to schedule,
                 TopLevelDestination.Directory to directory,
                 TopLevelDestination.Settings to settings,
+                TopLevelDestination.Profiles to profiles,
             ),
         )
     }

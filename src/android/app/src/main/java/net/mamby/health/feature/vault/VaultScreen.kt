@@ -13,14 +13,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -34,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import java.util.UUID
@@ -49,6 +46,7 @@ import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
@@ -127,12 +125,15 @@ fun VaultScreen(
         onBack = onBack,
         actions = {
             IconButton(onClick = { onManageCategories(filterProfileId) }) {
-                Icon(Icons.Outlined.Tune, stringResource(R.string.manage_document_categories))
+                Icon(
+                    painterResource(R.drawable.ic_lucide_sliders_horizontal),
+                    stringResource(R.string.manage_document_categories),
+                )
             }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = ::startImport) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.import_document))
+                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.import_document))
             }
         },
     ) { innerPadding ->
@@ -294,7 +295,7 @@ private fun DocumentImportDialog(
                         .fillMaxWidth()
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                     label = { Text(stringResource(R.string.document_category)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoryExpanded) },
+                    trailingIcon = { DropdownTrailingIcon(categoryExpanded) },
                 )
                 ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
                     availableCategories.forEach { candidate ->

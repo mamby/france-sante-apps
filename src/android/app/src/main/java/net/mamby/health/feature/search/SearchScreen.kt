@@ -10,8 +10,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -23,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.WindowInsetsRulers
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.util.UUID
 import net.mamby.health.R
@@ -96,7 +95,12 @@ fun SearchScreen(
                     onValueChange = onQueryChanged,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            painterResource(R.drawable.ic_lucide_search),
+                            contentDescription = null,
+                        )
+                    },
                     label = {
                         Text(
                             stringResource(
