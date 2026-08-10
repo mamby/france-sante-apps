@@ -5,7 +5,6 @@ import java.io.OutputStream
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.StateFlow
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectoryEntry
@@ -21,7 +20,7 @@ import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
-import net.mamby.health.core.model.Reminder
+import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.Vaccination
 
 sealed interface VaultState {
@@ -135,17 +134,13 @@ interface VaultRepository {
 
     suspend fun deleteMedication(profileId: UUID, medicationId: UUID)
 
-    suspend fun upsertAppointment(profileId: UUID, appointment: Appointment)
+    suspend fun upsertSchedule(schedule: Schedule)
 
-    suspend fun deleteAppointment(profileId: UUID, appointmentId: UUID)
+    suspend fun deleteSchedule(scheduleId: UUID)
 
     suspend fun upsertVaccination(profileId: UUID, vaccination: Vaccination)
 
     suspend fun deleteVaccination(profileId: UUID, vaccinationId: UUID)
-
-    suspend fun upsertReminder(profileId: UUID, reminder: Reminder)
-
-    suspend fun deleteReminder(profileId: UUID, reminderId: UUID)
 
     suspend fun upsertHealthNote(note: HealthNote)
 

@@ -67,9 +67,8 @@ enum class ReminderRecurrence {
 enum class VaultItemKind {
     DOCUMENT,
     MEDICATION,
-    APPOINTMENT,
+    SCHEDULE,
     VACCINATION,
-    REMINDER,
     NOTE,
     MEASUREMENT,
     DIRECTORY_ENTRY,
@@ -323,17 +322,83 @@ data class Medication(
 )
 
 @Serializable
-data class Appointment(
+sealed interface ScheduleTiming {
+    @Serializable
+    @SerialName("instantTimed")
+    data class InstantTimed(
+        val startsAt: Instant,
+        val endsAt: Instant? = null,
+    ) : ScheduleTiming
+
+    @Serializable
+    @SerialName("localTimed")
+    data class LocalTimed(
+        val startsOn: LocalDate,
+        val timeOfDay: LocalTime,
+        val durationMinutes: Long? = null,
+    ) : ScheduleTiming
+
+    @Serializable
+    @SerialName("allDay")
+    data class AllDay(
+        val startsOn: LocalDate,
+        val endsOn: LocalDate? = null,
+    ) : ScheduleTiming
+}
+
+@Serializable
+sealed interface ScheduleRecurrence {
+    val repeatUntil: LocalDate?
+
+    @Serializable
+    @SerialName("none")
+    data object None : ScheduleRecurrence {
+        override val repeatUntil: LocalDate? = null
+    }
+
+    @Serializable
+    @SerialName("daily")
+    data class Daily(override val repeatUntil: LocalDate? = null) : ScheduleRecurrence
+
+    @Serializable
+    @SerialName("weekly")
+    data class Weekly(
+        val daysOfWeek: Set<DayOfWeek>,
+        override val repeatUntil: LocalDate? = null,
+    ) : ScheduleRecurrence
+
+    @Serializable
+    @SerialName("monthly")
+    data class Monthly(
+        val dayOfMonth: Int,
+        override val repeatUntil: LocalDate? = null,
+    ) : ScheduleRecurrence
+}
+
+@Serializable
+sealed interface ScheduleAlert {
+    @Serializable
+    @SerialName("timed")
+    data class Timed(val minutesBefore: Long) : ScheduleAlert
+
+    @Serializable
+    @SerialName("allDay")
+    data class AllDay(
+        val daysBefore: Int,
+        val timeOfDay: LocalTime,
+    ) : ScheduleAlert
+}
+
+@Serializable
+data class Schedule(
     val id: UUID,
     val title: String,
-    val clinician: String,
-    val location: String,
-    val startsAt: Instant,
-    val relatedDocumentIds: List<UUID> = emptyList(),
-    val clinicianEntryId: UUID? = null,
-    val facilityEntryId: UUID? = null,
+    val timing: ScheduleTiming,
+    val recurrence: ScheduleRecurrence = ScheduleRecurrence.None,
+    val alert: ScheduleAlert? = null,
+    val people: List<String> = emptyList(),
+    val location: String? = null,
     val notes: String? = null,
-    val reminderLeadMinutes: Long? = null,
     val updatedAt: Instant,
 )
 
@@ -346,20 +411,6 @@ data class Vaccination(
     val providerEntryId: UUID? = null,
     val lotNumber: String? = null,
     val nextDueOn: LocalDate? = null,
-    val notes: String? = null,
-    val updatedAt: Instant,
-)
-
-@Serializable
-data class Reminder(
-    val id: UUID,
-    val title: String,
-    val startsOn: LocalDate,
-    val timeOfDay: LocalTime,
-    val recurrence: ReminderRecurrence = ReminderRecurrence.NONE,
-    val daysOfWeek: Set<DayOfWeek> = emptySet(),
-    val endsOn: LocalDate? = null,
-    val isEnabled: Boolean = true,
     val notes: String? = null,
     val updatedAt: Instant,
 )
@@ -385,9 +436,7 @@ data class ProfileRecord(
     val profile: HealthProfile,
     val documents: List<MedicalDocument> = emptyList(),
     val medications: List<Medication> = emptyList(),
-    val appointments: List<Appointment> = emptyList(),
     val vaccinations: List<Vaccination> = emptyList(),
-    val reminders: List<Reminder> = emptyList(),
     val measurements: List<HealthMeasurement> = emptyList(),
     val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
     val careDirectory: List<CareDirectoryEntry> = emptyList(),
@@ -404,10 +453,11 @@ data class HealthVault(
     val revision: Long,
     val profiles: List<ProfileRecord>,
     val notes: List<HealthNote> = emptyList(),
+    val schedules: List<Schedule> = emptyList(),
     val updatedAt: Instant,
 ) {
     companion object {
-        const val CURRENT_VERSION: Int = 4
+        const val CURRENT_VERSION: Int = 5
 
         fun empty(
             now: Instant,

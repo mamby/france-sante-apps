@@ -1,5 +1,7 @@
 package net.mamby.health.notifications
 
+import java.time.Instant
+
 interface ReminderScheduler {
     suspend fun schedule(request: ReminderRequest)
 
@@ -14,4 +16,7 @@ interface ReminderScheduler {
 
 interface ReminderSource {
     suspend fun activeReminderRequests(): List<ReminderRequest>
+
+    suspend fun requestForDelivery(scheduleKey: String, scheduledOccurrence: Instant): ReminderRequest? =
+        activeReminderRequests().firstOrNull { ReminderScheduleKey.from(it.id) == scheduleKey }
 }

@@ -2,6 +2,7 @@ package net.mamby.health.feature.summary
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -114,7 +115,7 @@ fun SummaryScreen(
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
             contentPadding = innerPadding.withScreenPadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),

@@ -1,10 +1,13 @@
 package net.mamby.health.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalGridApi
 import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.GridTrackSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -14,17 +17,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,46 +56,96 @@ fun AppNavigationSuite(
     content: @Composable () -> Unit,
 ) {
     val usesMore = layoutType == NavigationSuiteType.ShortNavigationBarCompact
-    NavigationSuiteScaffold(
-        layoutType = layoutType,
-        containerColor = Color.Transparent,
-        navigationSuiteColors = NavigationSuiteDefaults.colors(
-            shortNavigationBarContainerColor = Color.Transparent,
-            navigationBarContainerColor = Color.Transparent,
-            navigationRailContainerColor = Color.Transparent,
-            navigationDrawerContainerColor = Color.Transparent,
+    val navigationSuiteColors = NavigationSuiteDefaults.colors(
+        shortNavigationBarContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(
+            alpha = UiTokens.CompactNavigationContainerAlpha,
         ),
-        navigationSuiteItems = {
-            (if (usesMore) TopLevelDestination.compactPrimary else TopLevelDestination.entries)
-                .forEach { destination ->
-                val selected = !isMoreSelected && selectedDestination == destination
-                item(
-                    selected = selected,
-                    onClick = { onDestinationSelected(destination) },
-                    icon = {
-                        val label = stringResource(destination.label)
-                        NavigationIcon(
-                            imageVector = if (selected) destination.selectedIcon else destination.icon,
-                            label = label,
-                        )
-                    },
-                )
-            }
-            if (usesMore) {
-                item(
-                    selected = isMoreSelected,
-                    onClick = onMoreSelected,
-                    icon = {
-                        NavigationIcon(
-                            imageVector = Icons.Outlined.MoreHoriz,
-                            label = stringResource(R.string.action_more),
-                        )
-                    },
-                )
-            }
-        },
-        content = content,
+        shortNavigationBarContentColor = MaterialTheme.colorScheme.onSurface,
+        navigationBarContainerColor = Color.Transparent,
+        navigationRailContainerColor = Color.Transparent,
+        navigationDrawerContainerColor = Color.Transparent,
     )
+    val navigationItems: @Composable () -> Unit = {
+        AppNavigationItems(
+            selectedDestination = selectedDestination,
+            layoutType = layoutType,
+            usesMore = usesMore,
+            isMoreSelected = isMoreSelected,
+            onDestinationSelected = onDestinationSelected,
+            onMoreSelected = onMoreSelected,
+        )
+    }
+
+    if (usesMore) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = {
+                NavigationSuite(
+                    navigationSuiteType = layoutType,
+                    colors = navigationSuiteColors,
+                    content = navigationItems,
+                )
+            },
+        ) { padding ->
+            CompositionLocalProvider(
+                LocalBottomTabBarInsets provides WindowInsets(
+                    bottom = padding.calculateBottomPadding(),
+                ),
+            ) {
+                Box(Modifier.fillMaxSize()) { content() }
+            }
+        }
+    } else {
+        NavigationSuiteScaffold(
+            navigationItems = navigationItems,
+            navigationSuiteType = layoutType,
+            containerColor = Color.Transparent,
+            navigationSuiteColors = navigationSuiteColors,
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun AppNavigationItems(
+    selectedDestination: TopLevelDestination,
+    layoutType: NavigationSuiteType,
+    usesMore: Boolean,
+    isMoreSelected: Boolean,
+    onDestinationSelected: (TopLevelDestination) -> Unit,
+    onMoreSelected: () -> Unit,
+) {
+    (if (usesMore) TopLevelDestination.compactPrimary else TopLevelDestination.entries)
+        .forEach { destination ->
+            val selected = !isMoreSelected && selectedDestination == destination
+            NavigationSuiteItem(
+                selected = selected,
+                onClick = { onDestinationSelected(destination) },
+                icon = {
+                    NavigationIcon(
+                        imageVector = if (selected) destination.selectedIcon else destination.icon,
+                        label = stringResource(destination.label),
+                    )
+                },
+                label = null,
+                navigationSuiteType = layoutType,
+            )
+        }
+    if (usesMore) {
+        NavigationSuiteItem(
+            selected = isMoreSelected,
+            onClick = onMoreSelected,
+            icon = {
+                NavigationIcon(
+                    imageVector = Icons.Outlined.MoreHoriz,
+                    label = stringResource(R.string.action_more),
+                )
+            },
+            label = null,
+            navigationSuiteType = layoutType,
+        )
+    }
 }
 
 internal fun appNavigationSuiteType(adaptiveInfo: WindowAdaptiveInfo): NavigationSuiteType =

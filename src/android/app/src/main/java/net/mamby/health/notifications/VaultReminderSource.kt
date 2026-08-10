@@ -1,11 +1,13 @@
 package net.mamby.health.notifications
 
+import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.Medication
-import net.mamby.health.core.model.Reminder
 import net.mamby.health.core.model.ReminderRecurrence as VaultRecurrence
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleCalculator
 import net.mamby.health.data.VaultRepository
 import net.mamby.health.data.VaultState
 
@@ -13,10 +15,10 @@ import net.mamby.health.data.VaultState
 class VaultReminderSource @Inject constructor(
     private val vaultRepository: VaultRepository,
     private val zoneIdProvider: ZoneIdProvider,
+    private val clock: Clock,
 ) : ReminderSource {
     override suspend fun activeReminderRequests(): List<ReminderRequest> {
-        if (vaultRepository.state.value is VaultState.Loading) vaultRepository.initialize()
-        val vault = (vaultRepository.state.value as? VaultState.Ready)?.vault ?: return emptyList()
+        val vault = readyVault() ?: return emptyList()
         return buildList {
             vault.profiles.forEach { record ->
                 val profileId = record.profile.id.toString()
@@ -25,25 +27,42 @@ class VaultReminderSource @Inject constructor(
                     .filter { it.isActive && it.remindersEnabled }
                     .flatMap { medicationRequests(profileId, it) }
                     .forEach(::add)
-                record.appointments.mapNotNull { appointmentRequest(profileId, it) }.forEach(::add)
-                record.reminders
-                    .filter(Reminder::isEnabled)
-                    .mapNotNull { generalRequest(profileId, it) }
-                    .forEach(::add)
             }
+            vault.schedules.mapNotNull(::scheduleRequest).forEach(::add)
         }
+    }
+
+    override suspend fun requestForDelivery(
+        scheduleKey: String,
+        scheduledOccurrence: Instant,
+    ): ReminderRequest? {
+        val vault = readyVault() ?: return null
+        vault.profiles.forEach { record ->
+            val profileId = record.profile.id.toString()
+            record.medications
+                .asSequence()
+                .filter { it.isActive && it.remindersEnabled }
+                .flatMap { medicationRequests(profileId, it) }
+                .firstOrNull { ReminderScheduleKey.from(it.id) == scheduleKey }
+                ?.let { return it }
+        }
+        val schedule = vault.schedules.firstOrNull {
+            ReminderScheduleKey.from("schedule:${it.id}") == scheduleKey
+        } ?: return null
+        val expected = ScheduleCalculator.nextAlert(
+            schedule,
+            scheduledOccurrence.minusNanos(1),
+            zoneIdProvider.current(),
+        ) ?: return null
+        return scheduleRequest(schedule, scheduledOccurrence)
+            .takeIf { expected.toEpochMilli() == scheduledOccurrence.toEpochMilli() }
     }
 
     private fun medicationRequests(profileId: String, medication: Medication): Sequence<ReminderRequest> =
         medication.schedule.reminderTimes.asSequence().mapNotNull { localTime ->
             val recurrence = when (medication.schedule.recurrence) {
                 VaultRecurrence.NONE -> medication.schedule.startsOn?.let { startsOn ->
-                    ReminderRecurrence.Once(
-                        startsOn
-                            .atTime(localTime)
-                            .atZone(zoneIdProvider.current())
-                            .toInstant(),
-                    )
+                    ReminderRecurrence.Once(startsOn.atTime(localTime).atZone(zoneIdProvider.current()).toInstant())
                 }
                 VaultRecurrence.DAILY -> ReminderRecurrence.Daily(
                     localTime = localTime,
@@ -73,9 +92,7 @@ class VaultReminderSource @Inject constructor(
             } ?: return@mapNotNull null
             ReminderRequest(
                 id = "profile:$profileId:medication:${medication.id}:$localTime",
-                profileId = profileId,
-                type = ReminderType.MEDICATION,
-                targetId = medication.id.toString(),
+                target = ReminderTarget.Medication(profileId, medication.id.toString()),
                 title = medication.name,
                 message = listOf(medication.dose, medication.instructions)
                     .filter(String::isNotBlank)
@@ -84,62 +101,25 @@ class VaultReminderSource @Inject constructor(
             )
         }
 
-    private fun appointmentRequest(profileId: String, appointment: Appointment): ReminderRequest? {
-        val leadMinutes = appointment.reminderLeadMinutes ?: return null
-        if (leadMinutes < 0) return null
-        return ReminderRequest(
-            id = "profile:$profileId:appointment:${appointment.id}",
-            profileId = profileId,
-            type = ReminderType.APPOINTMENT,
-            targetId = appointment.id.toString(),
-            title = appointment.title,
-            message = listOf(appointment.clinician, appointment.location)
-                .filter(String::isNotBlank)
-                .joinToString(SEPARATOR),
-            recurrence = ReminderRecurrence.Once(
-                appointment.startsAt.minusSeconds(Math.multiplyExact(leadMinutes, 60L)),
-            ),
-        )
+    private fun scheduleRequest(schedule: Schedule): ReminderRequest? {
+        val occurrence = ScheduleCalculator.nextAlert(schedule, clock.instant(), zoneIdProvider.current()) ?: return null
+        return scheduleRequest(schedule, occurrence)
     }
 
-    private fun generalRequest(profileId: String, reminder: Reminder): ReminderRequest? {
-        val recurrence = when (reminder.recurrence) {
-            VaultRecurrence.NONE -> ReminderRecurrence.Once(
-                reminder.startsOn
-                    .atTime(reminder.timeOfDay)
-                    .atZone(zoneIdProvider.current())
-                    .toInstant(),
-            )
-            VaultRecurrence.DAILY -> ReminderRecurrence.Daily(
-                localTime = reminder.timeOfDay,
-                startDate = reminder.startsOn,
-                endDate = reminder.endsOn,
-            )
-            VaultRecurrence.WEEKLY -> {
-                val days = reminder.daysOfWeek.ifEmpty { setOf(reminder.startsOn.dayOfWeek) }
-                ReminderRecurrence.Weekly(
-                    isoDaysOfWeek = days.mapTo(mutableSetOf()) { it.value },
-                    localTime = reminder.timeOfDay,
-                    startDate = reminder.startsOn,
-                    endDate = reminder.endsOn,
-                )
-            }
-            VaultRecurrence.MONTHLY -> ReminderRecurrence.Monthly(
-                dayOfMonth = reminder.startsOn.dayOfMonth,
-                localTime = reminder.timeOfDay,
-                startDate = reminder.startsOn,
-                endDate = reminder.endsOn,
-            )
-        }
-        return ReminderRequest(
-            id = "profile:$profileId:reminder:${reminder.id}",
-            profileId = profileId,
-            type = ReminderType.GENERAL,
-            targetId = reminder.id.toString(),
-            title = reminder.title,
-            message = reminder.notes.orEmpty(),
-            recurrence = recurrence,
+    private fun scheduleRequest(schedule: Schedule, occurrence: Instant): ReminderRequest =
+        ReminderRequest(
+            id = "schedule:${schedule.id}",
+            target = ReminderTarget.Schedule(schedule.id.toString()),
+            title = schedule.title,
+            message = listOf(schedule.people.joinToString(), schedule.location.orEmpty())
+                .filter(String::isNotBlank)
+                .joinToString(SEPARATOR),
+            recurrence = ReminderRecurrence.Once(occurrence),
         )
+
+    private suspend fun readyVault(): net.mamby.health.core.model.HealthVault? {
+        if (vaultRepository.state.value is VaultState.Loading) vaultRepository.initialize()
+        return (vaultRepository.state.value as? VaultState.Ready)?.vault
     }
 
     private companion object {

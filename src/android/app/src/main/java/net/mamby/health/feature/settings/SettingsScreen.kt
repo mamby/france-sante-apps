@@ -7,6 +7,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -97,8 +98,9 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {

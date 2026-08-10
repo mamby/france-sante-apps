@@ -8,7 +8,6 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.coroutines.test.runTest
 import net.mamby.health.core.model.BuiltInDocumentCategory
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectiveKind
 import net.mamby.health.core.model.CareDirectoryEntry
@@ -24,6 +23,8 @@ import net.mamby.health.core.model.MeasurementUnitRef
 import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.Medication
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.core.model.profileRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -185,19 +186,6 @@ class DefaultVaultRepositoryTest {
             ),
             importedPdf(),
         )
-        repository.upsertAppointment(
-            profileId,
-            Appointment(
-                UUID.randomUUID(),
-                "Visit",
-                "Dr Martin",
-                "Clinic",
-                now,
-                relatedDocumentIds = listOf(document.id),
-                clinicianEntryId = doctorId,
-                updatedAt = Instant.EPOCH,
-            ),
-        )
         repository.upsertCareDirective(
             profileId,
             CareDirective(
@@ -219,8 +207,6 @@ class DefaultVaultRepositoryTest {
         assertEquals(null, afterDirectoryRecord.profile.primaryDoctorEntryId)
         assertEquals(null, afterDirectoryRecord.documents.single().sourceEntryId)
         assertEquals("Dr Martin", afterDirectoryRecord.documents.single().source)
-        assertEquals(null, afterDirectoryRecord.appointments.single().clinicianEntryId)
-        assertEquals("Dr Martin", afterDirectoryRecord.appointments.single().clinician)
 
         val beforeDocumentDelete = afterDirectoryDelete.revision
         repository.deleteDocument(profileId, document.id)
@@ -228,8 +214,41 @@ class DefaultVaultRepositoryTest {
         val afterDocumentRecord = afterDocumentDelete.profileRecord(profileId)
         assertEquals(beforeDocumentDelete + 1, afterDocumentDelete.revision)
         assertTrue(afterDocumentRecord.documents.isEmpty())
-        assertTrue(afterDocumentRecord.appointments.single().relatedDocumentIds.isEmpty())
         assertTrue(afterDocumentRecord.directives.single().relatedDocumentIds.isEmpty())
+    }
+
+    @Test
+    fun schedulesNormalizePeopleAndRemainIndependentOfProfileChanges() = runTest {
+        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
+        repository.initialize()
+        repository.createVault("Owner")
+        val initial = repository.exportSnapshot().profiles.single().profile
+        val scheduleId = UUID.randomUUID()
+
+        repository.upsertSchedule(
+            Schedule(
+                id = scheduleId,
+                title = "  Check-in  ",
+                timing = ScheduleTiming.InstantTimed(now.plusSeconds(3_600)),
+                people = listOf(" Owner ", "owner", " Guest "),
+                location = "  ",
+                notes = " Bring records ",
+                updatedAt = Instant.EPOCH,
+            ),
+        )
+        repository.updateProfile(initial.id, initial.copy(displayName = "Renamed"))
+        repository.addProfile("Second")
+        repository.deleteProfile(initial.id)
+
+        val stored = repository.exportSnapshot().schedules.single()
+        assertEquals(scheduleId, stored.id)
+        assertEquals("Check-in", stored.title)
+        assertEquals(listOf("Owner", "Guest"), stored.people)
+        assertEquals(null, stored.location)
+        assertEquals("Bring records", stored.notes)
+
+        repository.deleteSchedule(scheduleId)
+        assertTrue(repository.exportSnapshot().schedules.isEmpty())
     }
 
     @Test

@@ -13,13 +13,13 @@
 
 Personal health vault. Local-first, encrypted, and fully user-controlled. No backend, no tracking, no cloud required.
 
-Personal Health Vault is a privacy-first health app for iOS, Android, Windows, and macOS. It helps people organize personal medical records, documents, treatments, appointments, reminders, health measurements, notes, care contacts, directives, identifiers, and health summaries while keeping their health data on their own devices.
+Personal Health Vault is a privacy-first health app for iOS, Android, Windows, and macOS. It helps people organize personal medical records, documents, treatments, a flexible personal schedule, health measurements, notes, care contacts, directives, identifiers, and health summaries while keeping their health data on their own devices.
 
 ## Project Status
 
 This project is in early development.
 
-The current Android application provides a local-first foundation with encrypted multi-profile records, document import, reminders, and user-controlled encrypted backup and restore.
+The current Android application provides a local-first foundation with encrypted multi-profile records, document import, medication notifications, a vault-level schedule, and user-controlled encrypted backup and restore.
 
 Personal Health Vault is not ready for production use with real medical data yet.
 
@@ -41,7 +41,7 @@ Personal Health Vault is designed to help users keep a private, structured copy 
 
 - Medical documents
 - Treatments and medications
-- A unified schedule for appointments and reminders
+- A generic schedule for timed, all-day, and recurring entries with optional people and alerts
 - Vaccinations
 - Emergency contacts
 - Independent health notes

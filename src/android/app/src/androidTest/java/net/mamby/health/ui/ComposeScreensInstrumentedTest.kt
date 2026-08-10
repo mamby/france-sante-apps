@@ -4,8 +4,21 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -13,7 +26,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -21,22 +38,29 @@ import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.WindowInsets
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.core.graphics.Insets
+import androidx.core.view.WindowInsetsCompat
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -46,7 +70,12 @@ import java.util.UUID
 import net.mamby.health.MainActivity
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthVault
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.feature.dashboard.DashboardScreen
+import net.mamby.health.feature.schedule.ScheduleScreen
+import net.mamby.health.feature.search.SearchFilter
+import net.mamby.health.feature.search.SearchScreen
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppNavigationState
 import net.mamby.health.navigation.DirectoryEntryDetailRoute
@@ -64,6 +93,8 @@ import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.SwitchField
+import net.mamby.health.ui.components.appContentWindowInsets
+import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -84,24 +115,25 @@ class ComposeScreensInstrumentedTest {
                 DashboardScreen(
                     records = emptyVault("Amina").profiles,
                     notes = emptyList(),
+                    schedules = emptyList(),
                     clock = FIXED_CLOCK,
                     zoneId = ZoneOffset.UTC,
                     onMedications = {},
                     onSchedule = {},
                     onDocumentSelected = { _, _ -> },
                     onNoteSelected = {},
+                    onScheduleSelected = {},
                     onAddHealthInfo = {},
                     onImportDocument = {},
                     onAddMedication = {},
-                    onAddAppointment = {},
+                    onAddSchedule = {},
                 )
             }
         }
 
         listOf(
             R.string.no_scheduled_medication,
-            R.string.no_upcoming_appointment,
-            R.string.no_active_reminder,
+            R.string.no_upcoming_schedule,
             R.string.getting_started_title,
             R.string.add_medication,
         ).forEach { stringId ->
@@ -121,16 +153,18 @@ class ComposeScreensInstrumentedTest {
                 DashboardScreen(
                     records = emptyVault("Amina").profiles,
                     notes = emptyList(),
+                    schedules = emptyList(),
                     clock = FIXED_CLOCK,
                     zoneId = ZoneOffset.UTC,
                     onMedications = { medicationsOpened = true },
                     onSchedule = { scheduleOpened = true },
                     onDocumentSelected = { _, _ -> },
                     onNoteSelected = {},
+                    onScheduleSelected = {},
                     onAddHealthInfo = {},
                     onImportDocument = {},
                     onAddMedication = {},
-                    onAddAppointment = {},
+                    onAddSchedule = {},
                 )
             }
         }
@@ -141,6 +175,38 @@ class ComposeScreensInstrumentedTest {
             assertTrue(medicationsOpened)
             assertTrue(scheduleOpened)
         }
+    }
+
+    @Test
+    fun scheduleIsVaultScopedAndUsesProfileNamesOnlyAsPeopleSuggestions() {
+        val schedule = Schedule(
+            id = UUID.randomUUID(),
+            title = "School meeting",
+            timing = ScheduleTiming.InstantTimed(FIXED_CLOCK.instant().plusSeconds(3_600)),
+            people = listOf("Guest"),
+            updatedAt = FIXED_CLOCK.instant(),
+        )
+        composeRule.setContent {
+            HealthVaultTheme {
+                ScheduleScreen(
+                    schedules = listOf(schedule),
+                    profileNames = listOf("Amina"),
+                    today = LocalDate.of(2026, 7, 30),
+                    now = FIXED_CLOCK.instant(),
+                    zoneId = ZoneOffset.UTC,
+                    notificationsBlocked = false,
+                    onUpsert = {},
+                    onSelected = {},
+                    onOpenNotificationSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("School meeting").assertIsDisplayed()
+        composeRule.onAllNodesWithText(composeRule.activity.getString(R.string.all_profiles)).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_schedule)).performClick()
+        composeRule.onNodeWithText("Amina").assertExists()
+        composeRule.onAllNodesWithText(composeRule.activity.getString(R.string.choose_profile)).assertCountEquals(0)
     }
 
     @Test
@@ -192,22 +258,24 @@ class ComposeScreensInstrumentedTest {
                     DashboardScreen(
                         records = emptyVault("Expanded").profiles,
                         notes = emptyList(),
+                        schedules = emptyList(),
                         clock = FIXED_CLOCK,
                         zoneId = ZoneOffset.UTC,
                         onMedications = {},
                         onSchedule = {},
                         onDocumentSelected = { _, _ -> },
                         onNoteSelected = {},
+                        onScheduleSelected = {},
                         onAddHealthInfo = {},
                         onImportDocument = {},
                         onAddMedication = {},
-                        onAddAppointment = {},
+                        onAddSchedule = {},
                     )
                 }
             }
         }
 
-        listOf(R.string.documents_metric, R.string.medications_metric, R.string.appointments_metric)
+        listOf(R.string.documents_metric, R.string.medications_metric, R.string.schedules_metric)
             .forEach { composeRule.onNodeWithText(composeRule.activity.getString(it)).assertIsDisplayed() }
     }
 
@@ -305,6 +373,227 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
+    fun compactNavigationOverlaysFullHeightContent() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                        isMoreSelected = false,
+                        onDestinationSelected = {},
+                        onMoreSelected = {},
+                    ) {
+                        Box(Modifier.fillMaxSize().testTag(NAVIGATION_CONTENT_TAG))
+                    }
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val contentBounds = composeRule
+            .onNodeWithTag(NAVIGATION_CONTENT_TAG, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val homeIconBounds = composeRule
+            .onNodeWithContentDescription(
+                composeRule.activity.getString(R.string.nav_home),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertEquals(rootBounds.bottom, contentBounds.bottom, 0.5f)
+        assertTrue(contentBounds.bottom > homeIconBounds.bottom)
+    }
+
+    @Test
+    fun compactNavigationBarCompositesOverUnderlyingPixels() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme(darkTheme = false) {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                        isMoreSelected = false,
+                        onDestinationSelected = {},
+                        onMoreSelected = {},
+                    ) {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f).fillMaxSize().background(Color.Red))
+                            Box(Modifier.weight(1f).fillMaxSize().background(Color.Blue))
+                        }
+                    }
+                }
+            }
+        }
+
+        val pixels = composeRule.onRoot().captureToImage().toPixelMap()
+        val sampleY = pixels.height - 2
+        val overRed = pixels[2, sampleY]
+        val overBlue = pixels[pixels.width - 3, sampleY]
+
+        assertTrue(overRed.green > 0.5f && overBlue.green > 0.5f)
+        assertTrue(overRed.red > overBlue.red + 0.1f)
+        assertTrue(overBlue.blue > overRed.blue + 0.1f)
+    }
+
+    @Test
+    fun finalListItemAndFloatingActionClearCompactNavigationBar() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                        isMoreSelected = false,
+                        onDestinationSelected = {},
+                        onMoreSelected = {},
+                    ) {
+                        AppScreenScaffold(
+                            title = "Clearance",
+                            floatingActionButton = {
+                                FloatingActionButton(
+                                    onClick = {},
+                                    modifier = Modifier.testTag(FLOATING_ACTION_TAG),
+                                ) { Text("+") }
+                            },
+                        ) { padding ->
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .consumeWindowInsets(padding),
+                                contentPadding = padding.withScreenPadding(),
+                            ) {
+                                items((0 until 30).toList()) { index ->
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .then(
+                                                if (index == 29) {
+                                                    Modifier.testTag(FINAL_ITEM_TAG)
+                                                } else {
+                                                    Modifier
+                                                },
+                                            ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(FINAL_ITEM_TAG).performScrollTo()
+        val finalItemBounds = composeRule.onNodeWithTag(FINAL_ITEM_TAG).fetchSemanticsNode().boundsInRoot
+        val floatingActionBounds = composeRule
+            .onNodeWithTag(FLOATING_ACTION_TAG)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val homeIconBounds = composeRule
+            .onNodeWithContentDescription(
+                composeRule.activity.getString(R.string.nav_home),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(finalItemBounds.bottom <= floatingActionBounds.top)
+        assertTrue(floatingActionBounds.bottom < homeIconBounds.top)
+    }
+
+    @Test
+    fun rootSnackbarClearsCompactNavigationBar() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                        isMoreSelected = false,
+                        onDestinationSelected = {},
+                        onMoreSelected = {},
+                    ) {
+                        Box(Modifier.fillMaxSize()) {
+                            Snackbar(
+                                modifier = Modifier
+                                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                                    .windowInsetsPadding(appContentWindowInsets())
+                                    .padding(16.dp)
+                                    .testTag(SNACKBAR_TAG),
+                            ) { Text("Notice") }
+                        }
+                    }
+                }
+            }
+        }
+
+        val snackbarBounds = composeRule.onNodeWithTag(SNACKBAR_TAG).fetchSemanticsNode().boundsInRoot
+        val homeIconBounds = composeRule
+            .onNodeWithContentDescription(
+                composeRule.activity.getString(R.string.nav_home),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(snackbarBounds.bottom < homeIconBounds.top)
+    }
+
+    @Test
+    fun searchViewportFitsInsideImeInsetAndRemainsEditable() {
+        var submittedQuery = ""
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                val imeBottom = with(LocalDensity.current) { 300.dp.roundToPx() }
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.WindowInsets(
+                        WindowInsetsCompat.Builder()
+                            .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, imeBottom))
+                            .setVisible(WindowInsetsCompat.Type.ime(), true)
+                            .build(),
+                    ),
+                ) {
+                    HealthVaultTheme {
+                        SearchScreen(
+                            records = emptyVault("Amina").profiles,
+                            notes = emptyList(),
+                            schedules = emptyList(),
+                            onResultSelected = {},
+                            query = "",
+                            filter = SearchFilter.ALL,
+                            onQueryChanged = { submittedQuery = it },
+                            onFilterChanged = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val searchViewportBounds = composeRule
+            .onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollBy),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNodes()
+            .maxBy { it.boundsInRoot.width * it.boundsInRoot.height }
+            .boundsInRoot
+        val rootHeight = rootBounds.bottom - rootBounds.top
+
+        assertTrue(searchViewportBounds.bottom <= rootBounds.bottom - rootHeight * 0.25f)
+        composeRule
+            .onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsActions.SetText),
+                useUnmergedTree = true,
+            )[0]
+            .performTextInput("A")
+        composeRule.runOnIdle { assertEquals("A", submittedQuery) }
+    }
+
+    @Test
     fun compactNavigationSelectsOnlyMoreForMoreDestinations() {
         composeRule.setContent {
             HealthVaultTheme {
@@ -349,6 +638,41 @@ class ComposeScreensInstrumentedTest {
         composeRule
             .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_more))
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun expandedNavigationRailReservesSpaceBesideContent() {
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(900.dp, 1_000.dp))) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    HealthVaultTheme {
+                        AppNavigationSuite(
+                            selectedDestination = TopLevelDestination.Home,
+                            layoutType = NavigationSuiteType.NavigationRail,
+                            isMoreSelected = false,
+                            onDestinationSelected = {},
+                            onMoreSelected = {},
+                        ) {
+                            Box(Modifier.fillMaxSize().testTag(NAVIGATION_CONTENT_TAG))
+                        }
+                    }
+                }
+            }
+        }
+
+        val contentBounds = composeRule
+            .onNodeWithTag(NAVIGATION_CONTENT_TAG, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val homeIconBounds = composeRule
+            .onNodeWithContentDescription(
+                composeRule.activity.getString(R.string.nav_home),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(contentBounds.left >= homeIconBounds.right)
     }
 
     @Test
@@ -451,6 +775,10 @@ class ComposeScreensInstrumentedTest {
     )
 
     private companion object {
+        const val FINAL_ITEM_TAG = "final-item"
+        const val FLOATING_ACTION_TAG = "floating-action"
+        const val NAVIGATION_CONTENT_TAG = "navigation-content"
+        const val SNACKBAR_TAG = "root-snackbar"
         val PROFILE_ID: UUID = UUID.fromString("44e15584-8158-4bf8-bf26-dd7358f392cf")
         val FIXED_INSTANT: Instant = Instant.parse("2026-07-30T08:00:00Z")
         val FIXED_CLOCK: Clock = Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC)

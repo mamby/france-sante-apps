@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.EmergencyContact
@@ -24,7 +23,6 @@ import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
-import net.mamby.health.core.model.Reminder
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.data.ImportedDocumentData
 import net.mamby.health.data.MedicalDocumentDraft

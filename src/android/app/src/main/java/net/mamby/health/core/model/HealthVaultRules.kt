@@ -21,9 +21,7 @@ fun ProfileRecord.summary(): HealthSummary = HealthSummary(
 fun ProfileRecord.index(): List<VaultItem> = buildList {
     documents.mapTo(this) { VaultItem(it.id, VaultItemKind.DOCUMENT, it.title, it.updatedAt) }
     medications.mapTo(this) { VaultItem(it.id, VaultItemKind.MEDICATION, it.name, it.updatedAt) }
-    appointments.mapTo(this) { VaultItem(it.id, VaultItemKind.APPOINTMENT, it.title, it.updatedAt) }
     vaccinations.mapTo(this) { VaultItem(it.id, VaultItemKind.VACCINATION, it.name, it.updatedAt) }
-    reminders.mapTo(this) { VaultItem(it.id, VaultItemKind.REMINDER, it.title, it.updatedAt) }
     measurements.mapTo(this) { measurement ->
         VaultItem(
             measurement.id,
@@ -62,6 +60,10 @@ fun HealthVault.profileRecord(profileId: java.util.UUID): ProfileRecord =
 
 fun HealthVault.allDocuments(): List<MedicalDocument> = profiles.flatMap(ProfileRecord::documents)
 
+fun HealthVault.scheduleIndex(): List<VaultItem> = schedules
+    .map { VaultItem(it.id, VaultItemKind.SCHEDULE, it.title, it.updatedAt) }
+    .sortedByDescending(VaultItem::updatedAt)
+
 fun HealthVault.requireValid(): HealthVault = apply {
     if (version != HealthVault.CURRENT_VERSION) {
         throw UnsupportedVaultVersionException(version)
@@ -73,10 +75,9 @@ fun HealthVault.requireValid(): HealthVault = apply {
     requireDistinct("document", profiles.flatMap(ProfileRecord::documents).map(MedicalDocument::id))
     requireDistinct("document blob", profiles.flatMap(ProfileRecord::documents).map(MedicalDocument::blobId))
     requireDistinct("medication", profiles.flatMap(ProfileRecord::medications).map(Medication::id))
-    requireDistinct("appointment", profiles.flatMap(ProfileRecord::appointments).map(Appointment::id))
     requireDistinct("vaccination", profiles.flatMap(ProfileRecord::vaccinations).map(Vaccination::id))
-    requireDistinct("reminder", profiles.flatMap(ProfileRecord::reminders).map(Reminder::id))
     requireDistinct("note", notes.map(HealthNote::id))
+    requireDistinct("schedule", schedules.map(Schedule::id))
     requireDistinct("measurement", profiles.flatMap(ProfileRecord::measurements).map(HealthMeasurement::id))
     requireDistinct(
         "custom measurement type",
@@ -108,9 +109,7 @@ fun HealthVault.requireValid(): HealthVault = apply {
                 addAll(record.documents.map(MedicalDocument::id))
                 addAll(record.documents.map(MedicalDocument::blobId))
                 addAll(record.medications.map(Medication::id))
-                addAll(record.appointments.map(Appointment::id))
                 addAll(record.vaccinations.map(Vaccination::id))
-                addAll(record.reminders.map(Reminder::id))
                 addAll(record.measurements.map(HealthMeasurement::id))
                 addAll(record.customMeasurementTypes.map(CustomMeasurementType::id))
                 addAll(record.careDirectory.map(CareDirectoryEntry::id))
@@ -120,6 +119,7 @@ fun HealthVault.requireValid(): HealthVault = apply {
                 addAll(record.customDocumentCategories.map(CustomDocumentCategory::id))
             }
             addAll(notes.map(HealthNote::id))
+            addAll(schedules.map(Schedule::id))
         },
     )
 
@@ -127,6 +127,8 @@ fun HealthVault.requireValid(): HealthVault = apply {
         requireVault(note.title.isNotBlank()) { "Health note title is required." }
         requireVault(note.body.isNotBlank()) { "Health note body is required." }
     }
+
+    schedules.forEach(::requireSchedule)
 
     profiles.forEach { record ->
         requireVault(record.profile.displayName.isNotBlank()) { "Profile name is required." }
@@ -182,21 +184,8 @@ fun HealthVault.requireValid(): HealthVault = apply {
             requireDirectoryReference(directoryById, medication.prescriberEntryId, "medication prescriber")
             requireDirectoryReference(directoryById, medication.pharmacyEntryId, "medication pharmacy")
         }
-        record.appointments.forEach { appointment ->
-            requireVault(appointment.reminderLeadMinutes == null || appointment.reminderLeadMinutes >= 0) {
-                "Appointment reminder lead cannot be negative."
-            }
-            requireVault(appointment.relatedDocumentIds.all(documentIds::contains)) {
-                "Appointment references a document outside its profile."
-            }
-            requireDirectoryReference(directoryById, appointment.clinicianEntryId, "appointment clinician")
-            requireDirectoryReference(directoryById, appointment.facilityEntryId, "appointment facility")
-        }
         record.vaccinations.forEach { vaccination ->
             requireDirectoryReference(directoryById, vaccination.providerEntryId, "vaccination provider")
-        }
-        record.reminders.forEach { reminder ->
-            requireDateRange(reminder.startsOn, reminder.endsOn, "reminder")
         }
         record.measurements.forEach { measurement -> requireMeasurement(record, measurement) }
         record.familyHistory.forEach { entry ->
@@ -259,19 +248,6 @@ object DocumentSearch {
 }
 
 object RecurrenceCalculator {
-    fun nextOccurrence(reminder: Reminder, now: Instant, zoneId: ZoneId): Instant? {
-        if (!reminder.isEnabled) return null
-        return nextOccurrence(
-            recurrence = reminder.recurrence,
-            startsOn = reminder.startsOn,
-            endsOn = reminder.endsOn,
-            timeOfDay = reminder.timeOfDay,
-            daysOfWeek = reminder.daysOfWeek,
-            now = now,
-            zoneId = zoneId,
-        )
-    }
-
     fun nextOccurrence(medication: Medication, now: Instant, zoneId: ZoneId): Instant? {
         if (!medication.isActive) return null
         if (
@@ -368,6 +344,189 @@ object RecurrenceCalculator {
         } catch (error: DateTimeException) {
             throw VaultValidationException("Invalid local reminder time: ${error.message}")
         }
+}
+
+data class ScheduleOccurrence(
+    val startsAt: Instant,
+    val endsAt: Instant?,
+)
+
+object ScheduleCalculator {
+    fun nextOccurrence(schedule: Schedule, after: Instant, zoneId: ZoneId): ScheduleOccurrence? =
+        when (val timing = schedule.timing) {
+            is ScheduleTiming.InstantTimed -> timing.startsAt
+                .takeIf { it.isAfter(after) }
+                ?.let { ScheduleOccurrence(it, timing.endsAt) }
+            is ScheduleTiming.LocalTimed -> nextLocalStart(
+                startsOn = timing.startsOn,
+                timeOfDay = timing.timeOfDay,
+                recurrence = schedule.recurrence,
+                after = after,
+                zoneId = zoneId,
+            )?.let { start ->
+                ScheduleOccurrence(
+                    startsAt = start.toInstant(),
+                    endsAt = timing.durationMinutes?.let { start.plusMinutes(it).toInstant() },
+                )
+            }
+            is ScheduleTiming.AllDay -> nextLocalStart(
+                startsOn = timing.startsOn,
+                timeOfDay = LocalTime.MIDNIGHT,
+                recurrence = schedule.recurrence,
+                after = after,
+                zoneId = zoneId,
+            )?.let { start ->
+                val dayCount = timing.endsOn
+                    ?.let { java.time.temporal.ChronoUnit.DAYS.between(timing.startsOn, it) + 1 }
+                    ?: 1
+                ScheduleOccurrence(start.toInstant(), start.plusDays(dayCount).toInstant())
+            }
+        }
+
+    fun nextAlert(schedule: Schedule, after: Instant, zoneId: ZoneId): Instant? {
+        val alert = schedule.alert ?: return null
+        if (alert is ScheduleAlert.Timed) {
+            val occurrence = nextOccurrence(schedule, after.plusSeconds(alert.minutesBefore * 60), zoneId) ?: return null
+            return occurrence.startsAt.minusSeconds(alert.minutesBefore * 60)
+        }
+        alert as ScheduleAlert.AllDay
+        val startOfToday = after.atZone(zoneId).toLocalDate().atStartOfDay(zoneId).toInstant()
+        var occurrence = nextOccurrence(schedule, startOfToday.minusNanos(1), zoneId) ?: return null
+        repeat(alert.daysBefore + 2) {
+            val candidate = occurrence.startsAt
+                .atZone(zoneId)
+                .toLocalDate()
+                .minusDays(alert.daysBefore.toLong())
+                .atTime(alert.timeOfDay)
+                .atZone(zoneId)
+                .toInstant()
+            if (candidate.isAfter(after)) return candidate
+            occurrence = nextOccurrence(schedule, occurrence.startsAt, zoneId) ?: return null
+        }
+        return null
+    }
+
+    private fun nextLocalStart(
+        startsOn: LocalDate,
+        timeOfDay: LocalTime,
+        recurrence: ScheduleRecurrence,
+        after: Instant,
+        zoneId: ZoneId,
+    ): ZonedDateTime? {
+        val afterAtZone = after.atZone(zoneId)
+        val first = atScheduleZone(startsOn, timeOfDay, zoneId)
+        val candidate = when (recurrence) {
+            ScheduleRecurrence.None -> first.takeIf { it.isAfter(afterAtZone) }
+            is ScheduleRecurrence.Daily -> {
+                if (first.isAfter(afterAtZone)) first else {
+                    val date = afterAtZone.toLocalDate().let { current ->
+                        if (atScheduleZone(current, timeOfDay, zoneId).isAfter(afterAtZone)) current else current.plusDays(1)
+                    }.coerceAtLeast(startsOn)
+                    atScheduleZone(date, timeOfDay, zoneId)
+                }
+            }
+            is ScheduleRecurrence.Weekly -> {
+                var result: ZonedDateTime? = null
+                for (offset in 0L..14L) {
+                    val date = afterAtZone.toLocalDate().plusDays(offset)
+                    if (date.isBefore(startsOn) || date.dayOfWeek !in recurrence.daysOfWeek) continue
+                    val value = atScheduleZone(date, timeOfDay, zoneId)
+                    if (value.isAfter(afterAtZone)) {
+                        result = value
+                        break
+                    }
+                }
+                result
+            }
+            is ScheduleRecurrence.Monthly -> {
+                var month = YearMonth.from(maxOf(startsOn, afterAtZone.toLocalDate()))
+                var result: ZonedDateTime? = null
+                repeat(3) {
+                    val date = month.atDay(recurrence.dayOfMonth.coerceAtMost(month.lengthOfMonth()))
+                    val value = atScheduleZone(date, timeOfDay, zoneId)
+                    if (!date.isBefore(startsOn) && value.isAfter(afterAtZone)) {
+                        result = value
+                        return@repeat
+                    }
+                    month = month.plusMonths(1)
+                }
+                result
+            }
+        } ?: return null
+        return candidate.takeIf { recurrence.repeatUntil == null || !it.toLocalDate().isAfter(recurrence.repeatUntil) }
+    }
+
+    private fun atScheduleZone(date: LocalDate, time: LocalTime, zoneId: ZoneId): ZonedDateTime =
+        try {
+            ZonedDateTime.of(date, time, zoneId)
+        } catch (error: DateTimeException) {
+            throw VaultValidationException("Invalid local schedule time: ${error.message}")
+        }
+}
+
+fun Schedule.normalized(): Schedule {
+    val uniquePeople = linkedMapOf<String, String>()
+    people.map(String::trim).filter(String::isNotEmpty).forEach { name ->
+        uniquePeople.putIfAbsent(name.lowercase(Locale.ROOT), name)
+    }
+    return copy(
+        title = title.trim(),
+        people = uniquePeople.values.toList(),
+        location = location?.trim()?.takeIf(String::isNotEmpty),
+        notes = notes?.trim()?.takeIf(String::isNotEmpty),
+    )
+}
+
+private fun requireSchedule(schedule: Schedule) {
+    requireVault(schedule.title.isNotBlank()) { "Schedule title is required." }
+    requireVault(schedule.people.all { it.isNotBlank() }) { "Concerned people cannot be blank." }
+    requireVault(schedule.people.map { it.lowercase(Locale.ROOT) }.distinct().size == schedule.people.size) {
+        "Concerned people must be unique ignoring case."
+    }
+    when (val timing = schedule.timing) {
+        is ScheduleTiming.InstantTimed -> {
+            requireVault(timing.endsAt == null || timing.endsAt.isAfter(timing.startsAt)) {
+                "A timed schedule must end after it starts."
+            }
+            requireVault(schedule.recurrence == ScheduleRecurrence.None) {
+                "An instant schedule cannot recur."
+            }
+        }
+        is ScheduleTiming.LocalTimed -> requireVault(timing.durationMinutes == null || timing.durationMinutes > 0) {
+            "A timed schedule duration must be positive."
+        }
+        is ScheduleTiming.AllDay -> requireDateRange(timing.startsOn, timing.endsOn, "schedule")
+    }
+    val startsOn = when (val timing = schedule.timing) {
+        is ScheduleTiming.InstantTimed -> null
+        is ScheduleTiming.LocalTimed -> timing.startsOn
+        is ScheduleTiming.AllDay -> timing.startsOn
+    }
+    schedule.recurrence.repeatUntil?.let { repeatUntil ->
+        requireVault(startsOn == null || !repeatUntil.isBefore(startsOn)) {
+            "A schedule repeat-until date cannot precede its start date."
+        }
+    }
+    when (val recurrence = schedule.recurrence) {
+        ScheduleRecurrence.None, is ScheduleRecurrence.Daily -> Unit
+        is ScheduleRecurrence.Weekly -> requireVault(recurrence.daysOfWeek.isNotEmpty()) {
+            "A weekly schedule requires at least one day."
+        }
+        is ScheduleRecurrence.Monthly -> requireVault(recurrence.dayOfMonth in 1..31) {
+            "A monthly schedule day must be between 1 and 31."
+        }
+    }
+    when (val alert = schedule.alert) {
+        null -> Unit
+        is ScheduleAlert.Timed -> {
+            requireVault(schedule.timing !is ScheduleTiming.AllDay) { "An all-day schedule requires an all-day alert." }
+            requireVault(alert.minutesBefore >= 0) { "A schedule alert lead cannot be negative." }
+        }
+        is ScheduleAlert.AllDay -> {
+            requireVault(schedule.timing is ScheduleTiming.AllDay) { "A timed schedule requires a timed alert." }
+            requireVault(alert.daysBefore in 0..1) { "An all-day alert must be on the day or one day before." }
+        }
+    }
 }
 
 private fun requireDocumentCategory(record: ProfileRecord, reference: DocumentCategoryRef) {

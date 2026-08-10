@@ -4,7 +4,6 @@ import java.io.OutputStream
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectoryEntry
@@ -20,7 +19,7 @@ import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
-import net.mamby.health.core.model.Reminder
+import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.data.ImportedDocumentData
 import net.mamby.health.data.MedicalDocumentDraft
@@ -46,12 +45,10 @@ open class StubVaultRepository : VaultRepository {
     override suspend fun deleteDocument(profileId: UUID, documentId: UUID): Unit = unused()
     override suspend fun upsertMedication(profileId: UUID, medication: Medication): Unit = unused()
     override suspend fun deleteMedication(profileId: UUID, medicationId: UUID): Unit = unused()
-    override suspend fun upsertAppointment(profileId: UUID, appointment: Appointment): Unit = unused()
-    override suspend fun deleteAppointment(profileId: UUID, appointmentId: UUID): Unit = unused()
+    override suspend fun upsertSchedule(schedule: Schedule): Unit = unused()
+    override suspend fun deleteSchedule(scheduleId: UUID): Unit = unused()
     override suspend fun upsertVaccination(profileId: UUID, vaccination: Vaccination): Unit = unused()
     override suspend fun deleteVaccination(profileId: UUID, vaccinationId: UUID): Unit = unused()
-    override suspend fun upsertReminder(profileId: UUID, reminder: Reminder): Unit = unused()
-    override suspend fun deleteReminder(profileId: UUID, reminderId: UUID): Unit = unused()
     override suspend fun upsertHealthNote(note: HealthNote): Unit = unused()
     override suspend fun deleteHealthNote(noteId: UUID): Unit = unused()
     override suspend fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement): Unit = unused()

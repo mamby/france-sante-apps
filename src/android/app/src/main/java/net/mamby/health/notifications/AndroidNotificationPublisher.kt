@@ -95,14 +95,18 @@ class AndroidNotificationPublisher @Inject constructor(
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             .putExtra(
                 DeepLinkCoordinator.EXTRA_KIND,
-                when (request.type) {
-                    ReminderType.MEDICATION -> DeepLinkKind.Medication
-                    ReminderType.APPOINTMENT -> DeepLinkKind.Appointment
-                    ReminderType.GENERAL -> DeepLinkKind.Reminder
+                when (request.target) {
+                    is ReminderTarget.Medication -> DeepLinkKind.Medication
+                    is ReminderTarget.Schedule -> DeepLinkKind.Schedule
                 }.name,
             )
-            .putExtra(DeepLinkCoordinator.EXTRA_PROFILE_ID, request.profileId)
-            .putExtra(DeepLinkCoordinator.EXTRA_RECORD_ID, request.targetId)
+        when (val target = request.target) {
+            is ReminderTarget.Medication -> intent
+                .putExtra(DeepLinkCoordinator.EXTRA_PROFILE_ID, target.profileId)
+                .putExtra(DeepLinkCoordinator.EXTRA_RECORD_ID, target.medicationId)
+            is ReminderTarget.Schedule -> intent
+                .putExtra(DeepLinkCoordinator.EXTRA_RECORD_ID, target.scheduleId)
+        }
         return PendingIntent.getActivity(
             context,
             notificationId(request.id),

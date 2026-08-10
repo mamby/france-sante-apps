@@ -37,7 +37,7 @@ sealed interface TopLevelRoute : AppRoute
 
 @Serializable data class DocumentDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class MedicationDetailRoute(val profileId: String, val id: String) : AppRoute
-@Serializable data class AppointmentDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class ScheduleDetailRoute(val id: String) : AppRoute
 @Serializable data class HealthInfoRoute(val profileId: String) : AppRoute
 @Serializable data object DocumentsRoute : AppRoute
 @Serializable data object MeasurementsRoute : AppRoute

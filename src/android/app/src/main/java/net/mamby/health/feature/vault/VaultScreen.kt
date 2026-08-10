@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyRow
@@ -140,7 +141,7 @@ fun VaultScreen(
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
             contentPadding = innerPadding.withScreenPadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),

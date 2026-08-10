@@ -26,7 +26,6 @@ import net.mamby.health.backup.BackupRepository
 import net.mamby.health.backup.RestoreCommitResult
 import net.mamby.health.backup.RestorePreparationResult
 import net.mamby.health.backup.RestorePreview
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectoryEntry
@@ -40,7 +39,7 @@ import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
-import net.mamby.health.core.model.Reminder
+import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.data.DocumentImportException
 import net.mamby.health.data.DocumentImportFailure
@@ -210,13 +209,8 @@ class AppViewModel @Inject constructor(
         reconcileReminders()
     }
 
-    fun upsertAppointment(profileId: UUID, appointment: Appointment) = launchOperation {
-        vaultRepository.upsertAppointment(profileId, appointment)
-        reconcileReminders()
-    }
-
-    fun deleteAppointment(profileId: UUID, id: UUID) = launchOperation {
-        vaultRepository.deleteAppointment(profileId, id)
+    fun upsertSchedule(schedule: Schedule) = launchOperation {
+        vaultRepository.upsertSchedule(schedule)
         reconcileReminders()
     }
 
@@ -228,13 +222,8 @@ class AppViewModel @Inject constructor(
         vaultRepository.deleteVaccination(profileId, id)
     }
 
-    fun upsertReminder(profileId: UUID, reminder: Reminder) = launchOperation {
-        vaultRepository.upsertReminder(profileId, reminder)
-        reconcileReminders()
-    }
-
-    fun deleteReminder(profileId: UUID, id: UUID) = launchOperation {
-        vaultRepository.deleteReminder(profileId, id)
+    fun deleteSchedule(id: UUID) = launchOperation {
+        vaultRepository.deleteSchedule(id)
         reconcileReminders()
     }
 

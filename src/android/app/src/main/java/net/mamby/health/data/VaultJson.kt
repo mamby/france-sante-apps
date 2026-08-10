@@ -21,7 +21,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
@@ -40,8 +39,11 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.MedicationSchedule
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.core.model.Reminder
 import net.mamby.health.core.model.ReminderRecurrence
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleAlert
+import net.mamby.health.core.model.ScheduleRecurrence
+import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.core.model.UnsupportedVaultVersionException
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.core.model.asReference
@@ -74,6 +76,7 @@ object VaultCodec {
             1 -> json.decodeFromString<HealthVaultV1>(source).toCurrent()
             2 -> json.decodeFromString<HealthVaultV2>(source).toCurrent()
             3 -> json.decodeFromString<HealthVaultV3>(source).toCurrent()
+            4 -> json.decodeFromString<HealthVaultV4>(source).toCurrent()
             HealthVault.CURRENT_VERSION -> json.decodeFromString<HealthVault>(source)
             else -> throw UnsupportedVaultVersionException(version)
         }
@@ -82,13 +85,125 @@ object VaultCodec {
 }
 
 @Serializable
+private data class AppointmentV4(
+    val id: UUID,
+    val title: String,
+    val clinician: String,
+    val location: String,
+    val startsAt: Instant,
+    val relatedDocumentIds: List<UUID> = emptyList(),
+    val clinicianEntryId: UUID? = null,
+    val facilityEntryId: UUID? = null,
+    val notes: String? = null,
+    val reminderLeadMinutes: Long? = null,
+    val updatedAt: Instant,
+) {
+    fun toSchedule(profileName: String) = Schedule(
+        id = id,
+        title = title,
+        timing = ScheduleTiming.InstantTimed(startsAt),
+        alert = reminderLeadMinutes?.let(ScheduleAlert::Timed),
+        people = listOf(profileName),
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
+private data class ReminderV4(
+    val id: UUID,
+    val title: String,
+    val startsOn: LocalDate,
+    val timeOfDay: LocalTime,
+    val recurrence: ReminderRecurrence = ReminderRecurrence.NONE,
+    val daysOfWeek: Set<DayOfWeek> = emptySet(),
+    val endsOn: LocalDate? = null,
+    val isEnabled: Boolean = true,
+    val notes: String? = null,
+    val updatedAt: Instant,
+) {
+    fun toSchedule(profileName: String) = Schedule(
+        id = id,
+        title = title,
+        timing = ScheduleTiming.LocalTimed(startsOn, timeOfDay),
+        recurrence = recurrence.toScheduleRecurrence(startsOn, daysOfWeek, endsOn),
+        alert = ScheduleAlert.Timed(0).takeIf { isEnabled },
+        people = listOf(profileName),
+        updatedAt = updatedAt,
+    )
+}
+
+private fun ReminderRecurrence.toScheduleRecurrence(
+    startsOn: LocalDate,
+    daysOfWeek: Set<DayOfWeek>,
+    endsOn: LocalDate?,
+): ScheduleRecurrence = when (this) {
+    ReminderRecurrence.NONE -> ScheduleRecurrence.None
+    ReminderRecurrence.DAILY -> ScheduleRecurrence.Daily(endsOn)
+    ReminderRecurrence.WEEKLY -> ScheduleRecurrence.Weekly(daysOfWeek.ifEmpty { setOf(startsOn.dayOfWeek) }, endsOn)
+    ReminderRecurrence.MONTHLY -> ScheduleRecurrence.Monthly(startsOn.dayOfMonth, endsOn)
+}
+
+@Serializable
+private data class ProfileRecordV4(
+    val profile: HealthProfile,
+    val documents: List<MedicalDocument> = emptyList(),
+    val medications: List<Medication> = emptyList(),
+    val appointments: List<AppointmentV4> = emptyList(),
+    val vaccinations: List<Vaccination> = emptyList(),
+    val reminders: List<ReminderV4> = emptyList(),
+    val measurements: List<HealthMeasurement> = emptyList(),
+    val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
+    val careDirectory: List<CareDirectoryEntry> = emptyList(),
+    val familyHistory: List<FamilyHistoryEntry> = emptyList(),
+    val directives: List<CareDirective> = emptyList(),
+    val healthIdentifiers: List<HealthIdentifier> = emptyList(),
+    val customDocumentCategories: List<CustomDocumentCategory> = emptyList(),
+    val builtInDocumentCategoryPreferences: List<BuiltInDocumentCategoryPreference> = emptyList(),
+) {
+    fun toCurrent() = ProfileRecord(
+        profile = profile,
+        documents = documents,
+        medications = medications,
+        vaccinations = vaccinations,
+        measurements = measurements,
+        customMeasurementTypes = customMeasurementTypes,
+        careDirectory = careDirectory,
+        familyHistory = familyHistory,
+        directives = directives,
+        healthIdentifiers = healthIdentifiers,
+        customDocumentCategories = customDocumentCategories,
+        builtInDocumentCategoryPreferences = builtInDocumentCategoryPreferences,
+    )
+
+    fun schedules(): List<Schedule> =
+        appointments.map { it.toSchedule(profile.displayName) } + reminders.map { it.toSchedule(profile.displayName) }
+}
+
+@Serializable
+private data class HealthVaultV4(
+    val version: Int = 4,
+    val revision: Long,
+    val profiles: List<ProfileRecordV4>,
+    val notes: List<HealthNote> = emptyList(),
+    val updatedAt: Instant,
+) {
+    fun toCurrent() = HealthVault(
+        revision = revision,
+        profiles = profiles.map(ProfileRecordV4::toCurrent),
+        notes = notes,
+        schedules = profiles.flatMap(ProfileRecordV4::schedules),
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
 private data class ProfileRecordV3(
     val profile: HealthProfile,
     val documents: List<MedicalDocument> = emptyList(),
     val medications: List<Medication> = emptyList(),
-    val appointments: List<Appointment> = emptyList(),
+    val appointments: List<AppointmentV4> = emptyList(),
     val vaccinations: List<Vaccination> = emptyList(),
-    val reminders: List<Reminder> = emptyList(),
+    val reminders: List<ReminderV4> = emptyList(),
     val notes: List<HealthNote> = emptyList(),
     val measurements: List<HealthMeasurement> = emptyList(),
     val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
@@ -103,9 +218,7 @@ private data class ProfileRecordV3(
         profile = profile,
         documents = documents,
         medications = medications,
-        appointments = appointments,
         vaccinations = vaccinations,
-        reminders = reminders,
         measurements = measurements,
         customMeasurementTypes = customMeasurementTypes,
         careDirectory = careDirectory,
@@ -115,6 +228,9 @@ private data class ProfileRecordV3(
         customDocumentCategories = customDocumentCategories,
         builtInDocumentCategoryPreferences = builtInDocumentCategoryPreferences,
     )
+
+    fun schedules(): List<Schedule> =
+        appointments.map { it.toSchedule(profile.displayName) } + reminders.map { it.toSchedule(profile.displayName) }
 }
 
 @Serializable
@@ -128,6 +244,7 @@ private data class HealthVaultV3(
         revision = revision,
         profiles = profiles.map(ProfileRecordV3::toCurrent),
         notes = profiles.flatMap(ProfileRecordV3::notes),
+        schedules = profiles.flatMap(ProfileRecordV3::schedules),
         updatedAt = updatedAt,
     )
 }
@@ -264,15 +381,12 @@ private data class AppointmentV2(
     val reminderLeadMinutes: Long? = null,
     val updatedAt: Instant,
 ) {
-    fun toCurrent() = Appointment(
+    fun toSchedule(profileName: String) = Schedule(
         id = id,
         title = title,
-        clinician = clinician,
-        location = location,
-        startsAt = startsAt,
-        relatedDocumentIds = relatedDocumentIds,
-        notes = notes,
-        reminderLeadMinutes = reminderLeadMinutes,
+        timing = ScheduleTiming.InstantTimed(startsAt),
+        alert = reminderLeadMinutes?.let(ScheduleAlert::Timed),
+        people = listOf(profileName),
         updatedAt = updatedAt,
     )
 }
@@ -311,17 +425,14 @@ private data class ReminderV2(
     val notes: String? = null,
     val updatedAt: Instant,
 ) {
-    fun toCurrent() = Reminder(
-        id,
-        title,
-        startsOn,
-        timeOfDay,
-        recurrence,
-        daysOfWeek,
-        endsOn,
-        isEnabled,
-        notes,
-        updatedAt,
+    fun toSchedule(profileName: String) = Schedule(
+        id = id,
+        title = title,
+        timing = ScheduleTiming.LocalTimed(startsOn, timeOfDay),
+        recurrence = recurrence.toScheduleRecurrence(startsOn, daysOfWeek, endsOn),
+        alert = ScheduleAlert.Timed(0).takeIf { isEnabled },
+        people = listOf(profileName),
+        updatedAt = updatedAt,
     )
 }
 
@@ -338,10 +449,11 @@ private data class ProfileRecordV2(
         profile = profile.toCurrent(),
         documents = documents.map(MedicalDocumentV2::toCurrent),
         medications = medications.map(MedicationV2::toCurrent),
-        appointments = appointments.map(AppointmentV2::toCurrent),
         vaccinations = vaccinations.map(VaccinationV2::toCurrent),
-        reminders = reminders.map(ReminderV2::toCurrent),
     )
+
+    fun schedules(): List<Schedule> =
+        appointments.map { it.toSchedule(profile.displayName) } + reminders.map { it.toSchedule(profile.displayName) }
 }
 
 @Serializable
@@ -354,6 +466,7 @@ private data class HealthVaultV2(
     fun toCurrent() = HealthVault(
         revision = revision,
         profiles = profiles.map(ProfileRecordV2::toCurrent),
+        schedules = profiles.flatMap(ProfileRecordV2::schedules),
         updatedAt = updatedAt,
     )
 }
@@ -377,11 +490,11 @@ private data class HealthVaultV1(
                 profile = profile.toCurrent(),
                 documents = documents.map(MedicalDocumentV2::toCurrent),
                 medications = medications.map(MedicationV2::toCurrent),
-                appointments = appointments.map(AppointmentV2::toCurrent),
                 vaccinations = vaccinations.map(VaccinationV2::toCurrent),
-                reminders = reminders.map(ReminderV2::toCurrent),
             ),
         ),
+        schedules = appointments.map { it.toSchedule(profile.displayName) } +
+            reminders.map { it.toSchedule(profile.displayName) },
         updatedAt = updatedAt,
     )
 }

@@ -8,7 +8,7 @@ enum class HealthSearchGroup {
     HEALTH_RECORDS,
     NOTES,
     MEDICATIONS,
-    APPOINTMENTS,
+    SCHEDULE,
 }
 
 sealed interface HealthSearchScope {
@@ -28,7 +28,7 @@ sealed interface HealthSearchTarget {
 
     data class Medication(val id: UUID) : HealthSearchTarget
 
-    data class Appointment(val id: UUID) : HealthSearchTarget
+    data class Schedule(val id: UUID) : HealthSearchTarget
 
     data class Note(val id: UUID) : HealthSearchTarget
 
@@ -55,11 +55,19 @@ object HealthSearch {
     fun search(
         records: Iterable<ProfileRecord>,
         notes: Iterable<HealthNote>,
+        schedules: Iterable<Schedule>,
         query: String,
     ): List<HealthSearchResult> = buildList {
         records.flatMapTo(this) { record -> search(record, query) }
         addAll(searchNotes(notes, query))
+        addAll(searchSchedules(schedules, query))
     }
+
+    fun search(
+        records: Iterable<ProfileRecord>,
+        notes: Iterable<HealthNote>,
+        query: String,
+    ): List<HealthSearchResult> = search(records, notes, emptyList(), query)
 
     fun search(records: Iterable<ProfileRecord>, query: String): List<HealthSearchResult> =
         search(records, emptyList(), query)
@@ -153,24 +161,6 @@ object HealthSearch {
                             medication.name,
                             medication.dose,
                             HealthSearchTarget.Medication(medication.id),
-                        ),
-                    )
-                }
-            record.appointments
-                .filter {
-                    listOf(it.title, it.clinician, it.location, it.notes.orEmpty()).matches(terms)
-                }
-                .sortedBy(Appointment::startsAt)
-                .forEach { appointment ->
-                    add(
-                        HealthSearchResult(
-                            scope,
-                            HealthSearchGroup.APPOINTMENTS,
-                            appointment.title,
-                            listOf(appointment.clinician, appointment.location)
-                                .filter(String::isNotBlank)
-                                .joinToString(SEPARATOR),
-                            HealthSearchTarget.Appointment(appointment.id),
                         ),
                     )
                 }
@@ -283,6 +273,32 @@ object HealthSearch {
                     primaryText = note.title,
                     secondaryText = note.body,
                     target = HealthSearchTarget.Note(note.id),
+                )
+            }
+    }
+
+    private fun searchSchedules(schedules: Iterable<Schedule>, query: String): List<HealthSearchResult> {
+        val terms = query.searchTerms()
+        if (terms.isEmpty()) return emptyList()
+        return schedules
+            .filter { schedule ->
+                listOf(
+                    schedule.title,
+                    schedule.people.joinToString(" "),
+                    schedule.location.orEmpty(),
+                    schedule.notes.orEmpty(),
+                ).matches(terms)
+            }
+            .sortedByDescending(Schedule::updatedAt)
+            .map { schedule ->
+                HealthSearchResult(
+                    scope = HealthSearchScope.Vault,
+                    group = HealthSearchGroup.SCHEDULE,
+                    primaryText = schedule.title,
+                    secondaryText = (schedule.people + listOfNotNull(schedule.location))
+                        .joinToString(SEPARATOR)
+                        .takeIf(String::isNotBlank),
+                    target = HealthSearchTarget.Schedule(schedule.id),
                 )
             }
     }

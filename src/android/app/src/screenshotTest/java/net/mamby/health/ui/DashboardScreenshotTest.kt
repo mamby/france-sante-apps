@@ -12,7 +12,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 import java.util.UUID
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.HealthProfile
@@ -22,8 +21,10 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.MedicationSchedule
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.core.model.Reminder
 import net.mamby.health.core.model.ReminderRecurrence
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleAlert
+import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.ui.components.AppNavigationSuite
@@ -110,16 +111,18 @@ private fun DashboardPreviewContent(darkTheme: Boolean = false) {
             DashboardScreen(
                 records = vault.profiles,
                 notes = vault.notes,
+                schedules = vault.schedules,
                 clock = FIXED_CLOCK,
                 zoneId = ZoneOffset.UTC,
                 onMedications = {},
                 onSchedule = {},
                 onDocumentSelected = { _, _ -> },
                 onNoteSelected = {},
+                onScheduleSelected = {},
                 onAddHealthInfo = {},
                 onImportDocument = {},
                 onAddMedication = {},
-                onAddAppointment = {},
+                onAddSchedule = {},
             )
         }
     }
@@ -165,26 +168,6 @@ private fun screenshotVault(): HealthVault = HealthVault(
                     updatedAt = FIXED_INSTANT,
                 ),
             ),
-            appointments = listOf(
-                Appointment(
-                    id = id("55555555-5555-4555-8555-555555555555"),
-                    title = "Follow-up appointment",
-                    clinician = "Dr. Martin",
-                    location = "Community clinic",
-                    startsAt = Instant.parse("2026-08-02T09:30:00Z"),
-                    reminderLeadMinutes = 1_440,
-                    updatedAt = FIXED_INSTANT,
-                ),
-            ),
-            reminders = listOf(
-                Reminder(
-                    id = id("66666666-6666-4666-8666-666666666666"),
-                    title = "Renew prescription",
-                    startsOn = LocalDate.of(2026, 8, 1),
-                    timeOfDay = LocalTime.of(10, 0),
-                    updatedAt = FIXED_INSTANT,
-                ),
-            ),
         ),
         ProfileRecord(
             profile = HealthProfile(
@@ -200,6 +183,17 @@ private fun screenshotVault(): HealthVault = HealthVault(
             title = "Questions for the next visit",
             body = "Ask about the updated care plan.",
             notedAt = Instant.parse("2026-07-30T07:30:00Z"),
+            updatedAt = FIXED_INSTANT,
+        ),
+    ),
+    schedules = listOf(
+        Schedule(
+            id = id("55555555-5555-4555-8555-555555555555"),
+            title = "Follow-up",
+            timing = ScheduleTiming.InstantTimed(Instant.parse("2026-08-02T09:30:00Z")),
+            alert = ScheduleAlert.Timed(1_440),
+            people = listOf("Alex"),
+            location = "Community clinic",
             updatedAt = FIXED_INSTANT,
         ),
     ),

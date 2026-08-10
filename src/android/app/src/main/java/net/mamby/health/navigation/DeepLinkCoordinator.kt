@@ -10,15 +10,16 @@ import kotlinx.coroutines.flow.receiveAsFlow
 enum class DeepLinkKind {
     Dashboard,
     Medication,
-    Appointment,
-    Reminder,
+    Schedule,
 }
 
-data class DeepLinkTarget(
-    val kind: DeepLinkKind,
-    val profileId: String,
-    val recordId: String? = null,
-)
+sealed interface DeepLinkTarget {
+    data object Dashboard : DeepLinkTarget
+
+    data class Medication(val profileId: String, val medicationId: String?) : DeepLinkTarget
+
+    data class Schedule(val scheduleId: String?) : DeepLinkTarget
+}
 
 @Singleton
 class DeepLinkCoordinator @Inject constructor() {
@@ -30,8 +31,15 @@ class DeepLinkCoordinator @Inject constructor() {
         val kind = intent?.getStringExtra(EXTRA_KIND)
             ?.let { raw -> DeepLinkKind.entries.firstOrNull { it.name == raw } }
             ?: return
-        val profileId = intent.getStringExtra(EXTRA_PROFILE_ID) ?: return
-        targetChannel.trySend(DeepLinkTarget(kind, profileId, intent.getStringExtra(EXTRA_RECORD_ID)))
+        val target = when (kind) {
+            DeepLinkKind.Dashboard -> DeepLinkTarget.Dashboard
+            DeepLinkKind.Medication -> DeepLinkTarget.Medication(
+                profileId = intent.getStringExtra(EXTRA_PROFILE_ID) ?: return,
+                medicationId = intent.getStringExtra(EXTRA_RECORD_ID),
+            )
+            DeepLinkKind.Schedule -> DeepLinkTarget.Schedule(intent.getStringExtra(EXTRA_RECORD_ID))
+        }
+        targetChannel.trySend(target)
         intent.removeExtra(EXTRA_KIND)
         intent.removeExtra(EXTRA_PROFILE_ID)
         intent.removeExtra(EXTRA_RECORD_ID)

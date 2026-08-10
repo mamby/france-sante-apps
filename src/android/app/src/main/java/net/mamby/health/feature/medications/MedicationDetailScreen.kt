@@ -2,6 +2,7 @@ package net.mamby.health.feature.medications
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -48,7 +49,12 @@ fun MedicationDetailScreen(
         contextHeader = { ProfileOwnerHeader(profile) },
     ) { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).padding(UiTokens.ScreenPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             SectionCard(stringResource(R.string.medication_schedule)) {

@@ -3,6 +3,7 @@ package net.mamby.health.feature.dashboard
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,8 @@ import net.mamby.health.R
 import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.RecurrenceCalculator
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleCalculator
 import net.mamby.health.core.model.VaultItem
 import net.mamby.health.core.model.VaultItemKind
 import net.mamby.health.core.model.index
@@ -48,6 +51,7 @@ import net.mamby.health.ui.theme.UiTokens
 fun DashboardScreen(
     records: List<ProfileRecord>,
     notes: List<HealthNote>,
+    schedules: List<Schedule>,
     clock: Clock,
     zoneId: ZoneId,
     onMedications: () -> Unit,
@@ -57,10 +61,11 @@ fun DashboardScreen(
         if (item.kind == VaultItemKind.DOCUMENT) onDocumentSelected(profileId, item.id.toString())
     },
     onNoteSelected: (UUID) -> Unit,
+    onScheduleSelected: (UUID) -> Unit,
     onAddHealthInfo: () -> Unit,
     onImportDocument: () -> Unit,
     onAddMedication: () -> Unit,
-    onAddAppointment: () -> Unit,
+    onAddSchedule: () -> Unit,
 ) {
     val now = clock.instant()
     val nextMedication = records.ownedItems(ProfileRecord::medications)
@@ -75,28 +80,19 @@ fun DashboardScreen(
                 .thenBy { it.owned.profileId }
                 .thenBy { it.owned.value.id },
         )
-    val nextAppointment = records.ownedItems(ProfileRecord::appointments)
+    val nextSchedule = schedules
         .asSequence()
-        .filter { it.value.startsAt.isAfter(now) }
-        .minWithOrNull(compareBy<ProfileOwned<net.mamby.health.core.model.Appointment>> { it.value.startsAt }
-            .thenBy { it.profileId }
-            .thenBy { it.value.id })
-    val nextReminder = records.ownedItems(ProfileRecord::reminders)
-        .asSequence()
-        .mapNotNull { owned ->
-            RecurrenceCalculator.nextOccurrence(owned.value, now, zoneId)?.let { occurrence ->
-                Triple(occurrence, owned.profile, owned.value)
-            }
+        .mapNotNull { schedule ->
+            ScheduleCalculator.nextOccurrence(schedule, now, zoneId)?.let { occurrence -> occurrence to schedule }
         }
-        .minWithOrNull(compareBy<Triple<java.time.Instant, net.mamby.health.core.model.HealthProfile, net.mamby.health.core.model.Reminder>> { it.first }
-            .thenBy { it.second.id }
-            .thenBy { it.third.id })
+        .minWithOrNull(compareBy<Pair<net.mamby.health.core.model.ScheduleOccurrence, Schedule>> { it.first.startsAt }
+            .thenBy { it.second.id })
     val activeMedications = records.sumOf { record -> record.medications.count { it.isActive } }
-    val upcomingAppointments = records.sumOf { record -> record.appointments.count { it.startsAt.isAfter(now) } }
-    val enabledReminders = records.sumOf { record -> record.reminders.count { it.isEnabled } }
+    val upcomingSchedules = schedules.count { ScheduleCalculator.nextOccurrence(it, now, zoneId) != null }
     val recentItems = (
         records.ownedItems(ProfileRecord::index).map(RecentDashboardItem::ProfileItem) +
-            notes.map(RecentDashboardItem::NoteItem)
+            notes.map(RecentDashboardItem::NoteItem) +
+            schedules.map(RecentDashboardItem::ScheduleItem)
         )
         .sortedWith(
             compareByDescending<RecentDashboardItem> { it.item.updatedAt }
@@ -104,14 +100,14 @@ fun DashboardScreen(
                 .thenBy { it.item.id },
         )
         .take(4)
-    val isEmpty = notes.isEmpty() && records.all(ProfileRecord::isHealthDataEmpty)
+    val isEmpty = notes.isEmpty() && schedules.isEmpty() && records.all(ProfileRecord::isHealthDataEmpty)
 
     AppScreenScaffold(
         title = stringResource(R.string.dashboard_title),
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
             contentPadding = innerPadding.withScreenPadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
@@ -150,37 +146,20 @@ fun DashboardScreen(
                     onClick = onSchedule,
                 ) {
                     LabeledValue(
-                        stringResource(R.string.appointments_metric),
-                        upcomingAppointments.toString(),
-                    )
-                    LabeledValue(
-                        stringResource(R.string.reminders_metric),
-                        enabledReminders.toString(),
+                        stringResource(R.string.schedules_metric),
+                        upcomingSchedules.toString(),
                     )
                     Text(
-                        stringResource(R.string.next_appointment),
+                        stringResource(R.string.next_schedule),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    if (nextAppointment == null) {
-                        Text(stringResource(R.string.no_upcoming_appointment))
+                    if (nextSchedule == null) {
+                        Text(stringResource(R.string.no_upcoming_schedule))
                     } else {
-                        if (records.size > 1) ProfileMarker(nextAppointment.profile)
-                        Text(nextAppointment.value.title)
-                        Text(nextAppointment.value.startsAt.localizedDateTime(zoneId))
-                        nextAppointment.value.clinician.takeIf(String::isNotBlank)?.let { Text(it) }
-                    }
-                    Text(
-                        stringResource(R.string.next_reminder),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    if (nextReminder == null) {
-                        Text(stringResource(R.string.no_active_reminder))
-                    } else {
-                        if (records.size > 1) ProfileMarker(nextReminder.second)
-                        Text(nextReminder.third.title)
-                        Text(nextReminder.first.localizedDateTime(zoneId))
+                        Text(nextSchedule.second.title)
+                        Text(nextSchedule.first.startsAt.localizedDateTime(zoneId))
+                        nextSchedule.second.people.takeIf(List<String>::isNotEmpty)?.let { Text(it.joinToString()) }
                     }
                 }
             }
@@ -191,7 +170,7 @@ fun DashboardScreen(
                         Button(onClick = onAddHealthInfo) { Text(stringResource(R.string.getting_started_health)) }
                         Button(onClick = onImportDocument) { Text(stringResource(R.string.import_document)) }
                         Button(onClick = onAddMedication) { Text(stringResource(R.string.add_medication)) }
-                        Button(onClick = onAddAppointment) { Text(stringResource(R.string.add_appointment)) }
+                        Button(onClick = onAddSchedule) { Text(stringResource(R.string.add_schedule)) }
                     }
                 }
             }
@@ -225,6 +204,7 @@ fun DashboardScreen(
                     val item = recent.item
                     val title = when (recent) {
                         is RecentDashboardItem.NoteItem -> recent.note.title
+                        is RecentDashboardItem.ScheduleItem -> recent.schedule.title
                         is RecentDashboardItem.ProfileItem -> if (item.kind == VaultItemKind.MEASUREMENT) {
                             recent.owned.record.measurements
                                 .firstOrNull { it.id == item.id }
@@ -241,6 +221,7 @@ fun DashboardScreen(
                         Button(onClick = {
                             when (recent) {
                                 is RecentDashboardItem.NoteItem -> onNoteSelected(recent.note.id)
+                                is RecentDashboardItem.ScheduleItem -> onScheduleSelected(recent.schedule.id)
                                 is RecentDashboardItem.ProfileItem -> onRecentItem(recent.owned.profileId, item)
                             }
                         }) {
@@ -258,7 +239,7 @@ fun DashboardScreen(
 }
 
 private fun ProfileRecord.isHealthDataEmpty(): Boolean =
-    documents.isEmpty() && medications.isEmpty() && appointments.isEmpty() && reminders.isEmpty() &&
+    documents.isEmpty() && medications.isEmpty() &&
         vaccinations.isEmpty() && measurements.isEmpty() &&
         careDirectory.isEmpty() && familyHistory.isEmpty() && directives.isEmpty() &&
         healthIdentifiers.isEmpty() && profile.emergencyContacts.isEmpty() && profile.bloodType == null &&
@@ -303,6 +284,11 @@ private sealed interface RecentDashboardItem {
 
     data class NoteItem(val note: HealthNote) : RecentDashboardItem {
         override val item = VaultItem(note.id, VaultItemKind.NOTE, note.title, note.updatedAt)
+        override val scopeKey: String = "vault"
+    }
+
+    data class ScheduleItem(val schedule: Schedule) : RecentDashboardItem {
+        override val item = VaultItem(schedule.id, VaultItemKind.SCHEDULE, schedule.title, schedule.updatedAt)
         override val scopeKey: String = "vault"
     }
 }

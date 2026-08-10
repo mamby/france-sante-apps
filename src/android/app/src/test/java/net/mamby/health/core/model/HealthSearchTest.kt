@@ -50,21 +50,25 @@ class HealthSearchTest {
     }
 
     @Test
-    fun searchExcludesReminderTextAndDocumentBodies() {
+    fun searchIndexesScheduleVisibleFieldsAtVaultScope() {
+        val schedule = Schedule(
+            id = UUID.randomUUID(),
+            title = "Dental visit",
+            timing = ScheduleTiming.InstantTimed(now.plusSeconds(3_600)),
+            people = listOf("Samira"),
+            location = "North clinic",
+            notes = "Bring insurance card",
+            updatedAt = now,
+        )
         val record = ProfileRecord(
             profile = HealthProfile(UUID.randomUUID(), "Owner", lastUpdatedAt = now),
-            reminders = listOf(
-                Reminder(
-                    UUID.randomUUID(),
-                    "Secret reminder phrase",
-                    LocalDate.of(2026, 8, 1),
-                    java.time.LocalTime.NOON,
-                    updatedAt = now,
-                ),
-            ),
         )
 
-        assertTrue(HealthSearch.search(record, "secret reminder").isEmpty())
+        listOf("dental", "samira", "north clinic", "insurance card").forEach { query ->
+            val result = HealthSearch.search(listOf(record), emptyList(), listOf(schedule), query).single()
+            assertEquals(HealthSearchScope.Vault, result.scope)
+            assertEquals(HealthSearchTarget.Schedule(schedule.id), result.target)
+        }
     }
 
     @Test

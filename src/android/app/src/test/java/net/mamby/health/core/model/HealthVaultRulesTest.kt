@@ -8,6 +8,7 @@ import java.time.ZoneId
 import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class HealthVaultRulesTest {
@@ -38,40 +39,41 @@ class HealthVaultRulesTest {
 
     @Test
     fun monthlyRecurrenceClampsToLastDayOfShortMonth() {
-        val reminder = reminder(
+        val schedule = schedule(
             startsOn = LocalDate.of(2025, 1, 31),
-            recurrence = ReminderRecurrence.MONTHLY,
+            recurrence = ScheduleRecurrence.Monthly(31),
         )
 
-        val next = RecurrenceCalculator.nextOccurrence(
-            reminder,
+        val next = ScheduleCalculator.nextOccurrence(
+            schedule,
             Instant.parse("2025-02-01T09:00:00Z"),
             ZoneId.of("UTC"),
         )
 
-        assertEquals(Instant.parse("2025-02-28T10:00:00Z"), next)
+        assertEquals(Instant.parse("2025-02-28T10:00:00Z"), next?.startsAt)
     }
 
     @Test
     fun weeklyRecurrenceUsesConfiguredDaysAndRespectsEndDate() {
-        val reminder = reminder(
+        val schedule = schedule(
             startsOn = LocalDate.of(2026, 7, 1),
-            recurrence = ReminderRecurrence.WEEKLY,
-            days = setOf(DayOfWeek.MONDAY),
-            endsOn = LocalDate.of(2026, 7, 6),
+            recurrence = ScheduleRecurrence.Weekly(
+                daysOfWeek = setOf(DayOfWeek.MONDAY),
+                repeatUntil = LocalDate.of(2026, 7, 6),
+            ),
         )
 
         assertEquals(
             Instant.parse("2026-07-06T10:00:00Z"),
-            RecurrenceCalculator.nextOccurrence(
-                reminder,
+            ScheduleCalculator.nextOccurrence(
+                schedule,
                 Instant.parse("2026-07-05T12:00:00Z"),
                 ZoneId.of("UTC"),
-            ),
+            )?.startsAt,
         )
         assertNull(
-            RecurrenceCalculator.nextOccurrence(
-                reminder,
+            ScheduleCalculator.nextOccurrence(
+                schedule,
                 Instant.parse("2026-07-06T11:00:00Z"),
                 ZoneId.of("UTC"),
             ),
@@ -111,6 +113,83 @@ class HealthVaultRulesTest {
         )
     }
 
+    @Test
+    fun allDayAlertUsesSelectedLocalTimeAndAdvancesAfterDelivery() {
+        val schedule = Schedule(
+            id = UUID.randomUUID(),
+            title = "Daily task",
+            timing = ScheduleTiming.AllDay(LocalDate.of(2026, 7, 30)),
+            recurrence = ScheduleRecurrence.Daily(),
+            alert = ScheduleAlert.AllDay(daysBefore = 1, timeOfDay = LocalTime.of(9, 0)),
+            updatedAt = Instant.EPOCH,
+        )
+
+        assertEquals(
+            Instant.parse("2026-07-30T09:00:00Z"),
+            ScheduleCalculator.nextAlert(schedule, Instant.parse("2026-07-30T08:00:00Z"), ZoneId.of("UTC")),
+        )
+        assertEquals(
+            Instant.parse("2026-07-31T09:00:00Z"),
+            ScheduleCalculator.nextAlert(schedule, Instant.parse("2026-07-30T10:00:00Z"), ZoneId.of("UTC")),
+        )
+    }
+
+    @Test
+    fun recurringTimedDurationCanCrossMidnightAndStopsAtRepeatLimit() {
+        val schedule = Schedule(
+            id = UUID.randomUUID(),
+            title = "Overnight care",
+            timing = ScheduleTiming.LocalTimed(
+                startsOn = LocalDate.of(2026, 7, 30),
+                timeOfDay = LocalTime.of(23, 30),
+                durationMinutes = 120,
+            ),
+            recurrence = ScheduleRecurrence.Daily(LocalDate.of(2026, 7, 31)),
+            updatedAt = Instant.EPOCH,
+        )
+
+        val occurrence = ScheduleCalculator.nextOccurrence(
+            schedule,
+            Instant.parse("2026-07-30T22:00:00Z"),
+            ZoneId.of("UTC"),
+        )
+        assertEquals(Instant.parse("2026-07-30T23:30:00Z"), occurrence?.startsAt)
+        assertEquals(Instant.parse("2026-07-31T01:30:00Z"), occurrence?.endsAt)
+        assertNull(
+            ScheduleCalculator.nextOccurrence(
+                schedule,
+                Instant.parse("2026-07-31T23:30:00Z"),
+                ZoneId.of("UTC"),
+            ),
+        )
+    }
+
+    @Test
+    fun validationRejectsInvalidEndsAndCaseInsensitiveDuplicatePeople() {
+        val duplicatePeople = HealthVault.empty(Instant.EPOCH, displayName = "Owner").copy(
+            schedules = listOf(
+                Schedule(
+                    id = UUID.randomUUID(),
+                    title = "Visit",
+                    timing = ScheduleTiming.InstantTimed(Instant.EPOCH),
+                    people = listOf("Amina", "amina"),
+                    updatedAt = Instant.EPOCH,
+                ),
+            ),
+        )
+
+        assertThrows(VaultValidationException::class.java) { duplicatePeople.requireValid() }
+        val invalidEnd = duplicatePeople.copy(
+            schedules = listOf(
+                duplicatePeople.schedules.single().copy(
+                    people = listOf("Amina"),
+                    timing = ScheduleTiming.InstantTimed(Instant.EPOCH, Instant.EPOCH.minusSeconds(1)),
+                ),
+            ),
+        )
+        assertThrows(VaultValidationException::class.java) { invalidEnd.requireValid() }
+    }
+
     private fun document(
         title: String,
         category: DocumentCategoryRef,
@@ -129,19 +208,14 @@ class HealthVaultRulesTest {
         updatedAt = now,
     )
 
-    private fun reminder(
+    private fun schedule(
         startsOn: LocalDate,
-        recurrence: ReminderRecurrence,
-        days: Set<DayOfWeek> = emptySet(),
-        endsOn: LocalDate? = null,
-    ) = Reminder(
+        recurrence: ScheduleRecurrence,
+    ) = Schedule(
         id = UUID.randomUUID(),
-        title = "Reminder",
-        startsOn = startsOn,
-        timeOfDay = LocalTime.of(10, 0),
+        title = "Schedule",
+        timing = ScheduleTiming.LocalTimed(startsOn, LocalTime.of(10, 0)),
         recurrence = recurrence,
-        daysOfWeek = days,
-        endsOn = endsOn,
         updatedAt = Instant.EPOCH,
     )
 }

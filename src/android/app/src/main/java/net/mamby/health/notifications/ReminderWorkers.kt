@@ -24,15 +24,17 @@ class ReminderWorker @AssistedInject constructor(
         if (scheduledEpochMillis == Long.MIN_VALUE) return Result.failure()
 
         return runCatching {
-            val request = source.activeReminderRequests()
-                .firstOrNull { ReminderScheduleKey.from(it.id) == scheduleKey }
+            val scheduledOccurrence = Instant.ofEpochMilli(scheduledEpochMillis)
+            val request = source.requestForDelivery(scheduleKey, scheduledOccurrence)
                 ?: return@runCatching Result.success()
-            if (clock.instant().isBefore(Instant.ofEpochMilli(scheduledEpochMillis))) {
+            if (clock.instant().isBefore(scheduledOccurrence)) {
                 scheduler.scheduleFollowing(request)
                 return@runCatching Result.success()
             }
             publisher.publish(request)
-            scheduler.scheduleFollowing(request)
+            source.activeReminderRequests()
+                .firstOrNull { ReminderScheduleKey.from(it.id) == scheduleKey }
+                ?.let { scheduler.scheduleFollowing(it) }
             Result.success()
         }.getOrElse { Result.retry() }
     }

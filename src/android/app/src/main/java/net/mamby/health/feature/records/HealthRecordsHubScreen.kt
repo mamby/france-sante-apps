@@ -1,6 +1,7 @@
 package net.mamby.health.feature.records
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -31,7 +32,7 @@ fun HealthRecordsHubScreen(
     ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().consumeWindowInsets(padding),
             contentPadding = padding.withScreenPadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),

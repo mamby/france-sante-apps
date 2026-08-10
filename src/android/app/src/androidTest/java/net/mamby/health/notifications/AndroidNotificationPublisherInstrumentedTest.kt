@@ -61,8 +61,7 @@ class AndroidNotificationPublisherInstrumentedTest {
     private companion object {
         val REQUEST = ReminderRequest(
             id = "permission-test:${Instant.parse("2026-07-30T08:00:00Z")}",
-            profileId = "2f59f953-d6a2-4577-af28-3576c994094f",
-            type = ReminderType.GENERAL,
+            target = ReminderTarget.Schedule("2f59f953-d6a2-4577-af28-3576c994094f"),
             title = "Permission acceptance test",
             message = "This notification must not be posted.",
             recurrence = ReminderRecurrence.Once(Instant.parse("2026-07-30T09:00:00Z")),

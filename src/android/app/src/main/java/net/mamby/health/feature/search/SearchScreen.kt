@@ -1,8 +1,10 @@
 package net.mamby.health.feature.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fitInside
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -20,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.WindowInsetsRulers
 import androidx.compose.ui.res.stringResource
 import java.util.UUID
 import net.mamby.health.R
@@ -30,6 +33,7 @@ import net.mamby.health.core.model.HealthSearchScope
 import net.mamby.health.core.model.HealthSearchTarget
 import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.Schedule
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.ProfileListFilterHeader
@@ -39,12 +43,13 @@ import net.mamby.health.ui.components.withScreenPadding
 import net.mamby.health.ui.theme.UiTokens
 import net.mamby.health.ui.format.localizedLabel
 
-enum class SearchFilter { ALL, HEALTH_RECORDS, NOTES, MEDICATIONS, APPOINTMENTS }
+enum class SearchFilter { ALL, HEALTH_RECORDS, NOTES, MEDICATIONS, SCHEDULE }
 
 @Composable
 fun SearchScreen(
     records: List<ProfileRecord>,
     notes: List<HealthNote>,
+    schedules: List<Schedule>,
     onResultSelected: (HealthSearchResult) -> Unit,
     query: String,
     filter: SearchFilter,
@@ -54,14 +59,14 @@ fun SearchScreen(
     var filterProfileId by remember { mutableStateOf<UUID?>(null) }
     val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
     val recordsById = remember(records) { records.associateBy { it.profile.id } }
-    val results = remember(filteredRecords, notes, query, filter) {
-        HealthSearch.search(filteredRecords, notes, query).filter { result ->
+    val results = remember(filteredRecords, notes, schedules, query, filter) {
+        HealthSearch.search(filteredRecords, notes, schedules, query).filter { result ->
             when (filter) {
                 SearchFilter.ALL -> true
                 SearchFilter.HEALTH_RECORDS -> result.group == HealthSearchGroup.HEALTH_RECORDS
                 SearchFilter.NOTES -> result.group == HealthSearchGroup.NOTES
                 SearchFilter.MEDICATIONS -> result.group == HealthSearchGroup.MEDICATIONS
-                SearchFilter.APPOINTMENTS -> result.group == HealthSearchGroup.APPOINTMENTS
+                SearchFilter.SCHEDULE -> result.group == HealthSearchGroup.SCHEDULE
             }
         }
     }
@@ -74,7 +79,10 @@ fun SearchScreen(
     ) { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .fitInside(WindowInsetsRulers.Ime.current)
+                .consumeWindowInsets(innerPadding),
             contentPadding = innerPadding.withScreenPadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
@@ -168,5 +176,5 @@ private fun SearchFilter.labelResource(): Int = when (this) {
     SearchFilter.HEALTH_RECORDS -> R.string.nav_health_records
     SearchFilter.NOTES -> R.string.nav_notes
     SearchFilter.MEDICATIONS -> R.string.nav_medications
-    SearchFilter.APPOINTMENTS -> R.string.nav_appointments
+    SearchFilter.SCHEDULE -> R.string.schedule_title
 }

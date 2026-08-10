@@ -2,6 +2,7 @@ package net.mamby.health.core.model
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 import net.mamby.health.data.VaultCodec
 import org.junit.Assert.assertEquals
@@ -17,7 +18,7 @@ class HealthVaultSerializationTest {
     private val blobId = UUID.fromString("27d14e33-91aa-47d5-bf19-fd7beb082d96")
 
     @Test
-    fun schemaV4RoundTripsMultipleProfilesAndVaultWideNotesWithoutDerivedViews() {
+    fun schemaV5RoundTripsMultipleProfilesNotesAndSchedulesWithoutDerivedViews() {
         val doctorId = UUID.fromString("34a502d7-23c0-4be5-a8fd-34b56dca82d0")
         val noteId = UUID.fromString("096c83e2-7703-49b4-8d24-e5bf5f9c63e4")
         val measurementId = UUID.fromString("8c918e28-6344-484b-a969-a2d23c109bf3")
@@ -95,13 +96,26 @@ class HealthVaultSerializationTest {
                 ProfileRecord(HealthProfile(secondId, "Sam", lastUpdatedAt = now)),
             ),
             notes = listOf(HealthNote(noteId, "Follow-up", "Context", now, now)),
+            schedules = listOf(
+                Schedule(
+                    id = UUID.randomUUID(),
+                    title = "Family check-in",
+                    timing = ScheduleTiming.AllDay(LocalDate.of(2026, 8, 1)),
+                    recurrence = ScheduleRecurrence.Monthly(1, LocalDate.of(2026, 12, 1)),
+                    alert = ScheduleAlert.AllDay(1, LocalTime.of(9, 0)),
+                    people = listOf("Amina", "Sam"),
+                    location = "Home",
+                    notes = "Bring records",
+                    updatedAt = now,
+                ),
+            ),
             updatedAt = now,
         ).requireValid()
 
         val encoded = VaultCodec.encode(vault)
         val decoded = VaultCodec.decode(encoded)
 
-        assertEquals(4, decoded.sourceVersion)
+        assertEquals(5, decoded.sourceVersion)
         assertEquals(vault, decoded.vault)
         assertEquals(noteId, decoded.vault.notes.single().id)
         assertEquals("O+", decoded.vault.profiles.first().summary().bloodType)
@@ -118,6 +132,8 @@ class HealthVaultSerializationTest {
     fun exactV3PayloadMigratesProfileNotesToVaultScopeInStableOrder() {
         val firstNote = UUID.fromString("1fd70aaf-9404-45a3-8586-4ba5ecfa2cc2")
         val secondNote = UUID.fromString("e6a40b07-999c-4e73-bbd8-8249b5c18bdc")
+        val appointmentId = UUID.fromString("ad62eb6e-383d-4fdd-b4dd-aab7f44b4641")
+        val reminderId = UUID.fromString("ba22181c-b6a0-4b6b-86a8-cb55fe80bef6")
         val payload = """
             {
               "version": 3,
@@ -128,6 +144,16 @@ class HealthVaultSerializationTest {
                   "notes": [{
                     "id":"$firstNote","title":"First","body":"One",
                     "notedAt":"$now","updatedAt":"$now"
+                  }],
+                  "appointments": [{
+                    "id":"$appointmentId","title":"Visit","clinician":"Discarded clinician",
+                    "location":"Discarded location","startsAt":"2026-08-01T10:00:00Z",
+                    "notes":"Discarded notes","reminderLeadMinutes":37,"updatedAt":"$now"
+                  }],
+                  "reminders": [{
+                    "id":"$reminderId","title":"Monthly task","startsOn":"2026-08-31",
+                    "timeOfDay":"09:30:00","recurrence":"MONTHLY","endsOn":"2026-12-31",
+                    "isEnabled":false,"notes":"Discarded notes","updatedAt":"$now"
                   }]
                 },
                 {
@@ -145,10 +171,49 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(3, decoded.sourceVersion)
-        assertEquals(4, decoded.vault.version)
+        assertEquals(5, decoded.vault.version)
         assertEquals(12L, decoded.vault.revision)
         assertEquals(listOf(firstNote, secondNote), decoded.vault.notes.map(HealthNote::id))
         assertEquals(listOf(firstId, secondId), decoded.vault.profiles.map { it.profile.id })
+        val appointment = decoded.vault.schedules.first { it.id == appointmentId }
+        assertEquals(ScheduleAlert.Timed(37), appointment.alert)
+        assertEquals(listOf("Amina"), appointment.people)
+        assertEquals(null, appointment.location)
+        assertEquals(null, appointment.notes)
+        val reminder = decoded.vault.schedules.first { it.id == reminderId }
+        assertEquals(ScheduleRecurrence.Monthly(31, LocalDate.of(2026, 12, 31)), reminder.recurrence)
+        assertEquals(null, reminder.alert)
+    }
+
+    @Test
+    fun exactV4PayloadMigratesVaultNotesAndCopiesOnlyOwnerNamesIntoSchedules() {
+        val appointmentId = UUID.fromString("b9d1a9cd-408f-47d9-aa5f-50d3f28632fe")
+        val payload = """
+            {
+              "version":4,"revision":14,
+              "profiles":[{
+                "profile":{"id":"$firstId","displayName":"Amina","lastUpdatedAt":"$now"},
+                "appointments":[{
+                  "id":"$appointmentId","title":"Check-up","clinician":"Discard me",
+                  "location":"Discard me","startsAt":"2026-09-01T08:00:00Z",
+                  "relatedDocumentIds":[],"notes":"Discard me","reminderLeadMinutes":1440,
+                  "updatedAt":"$now"
+                }]
+              }],
+              "notes":[],"updatedAt":"$now"
+            }
+        """.trimIndent().encodeToByteArray()
+
+        val decoded = VaultCodec.decode(payload)
+        val schedule = decoded.vault.schedules.single()
+
+        assertEquals(4, decoded.sourceVersion)
+        assertEquals(5, decoded.vault.version)
+        assertEquals(appointmentId, schedule.id)
+        assertEquals(listOf("Amina"), schedule.people)
+        assertEquals(ScheduleAlert.Timed(1_440), schedule.alert)
+        assertEquals(null, schedule.location)
+        assertEquals(null, schedule.notes)
     }
 
     @Test
@@ -185,7 +250,7 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(2, decoded.sourceVersion)
-        assertEquals(4, decoded.vault.version)
+        assertEquals(5, decoded.vault.version)
         assertEquals(11L, decoded.vault.revision)
         assertEquals(listOf(firstId, secondId), decoded.vault.profiles.map { it.profile.id })
         val firstDocument = decoded.vault.profiles.first().documents.single()
@@ -227,7 +292,7 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(1, decoded.sourceVersion)
-        assertEquals(4, decoded.vault.version)
+        assertEquals(5, decoded.vault.version)
         assertEquals(3L, decoded.vault.revision)
         assertEquals(firstId, decoded.vault.profiles.single().profile.id)
         assertEquals(documentId, decoded.vault.profiles.single().documents.single().id)
@@ -247,7 +312,7 @@ class HealthVaultSerializationTest {
     }
 
     @Test
-    fun validationRejectsGlobalIdCollisionsAndCrossProfileDocumentLinks() {
+    fun validationRejectsGlobalIdCollisionsAcrossVaultAndProfileObjects() {
         val sharedId = UUID.randomUUID()
         val document = MedicalDocument(
             sharedId,
@@ -266,18 +331,10 @@ class HealthVaultSerializationTest {
                 ProfileRecord(HealthProfile(firstId, "Amina", lastUpdatedAt = now), documents = listOf(document)),
                 ProfileRecord(
                     HealthProfile(secondId, "Sam", lastUpdatedAt = now),
-                    appointments = listOf(
-                        Appointment(
-                            UUID.randomUUID(),
-                            "Visit",
-                            "Clinician",
-                            "Clinic",
-                            now,
-                            relatedDocumentIds = listOf(sharedId),
-                            updatedAt = now,
-                        ),
-                    ),
                 ),
+            ),
+            schedules = listOf(
+                Schedule(sharedId, "Visit", ScheduleTiming.InstantTimed(now), updatedAt = now),
             ),
             updatedAt = now,
         )

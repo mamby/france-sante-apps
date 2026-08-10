@@ -20,9 +20,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -98,7 +98,6 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.VaultItemKind
 import net.mamby.health.core.model.profileRecord
 import net.mamby.health.data.VaultState
-import net.mamby.health.feature.appointments.AppointmentDetailScreen
 import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.feature.error.VaultUnreadableScreen
 import net.mamby.health.feature.lock.LockScreen
@@ -115,7 +114,7 @@ import net.mamby.health.feature.records.HealthRecordsHubScreen
 import net.mamby.health.feature.profiles.ProfileManagementScreen
 import net.mamby.health.feature.profiles.ProfileNameDialog
 import net.mamby.health.feature.schedule.ScheduleScreen
-import net.mamby.health.feature.schedule.ScheduleSection
+import net.mamby.health.feature.schedule.ScheduleDetailScreen
 import net.mamby.health.feature.search.SearchScreen
 import net.mamby.health.feature.search.SearchFilter
 import net.mamby.health.feature.settings.SettingsScreen
@@ -130,9 +129,7 @@ import net.mamby.health.feature.vault.DocumentDetailScreen
 import net.mamby.health.feature.vault.ManageDocumentCategoriesScreen
 import net.mamby.health.feature.vault.DocumentPreviewState
 import net.mamby.health.feature.vault.VaultScreen
-import net.mamby.health.navigation.AppointmentDetailRoute
 import net.mamby.health.navigation.AppRoute
-import net.mamby.health.navigation.DeepLinkKind
 import net.mamby.health.navigation.DeepLinkTarget
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.CareDirectiveDetailRoute
@@ -155,6 +152,7 @@ import net.mamby.health.navigation.NotesRoute
 import net.mamby.health.navigation.DirectoryRoute
 import net.mamby.health.navigation.DocumentsRoute
 import net.mamby.health.navigation.ScheduleRoute
+import net.mamby.health.navigation.ScheduleDetailRoute
 import net.mamby.health.navigation.SearchRoute
 import net.mamby.health.navigation.SettingsRoute
 import net.mamby.health.navigation.TopLevelDestination
@@ -171,6 +169,7 @@ import net.mamby.health.ui.components.LocalProfileDisplayLabels
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.appContentWindowInsets
 import net.mamby.health.ui.components.appNavigationSuiteType
 import net.mamby.health.ui.components.disambiguatedProfileLabels
 import net.mamby.health.ui.theme.HealthVaultTheme
@@ -432,8 +431,7 @@ private fun VaultNavigation(
     var measurementCreation by remember { mutableLongStateOf(0) }
     var directoryCreation by remember { mutableLongStateOf(0) }
     var medicationCreation by remember { mutableLongStateOf(0) }
-    var appointmentCreation by remember { mutableLongStateOf(0) }
-    var scheduleSection by rememberSaveable { mutableStateOf(ScheduleSection.Appointments) }
+    var scheduleCreation by remember { mutableLongStateOf(0) }
     var pendingOwnerAction by remember { mutableStateOf<ProfileOwnerAction?>(null) }
     var pendingDeepLink by remember { mutableStateOf<DeepLinkTarget?>(null) }
     var notificationsBlocked by remember { mutableStateOf(viewModel.notificationsBlocked()) }
@@ -454,25 +452,16 @@ private fun VaultNavigation(
 
     LaunchedEffect(pendingDeepLink) {
         val target = pendingDeepLink ?: return@LaunchedEffect
-        val ownerId = runCatching { UUID.fromString(target.profileId) }.getOrNull()
-            ?: return@LaunchedEffect
-        when (target.kind) {
-            DeepLinkKind.Dashboard -> navigation.select(TopLevelDestination.Home)
-            DeepLinkKind.Medication -> navigation.navigate(
+        when (target) {
+            DeepLinkTarget.Dashboard -> navigation.select(TopLevelDestination.Home)
+            is DeepLinkTarget.Medication -> navigation.navigate(
                 TopLevelDestination.Medications,
-                target.recordId?.let { MedicationDetailRoute(ownerId.toString(), it) },
+                target.medicationId?.let { MedicationDetailRoute(target.profileId, it) },
             )
-            DeepLinkKind.Appointment -> {
-                scheduleSection = ScheduleSection.Appointments
-                navigation.navigate(
-                    TopLevelDestination.Schedule,
-                    target.recordId?.let { AppointmentDetailRoute(ownerId.toString(), it) },
-                )
-            }
-            DeepLinkKind.Reminder -> {
-                scheduleSection = ScheduleSection.Reminders
-                navigation.selectRoot(TopLevelDestination.Schedule)
-            }
+            is DeepLinkTarget.Schedule -> navigation.navigate(
+                TopLevelDestination.Schedule,
+                target.scheduleId?.let(::ScheduleDetailRoute),
+            )
         }
         pendingDeepLink = null
     }
@@ -489,8 +478,14 @@ private fun VaultNavigation(
 
     LaunchedEffect(Unit) {
         viewModel.deepLinkTargets().collect { target ->
-            val ownerId = runCatching { UUID.fromString(target.profileId) }.getOrNull()
-            if (ownerId == null || currentVault.profiles.none { it.profile.id == ownerId }) {
+            val available = when (target) {
+                DeepLinkTarget.Dashboard -> true
+                is DeepLinkTarget.Medication -> runCatching { UUID.fromString(target.profileId) }.getOrNull()
+                    ?.let { ownerId -> currentVault.profiles.any { it.profile.id == ownerId } } == true
+                is DeepLinkTarget.Schedule -> target.scheduleId == null ||
+                    currentVault.schedules.any { it.id.toString() == target.scheduleId }
+            }
+            if (!available) {
                 navigation.resetTo()
                 viewModel.showUnavailable()
                 return@collect
@@ -551,7 +546,8 @@ private fun VaultNavigation(
             onDestinationSelected = navigation::selectRoot,
             onMoreSelected = { moreSheetVisible = true },
         ) {
-            CompositionLocalProvider(LocalProfileDisplayLabels provides profileLabels) {
+            Box(Modifier.fillMaxSize()) {
+                CompositionLocalProvider(LocalProfileDisplayLabels provides profileLabels) {
                     NavDisplay(
                         backStack = navigation.currentBackStack,
                         onBack = navigation::goBack,
@@ -561,6 +557,7 @@ private fun VaultNavigation(
                         DashboardScreen(
                             records = vault.profiles,
                             notes = vault.notes,
+                            schedules = vault.schedules,
                             clock = viewModel.clock,
                             zoneId = zoneId,
                             onMedications = { navigation.selectRoot(TopLevelDestination.Medications) },
@@ -587,22 +584,15 @@ private fun VaultNavigation(
                                         TopLevelDestination.Medications,
                                         MedicationDetailRoute(profileId.toString(), item.id.toString()),
                                     )
-                                    VaultItemKind.APPOINTMENT -> {
-                                        scheduleSection = ScheduleSection.Appointments
-                                        navigation.navigate(
-                                            TopLevelDestination.Schedule,
-                                            AppointmentDetailRoute(profileId.toString(), item.id.toString()),
-                                        )
-                                    }
+                                    VaultItemKind.SCHEDULE -> navigation.navigate(
+                                        TopLevelDestination.Schedule,
+                                        ScheduleDetailRoute(item.id.toString()),
+                                    )
                                     VaultItemKind.VACCINATION -> navigation.navigate(
                                         TopLevelDestination.HealthRecords,
                                         HealthInfoRoute(profileId.toString()),
                                         VaccinationDetailRoute(profileId.toString(), item.id.toString()),
                                     )
-                                    VaultItemKind.REMINDER -> {
-                                        scheduleSection = ScheduleSection.Reminders
-                                        navigation.selectRoot(TopLevelDestination.Schedule)
-                                    }
                                     VaultItemKind.NOTE -> navigation.navigate(
                                         TopLevelDestination.Notes,
                                         NoteDetailRoute(item.id.toString()),
@@ -639,6 +629,12 @@ private fun VaultNavigation(
                                     NoteDetailRoute(noteId.toString()),
                                 )
                             },
+                            onScheduleSelected = { scheduleId ->
+                                navigation.navigate(
+                                    TopLevelDestination.Schedule,
+                                    ScheduleDetailRoute(scheduleId.toString()),
+                                )
+                            },
                             onAddHealthInfo = {
                                 healthCreationProfileId = vault.profiles.singleOrNull()?.profile?.id
                                 healthCreationVisible = true
@@ -651,9 +647,8 @@ private fun VaultNavigation(
                                 medicationCreation++
                                 navigation.selectRoot(TopLevelDestination.Medications)
                             },
-                            onAddAppointment = {
-                                scheduleSection = ScheduleSection.Appointments
-                                appointmentCreation++
+                            onAddSchedule = {
+                                scheduleCreation++
                                 navigation.selectRoot(TopLevelDestination.Schedule)
                             },
                         )
@@ -784,6 +779,7 @@ private fun VaultNavigation(
                         SearchScreen(
                             records = vault.profiles,
                             notes = vault.notes,
+                            schedules = vault.schedules,
                             onResultSelected = { result ->
                                 navigation.navigate(result.toRoute())
                                 viewModel.resetPreview()
@@ -820,30 +816,20 @@ private fun VaultNavigation(
                         ),
                     ) {
                         ScheduleScreen(
-                            records = vault.profiles,
+                            schedules = vault.schedules,
+                            profileNames = vault.profiles.map { it.profile.displayName },
                             today = today,
                             zoneId = zoneId,
                             now = now,
                             notificationsBlocked = notificationsBlocked,
-                            onAddProfile = viewModel::addProfile,
-                            onUpsertAppointment = { profileId, appointment ->
-                                withNotificationPermission(appointment.reminderLeadMinutes != null) {
-                                    viewModel.upsertAppointment(profileId, appointment)
+                            onUpsert = { schedule ->
+                                withNotificationPermission(schedule.alert != null) {
+                                    viewModel.upsertSchedule(schedule)
                                 }
                             },
-                            onAppointmentSelected = { profileId, id ->
-                                navigation.navigate(AppointmentDetailRoute(profileId.toString(), id))
-                            },
-                            onUpsertReminder = { profileId, reminder ->
-                                withNotificationPermission(reminder.isEnabled) {
-                                    viewModel.upsertReminder(profileId, reminder)
-                                }
-                            },
-                            onDeleteReminder = viewModel::deleteReminder,
+                            onSelected = { id -> navigation.navigate(ScheduleDetailRoute(id)) },
                             onOpenNotificationSettings = context::openNotificationSettings,
-                            selectedSection = scheduleSection,
-                            onSectionSelected = { scheduleSection = it },
-                            appointmentCreationRequest = appointmentCreation,
+                            creationRequest = scheduleCreation,
                         )
                     }
                     entry<DocumentDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
@@ -985,33 +971,22 @@ private fun VaultNavigation(
                             },
                         )
                     }
-                    entry<AppointmentDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val record = vault.profileRecordOrNull(route.profileId)
-                        val appointment = record?.appointments?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || appointment == null) MissingRecordScreen(navigation::goBack) else AppointmentDetailScreen(
-                            appointment = appointment,
-                            profile = record.profile,
-                            documents = record.documents,
-                            directory = record.careDirectory,
+                    entry<ScheduleDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val schedule = vault.schedules.firstOrNull { it.id.toString() == route.id }
+                        if (schedule == null) MissingRecordScreen(navigation::goBack) else ScheduleDetailScreen(
+                            schedule = schedule,
+                            profileNames = vault.profiles.map { it.profile.displayName },
                             zoneId = zoneId,
                             today = today,
                             onBack = navigation::goBack,
                             onUpsert = { updated ->
-                                withNotificationPermission(updated.reminderLeadMinutes != null) {
-                                    viewModel.upsertAppointment(record.profile.id, updated)
+                                withNotificationPermission(updated.alert != null) {
+                                    viewModel.upsertSchedule(updated)
                                 }
                             },
                             onDelete = {
-                                viewModel.deleteAppointment(record.profile.id, appointment.id)
+                                viewModel.deleteSchedule(schedule.id)
                                 navigation.goBack()
-                            },
-                            onDocumentSelected = { id ->
-                                viewModel.resetPreview()
-                                navigation.navigate(
-                                    TopLevelDestination.HealthRecords,
-                                    DocumentsRoute,
-                                    DocumentDetailRoute(record.profile.id.toString(), id),
-                                )
                             },
                         )
                     }
@@ -1063,14 +1038,15 @@ private fun VaultNavigation(
                         },
                     )
                 }
+                if (message != null) {
+                    Snackbar(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(appContentWindowInsets())
+                            .padding(UiTokens.ScreenPadding),
+                    ) { Text(message) }
+                }
             }
-        if (message != null) {
-            Snackbar(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(UiTokens.ScreenPadding),
-            ) { Text(message) }
         }
     }
 
@@ -1143,7 +1119,7 @@ private fun HealthSearchResult.toRoute(): AppRoute {
     return when (val selected = target) {
         is HealthSearchTarget.Document -> DocumentDetailRoute(requireProfileId(), selected.id.toString())
         is HealthSearchTarget.Medication -> MedicationDetailRoute(requireProfileId(), selected.id.toString())
-        is HealthSearchTarget.Appointment -> AppointmentDetailRoute(requireProfileId(), selected.id.toString())
+        is HealthSearchTarget.Schedule -> ScheduleDetailRoute(selected.id.toString())
         is HealthSearchTarget.EmergencyContact -> EmergencyContactDetailRoute(requireProfileId(), selected.id.toString())
         is HealthSearchTarget.Vaccination -> VaccinationDetailRoute(requireProfileId(), selected.id.toString())
         is HealthSearchTarget.HealthInfo -> HealthInfoRoute(requireProfileId())
@@ -1196,14 +1172,20 @@ internal fun MissingVaultScreen(onStart: () -> Unit, onRestore: () -> Unit) {
 
 @Composable
 private fun DetailPlaceholder(messageResource: Int) {
-    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().windowInsetsPadding(appContentWindowInsets()),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(stringResource(messageResource), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 @Composable
 private fun MissingRecordScreen(onBack: () -> Unit) {
-    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().windowInsetsPadding(appContentWindowInsets()),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),

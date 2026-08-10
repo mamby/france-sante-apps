@@ -6,10 +6,15 @@ import java.time.LocalTime
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class ReminderType {
-    MEDICATION,
-    APPOINTMENT,
-    GENERAL,
+sealed interface ReminderTarget {
+    @Serializable
+    data class Medication(
+        val profileId: String,
+        val medicationId: String,
+    ) : ReminderTarget
+
+    @Serializable
+    data class Schedule(val scheduleId: String) : ReminderTarget
 }
 
 @Serializable
@@ -79,9 +84,7 @@ sealed interface ReminderRecurrence {
 @Serializable
 data class ReminderRequest(
     val id: String,
-    val profileId: String,
-    val type: ReminderType,
-    val targetId: String? = null,
+    val target: ReminderTarget,
     val title: String,
     val message: String,
     val recurrence: ReminderRecurrence,
@@ -89,7 +92,15 @@ data class ReminderRequest(
 ) {
     init {
         require(id.isNotBlank()) { "Reminder id must not be blank" }
-        require(profileId.isNotBlank()) { "Reminder profile id must not be blank" }
+        when (target) {
+            is ReminderTarget.Medication -> {
+                require(target.profileId.isNotBlank()) { "Medication reminder profile id must not be blank" }
+                require(target.medicationId.isNotBlank()) { "Medication reminder target id must not be blank" }
+            }
+            is ReminderTarget.Schedule -> require(target.scheduleId.isNotBlank()) {
+                "Schedule reminder target id must not be blank"
+            }
+        }
         require(title.isNotBlank()) { "Reminder title must not be blank" }
     }
 }

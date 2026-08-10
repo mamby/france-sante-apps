@@ -18,7 +18,7 @@ The backup destination receives one portable encrypted container. Scheduled upda
 4. Confirm that restore will replace the entire current vault.
 5. Keep the application open until validation completes.
 
-Restore authenticates the manifest and every document before replacement. It then encrypts the recovered data with a new local Keystore key. A wrong passphrase, unsupported schema, missing document, modified container, provider failure, or interrupted operation leaves the existing vault unchanged.
+Restore authenticates the manifest and every document before replacement. It accepts historical schema-v1 through schema-v4 snapshots and deterministically migrates their appointments and reminders into vault-level schedules; the portable container version remains unchanged. It then encrypts the recovered schema-v5 data with a new local Keystore key. A wrong passphrase, unsupported schema, missing document, modified container, provider failure, or interrupted operation leaves the existing vault unchanged.
 
 ## Important limitations
 

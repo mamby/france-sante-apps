@@ -3,6 +3,8 @@ package net.mamby.health.ui.theme
 import androidx.compose.ui.unit.dp
 
 object UiTokens {
+    const val CompactNavigationContainerAlpha = 0.8f
+
     val ProfileAvatarSize = 40.dp
     val ProfileMarkerAvatarSize = 24.dp
     val ScreenPadding = 16.dp

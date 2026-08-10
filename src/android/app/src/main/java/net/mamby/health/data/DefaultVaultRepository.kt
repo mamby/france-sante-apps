@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import net.mamby.health.core.model.Appointment
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectoryEntry
@@ -30,13 +29,14 @@ import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.core.model.Reminder
+import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.UnsupportedVaultVersionException
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.core.model.allDocuments
 import net.mamby.health.core.model.isDocumentCategoryAvailable
 import net.mamby.health.core.model.profileRecord
 import net.mamby.health.core.model.requireValid
+import net.mamby.health.core.model.normalized
 
 fun interface UuidGenerator {
     fun next(): UUID
@@ -233,14 +233,6 @@ class DefaultVaultRepository @Inject constructor(
             val now = clock.instant()
             val updated = record.copy(
                 documents = record.documents.filterNot { it.id == documentId },
-                appointments = record.appointments.map { appointment ->
-                    if (documentId in appointment.relatedDocumentIds) {
-                        appointment.copy(
-                            relatedDocumentIds = appointment.relatedDocumentIds.filterNot(documentId::equals),
-                            updatedAt = now,
-                        )
-                    } else appointment
-                },
                 directives = record.directives.map { directive ->
                     if (documentId in directive.relatedDocumentIds) {
                         directive.copy(
@@ -267,15 +259,14 @@ class DefaultVaultRepository @Inject constructor(
             record.copy(medications = record.medications.filterNot { it.id == medicationId })
         }
 
-    override suspend fun upsertAppointment(profileId: UUID, appointment: Appointment) =
-        mutateProfile(profileId) { record, now ->
-            record.copy(appointments = record.appointments.upsert(appointment.copy(updatedAt = now), Appointment::id))
-        }
+    override suspend fun upsertSchedule(schedule: Schedule) = mutateVault { vault, now ->
+        val normalized = schedule.copy(updatedAt = now).normalized()
+        vault.copy(schedules = vault.schedules.upsert(normalized, Schedule::id))
+    }
 
-    override suspend fun deleteAppointment(profileId: UUID, appointmentId: UUID) =
-        mutateProfile(profileId) { record, _ ->
-            record.copy(appointments = record.appointments.filterNot { it.id == appointmentId })
-        }
+    override suspend fun deleteSchedule(scheduleId: UUID) = mutateVault { vault, _ ->
+        vault.copy(schedules = vault.schedules.filterNot { it.id == scheduleId })
+    }
 
     override suspend fun upsertVaccination(profileId: UUID, vaccination: Vaccination) =
         mutateProfile(profileId) { record, now ->
@@ -285,16 +276,6 @@ class DefaultVaultRepository @Inject constructor(
     override suspend fun deleteVaccination(profileId: UUID, vaccinationId: UUID) =
         mutateProfile(profileId) { record, _ ->
             record.copy(vaccinations = record.vaccinations.filterNot { it.id == vaccinationId })
-        }
-
-    override suspend fun upsertReminder(profileId: UUID, reminder: Reminder) =
-        mutateProfile(profileId) { record, now ->
-            record.copy(reminders = record.reminders.upsert(reminder.copy(updatedAt = now), Reminder::id))
-        }
-
-    override suspend fun deleteReminder(profileId: UUID, reminderId: UUID) =
-        mutateProfile(profileId) { record, _ ->
-            record.copy(reminders = record.reminders.filterNot { it.id == reminderId })
         }
 
     override suspend fun upsertHealthNote(note: HealthNote) =
@@ -391,15 +372,6 @@ class DefaultVaultRepository @Inject constructor(
                             updatedAt = now,
                         )
                     } else medication
-                },
-                appointments = record.appointments.map { appointment ->
-                    if (appointment.clinicianEntryId == entryId || appointment.facilityEntryId == entryId) {
-                        appointment.copy(
-                            clinicianEntryId = appointment.clinicianEntryId.takeUnless(entryId::equals),
-                            facilityEntryId = appointment.facilityEntryId.takeUnless(entryId::equals),
-                            updatedAt = now,
-                        )
-                    } else appointment
                 },
                 vaccinations = record.vaccinations.map { vaccination ->
                     if (vaccination.providerEntryId == entryId) {

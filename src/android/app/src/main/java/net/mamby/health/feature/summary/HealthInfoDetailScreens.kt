@@ -2,6 +2,7 @@ package net.mamby.health.feature.summary
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -121,9 +122,10 @@ private fun HealthInfoDetailScaffold(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(padding)
-                .padding(UiTokens.ScreenPadding)
-                .verticalScroll(rememberScrollState()),
+                .consumeWindowInsets(padding)
+                .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             content()

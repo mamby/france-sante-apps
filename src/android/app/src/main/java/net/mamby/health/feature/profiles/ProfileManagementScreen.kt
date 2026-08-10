@@ -2,6 +2,7 @@ package net.mamby.health.feature.profiles
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -45,8 +46,9 @@ fun ProfileManagementScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
+                .padding(padding)
+                .consumeWindowInsets(padding)
                 .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
