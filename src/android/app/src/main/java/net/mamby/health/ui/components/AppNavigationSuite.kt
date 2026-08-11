@@ -1,8 +1,6 @@
 package net.mamby.health.ui.components
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,7 +42,6 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScope
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -160,6 +156,7 @@ private fun AppShortNavigationItems(
     onMoreSelected: () -> Unit,
 ) {
     val itemColors = ShortNavigationBarItemDefaults.colors(
+        selectedIconColor = MaterialTheme.colorScheme.primary,
         selectedIndicatorColor = Color.Transparent,
     )
     TopLevelDestination.compactPrimary.forEach { destination ->
@@ -168,10 +165,10 @@ private fun AppShortNavigationItems(
             selected = selected,
             onClick = { onDestinationSelected(destination) },
             icon = {
-                NavigationIndicatorIcon(
-                    icon = destination.icon,
-                    label = stringResource(destination.label),
-                    selected = selected,
+                Icon(
+                    painter = painterResource(destination.icon),
+                    contentDescription = stringResource(destination.label),
+                    modifier = Modifier.semantics { role = Role.Tab },
                 )
             },
             label = null,
@@ -182,10 +179,10 @@ private fun AppShortNavigationItems(
         selected = isMoreSelected,
         onClick = onMoreSelected,
         icon = {
-            NavigationIndicatorIcon(
-                icon = R.drawable.ic_lucide_ellipsis,
-                label = stringResource(R.string.action_more),
-                selected = isMoreSelected,
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_ellipsis),
+                contentDescription = stringResource(R.string.action_more),
+                modifier = Modifier.semantics { role = Role.Tab },
             )
         },
         label = null,
@@ -211,7 +208,6 @@ private fun NavigationSuiteScope.AppNavigationItems(
                     NavigationIcon(
                         icon = destination.icon,
                         label = stringResource(destination.label),
-                        selected = selected,
                     )
                 },
                 label = null,
@@ -226,7 +222,6 @@ private fun NavigationSuiteScope.AppNavigationItems(
                 NavigationIcon(
                     icon = R.drawable.ic_lucide_ellipsis,
                     label = stringResource(R.string.action_more),
-                    selected = isMoreSelected,
                 )
             },
             label = null,
@@ -239,12 +234,15 @@ private fun NavigationSuiteScope.AppNavigationItems(
 private fun navigationSuiteItemColors(): NavigationSuiteItemColors =
     NavigationSuiteDefaults.itemColors(
         navigationBarItemColors = NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
             indicatorColor = Color.Transparent,
         ),
         navigationRailItemColors = NavigationRailItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
             indicatorColor = Color.Transparent,
         ),
         navigationDrawerItemColors = NavigationDrawerItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
             selectedContainerColor = Color.Transparent,
         ),
     )
@@ -290,7 +288,7 @@ internal fun AppMoreSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NavigationIcon(@DrawableRes icon: Int, label: String, selected: Boolean) {
+private fun NavigationIcon(@DrawableRes icon: Int, label: String) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Above,
@@ -298,36 +296,11 @@ private fun NavigationIcon(@DrawableRes icon: Int, label: String, selected: Bool
         tooltip = { PlainTooltip { Text(label) } },
         state = androidx.compose.material3.rememberTooltipState(),
     ) {
-        NavigationIndicatorIcon(icon = icon, label = label, selected = selected)
-    }
-}
-
-@Composable
-private fun NavigationIndicatorIcon(
-    @DrawableRes icon: Int,
-    label: String,
-    selected: Boolean,
-) {
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            Color.Transparent
-        },
-        label = "navigation selection indicator",
-    )
-    Surface(
-        modifier = Modifier.size(UiTokens.NavigationSelectionIndicatorSize),
-        shape = CircleShape,
-        color = containerColor,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = label,
-                modifier = Modifier.semantics { role = Role.Tab },
-            )
-        }
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = label,
+            modifier = Modifier.semantics { role = Role.Tab },
+        )
     }
 }
 

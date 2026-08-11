@@ -11,7 +11,6 @@ object UiTokens {
     val FloatingBackButtonVisualSize = 44.dp
     val FloatingBackButtonElevation = 3.dp
     val FloatingNavigationBarElevation = 3.dp
-    val NavigationSelectionIndicatorSize = 40.dp
     val ScreenPadding = 16.dp
     val CompactSpacing = 8.dp
     val ContentSpacing = 12.dp
