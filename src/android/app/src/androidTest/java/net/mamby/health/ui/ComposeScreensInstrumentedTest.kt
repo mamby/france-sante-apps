@@ -4,9 +4,7 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,8 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -51,7 +47,6 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -601,7 +596,7 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun compactNavigationBarCompositesOverUnderlyingPixels() {
+    fun compactNavigationBarFloatsWithinRootBounds() {
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
                 HealthVaultTheme(darkTheme = false) {
@@ -612,23 +607,32 @@ class ComposeScreensInstrumentedTest {
                         onDestinationSelected = {},
                         onMoreSelected = {},
                     ) {
-                        Row(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f).fillMaxSize().background(Color.Red))
-                            Box(Modifier.weight(1f).fillMaxSize().background(Color.Blue))
-                        }
+                        Box(Modifier.fillMaxSize())
                     }
                 }
             }
         }
 
-        val pixels = composeRule.onRoot().captureToImage().toPixelMap()
-        val sampleY = pixels.height - 2
-        val overRed = pixels[2, sampleY]
-        val overBlue = pixels[pixels.width - 3, sampleY]
+        val rootBounds = composeRule
+            .onAllNodes(isRoot())
+            .fetchSemanticsNodes()
+            .maxBy { it.boundsInRoot.width * it.boundsInRoot.height }
+            .boundsInRoot
+        val selectedItemBounds = composeRule
+            .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))[0]
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val moreIconBounds = composeRule
+            .onNodeWithContentDescription(
+                composeRule.activity.getString(R.string.action_more),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
 
-        assertTrue(overRed.green > 0.5f && overBlue.green > 0.5f)
-        assertTrue(overRed.red > overBlue.red + 0.1f)
-        assertTrue(overBlue.blue > overRed.blue + 0.1f)
+        assertTrue(selectedItemBounds.left > rootBounds.left)
+        assertTrue(selectedItemBounds.bottom < rootBounds.bottom)
+        assertTrue(moreIconBounds.right < rootBounds.right)
     }
 
     @Test

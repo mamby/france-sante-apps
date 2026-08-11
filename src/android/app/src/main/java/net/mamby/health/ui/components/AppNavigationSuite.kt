@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -22,13 +21,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarArrangement
+import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,11 +66,7 @@ fun AppNavigationSuite(
         alpha = UiTokens.CompactNavigationContainerAlpha,
     )
     val navigationSuiteColors = NavigationSuiteDefaults.colors(
-        shortNavigationBarContainerColor = if (usesMore) {
-            Color.Transparent
-        } else {
-            compactNavigationContainerColor
-        },
+        shortNavigationBarContainerColor = compactNavigationContainerColor,
         shortNavigationBarContentColor = MaterialTheme.colorScheme.onSurface,
         navigationBarContainerColor = Color.Transparent,
         navigationRailContainerColor = Color.Transparent,
@@ -84,27 +82,44 @@ fun AppNavigationSuite(
             onMoreSelected = onMoreSelected,
         )
     }
+    val compactNavigationItems: @Composable () -> Unit = {
+        AppShortNavigationItems(
+            selectedDestination = selectedDestination,
+            isMoreSelected = isMoreSelected,
+            onDestinationSelected = onDestinationSelected,
+            onMoreSelected = onMoreSelected,
+        )
+    }
 
     if (usesMore) {
         Scaffold(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                Surface(color = compactNavigationContainerColor) {
-                    Box(
-                        modifier = Modifier.windowInsetsPadding(
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(
                             WindowInsets.safeDrawing.only(
                                 WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
                             ),
-                        ),
-                    ) {
-                        NavigationSuite(
-                            navigationSuiteType = layoutType,
-                            modifier = Modifier.height(UiTokens.CompactNavigationBarHeight),
-                            colors = navigationSuiteColors,
-                            content = navigationItems,
                         )
-                    }
+                        .padding(UiTokens.CompactSpacing),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ShortNavigationBar(
+                        modifier = Modifier
+                            .shadow(
+                                elevation = UiTokens.FloatingNavigationBarElevation,
+                                shape = MaterialTheme.shapes.large,
+                                clip = true,
+                            ),
+                        containerColor = compactNavigationContainerColor,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        windowInsets = WindowInsets(0, 0, 0, 0),
+                        arrangement = ShortNavigationBarArrangement.EqualWeight,
+                        content = compactNavigationItems,
+                    )
                 }
             },
         ) { padding ->
@@ -125,6 +140,41 @@ fun AppNavigationSuite(
             content = content,
         )
     }
+}
+
+@Composable
+private fun AppShortNavigationItems(
+    selectedDestination: TopLevelDestination,
+    isMoreSelected: Boolean,
+    onDestinationSelected: (TopLevelDestination) -> Unit,
+    onMoreSelected: () -> Unit,
+) {
+    TopLevelDestination.compactPrimary.forEach { destination ->
+        ShortNavigationBarItem(
+            selected = !isMoreSelected && selectedDestination == destination,
+            onClick = { onDestinationSelected(destination) },
+            icon = {
+                Icon(
+                    painter = painterResource(destination.icon),
+                    contentDescription = stringResource(destination.label),
+                    modifier = Modifier.semantics { role = Role.Tab },
+                )
+            },
+            label = null,
+        )
+    }
+    ShortNavigationBarItem(
+        selected = isMoreSelected,
+        onClick = onMoreSelected,
+        icon = {
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_ellipsis),
+                contentDescription = stringResource(R.string.action_more),
+                modifier = Modifier.semantics { role = Role.Tab },
+            )
+        },
+        label = null,
+    )
 }
 
 @Composable
