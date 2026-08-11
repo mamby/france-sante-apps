@@ -27,6 +27,7 @@ import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedTimes
 import net.mamby.health.ui.theme.UiTokens
@@ -53,7 +54,7 @@ fun MedicationDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()

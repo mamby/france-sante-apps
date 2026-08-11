@@ -170,6 +170,7 @@ import net.mamby.health.ui.components.appContentWindowInsets
 import net.mamby.health.ui.components.appNavigationSuiteType
 import net.mamby.health.ui.components.disambiguatedProfileLabels
 import net.mamby.health.ui.components.listDetailAwareBack
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.HealthVaultTheme
 import net.mamby.health.ui.theme.UiTokens
 
@@ -1197,7 +1198,7 @@ private fun MissingRecordScreen(onBack: (() -> Unit)?) {
                 .fillMaxSize()
                 .padding(padding)
                 .consumeWindowInsets(padding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
         ) {
             PageHeader()
         }

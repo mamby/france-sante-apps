@@ -42,7 +42,7 @@ import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
-import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.theme.UiTokens
 
@@ -72,7 +72,7 @@ fun ManageDocumentCategoriesScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(padding),
-            contentPadding = padding.withScreenPadding(),
+            contentPadding = padding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {

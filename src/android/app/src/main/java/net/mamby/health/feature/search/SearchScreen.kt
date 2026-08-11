@@ -38,7 +38,7 @@ import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
-import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 import net.mamby.health.ui.format.localizedLabel
 
@@ -79,7 +79,7 @@ fun SearchScreen(
                 .fillMaxSize()
                 .fitInside(WindowInsetsRulers.Ime.current)
                 .consumeWindowInsets(innerPadding),
-            contentPadding = innerPadding.withScreenPadding(),
+            contentPadding = innerPadding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {

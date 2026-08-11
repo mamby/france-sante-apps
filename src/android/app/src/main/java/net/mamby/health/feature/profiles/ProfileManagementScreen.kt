@@ -27,6 +27,7 @@ import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
 import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
@@ -49,7 +50,7 @@ fun ProfileManagementScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .consumeWindowInsets(padding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()

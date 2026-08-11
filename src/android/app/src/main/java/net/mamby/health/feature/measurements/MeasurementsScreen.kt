@@ -63,7 +63,7 @@ import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
-import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedValue
@@ -118,7 +118,7 @@ fun MeasurementsScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(padding),
-            contentPadding = padding.withScreenPadding(),
+            contentPadding = padding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
@@ -196,7 +196,7 @@ fun MeasurementDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .consumeWindowInsets(padding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()
@@ -260,7 +260,7 @@ fun ManageMeasurementTypesScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(padding),
-            contentPadding = padding.withScreenPadding(),
+            contentPadding = padding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {

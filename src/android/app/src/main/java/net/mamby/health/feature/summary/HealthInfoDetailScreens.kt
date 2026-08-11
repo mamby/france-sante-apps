@@ -26,6 +26,7 @@ import net.mamby.health.core.model.Vaccination
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.theme.UiTokens
@@ -124,7 +125,7 @@ private fun HealthInfoDetailScaffold(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .consumeWindowInsets(padding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()

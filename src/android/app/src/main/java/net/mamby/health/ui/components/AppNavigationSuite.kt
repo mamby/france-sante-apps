@@ -114,6 +114,11 @@ fun AppNavigationSuite(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 Box(Modifier.fillMaxWidth()) {
+                    EdgeProtection(
+                        edge = EdgeProtectionEdge.Bottom,
+                        color = MaterialTheme.colorScheme.background,
+                        modifier = Modifier.matchParentSize(),
+                    )
                     CompactNavigationInteractionShield()
                     Box(
                         modifier = Modifier

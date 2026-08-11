@@ -41,7 +41,7 @@ import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.MetricCard
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
-import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.format.localizedLabel
@@ -108,7 +108,7 @@ fun DashboardScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
-            contentPadding = innerPadding.withScreenPadding(),
+            contentPadding = innerPadding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {

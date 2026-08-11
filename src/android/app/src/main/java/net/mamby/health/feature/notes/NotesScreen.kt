@@ -39,7 +39,7 @@ import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
-import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.theme.UiTokens
 
@@ -71,7 +71,7 @@ fun NotesScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(padding),
-            contentPadding = padding.withScreenPadding(),
+            contentPadding = padding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
@@ -133,7 +133,7 @@ fun NoteDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .consumeWindowInsets(padding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()

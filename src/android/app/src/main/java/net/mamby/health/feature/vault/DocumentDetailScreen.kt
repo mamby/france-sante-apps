@@ -46,6 +46,7 @@ import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.StringListEditor
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.theme.UiTokens
@@ -98,7 +99,7 @@ fun DocumentDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .padding(UiTokens.ScreenPadding),
+                .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()

@@ -18,7 +18,7 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
-import net.mamby.health.ui.components.withScreenPadding
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
@@ -34,7 +34,7 @@ fun HealthRecordsHubScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(UiTokens.CardMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(padding),
-            contentPadding = padding.withScreenPadding(),
+            contentPadding = padding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
