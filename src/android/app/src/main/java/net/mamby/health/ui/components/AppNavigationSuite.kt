@@ -1,12 +1,18 @@
 package net.mamby.health.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalGridApi
 import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.GridTrackSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,16 +49,20 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScope
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 import net.mamby.health.R
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.ui.theme.UiTokens
@@ -67,8 +78,8 @@ fun AppNavigationSuite(
     content: @Composable () -> Unit,
 ) {
     val usesMore = layoutType == NavigationSuiteType.ShortNavigationBarCompact
-    val compactNavigationContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(
-        alpha = UiTokens.CompactNavigationContainerAlpha,
+    val compactNavigationContainerColor = MaterialTheme.colorScheme.surface.copy(
+        alpha = UiTokens.FloatingNavigationContainerAlpha,
     )
     val navigationSuiteColors = NavigationSuiteDefaults.colors(
         shortNavigationBarContainerColor = compactNavigationContainerColor,
@@ -102,30 +113,54 @@ fun AppNavigationSuite(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
-                            ),
-                        )
-                        .padding(UiTokens.CompactSpacing),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ShortNavigationBar(
+                Box(Modifier.fillMaxWidth()) {
+                    CompactNavigationInteractionShield()
+                    Box(
                         modifier = Modifier
-                            .shadow(
-                                elevation = UiTokens.FloatingNavigationBarElevation,
-                                shape = MaterialTheme.shapes.extraLarge,
-                                clip = true,
+                            .fillMaxWidth()
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(
+                                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                                ),
+                            )
+                            .padding(UiTokens.CompactSpacing),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val navigationShape = MaterialTheme.shapes.extraLarge
+                        Surface(
+                            modifier = Modifier.dropShadow(
+                                shape = navigationShape,
+                                shadow = Shadow(
+                                    radius = UiTokens.FloatingNavigationShadowRadius,
+                                    spread = UiTokens.FloatingNavigationShadowSpread,
+                                    color = MaterialTheme.colorScheme.scrim.copy(
+                                        alpha = UiTokens.FloatingNavigationShadowAlpha,
+                                    ),
+                                    offset = DpOffset(
+                                        x = UiTokens.FloatingNavigationShadowOffsetX,
+                                        y = UiTokens.FloatingNavigationShadowOffsetY,
+                                    ),
+                                ),
                             ),
-                        containerColor = compactNavigationContainerColor,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        windowInsets = WindowInsets(0, 0, 0, 0),
-                        arrangement = ShortNavigationBarArrangement.EqualWeight,
-                        content = compactNavigationItems,
-                    )
+                            shape = navigationShape,
+                            color = compactNavigationContainerColor,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            border = BorderStroke(
+                                width = UiTokens.FloatingNavigationBorderWidth,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = UiTokens.FloatingNavigationBorderAlpha,
+                                ),
+                            ),
+                        ) {
+                            ShortNavigationBar(
+                                containerColor = Color.Transparent,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                windowInsets = WindowInsets(0, 0, 0, 0),
+                                arrangement = ShortNavigationBarArrangement.EqualWeight,
+                                content = compactNavigationItems,
+                            )
+                        }
+                    }
                 }
             },
         ) { padding ->
@@ -149,6 +184,21 @@ fun AppNavigationSuite(
 }
 
 @Composable
+private fun BoxScope.CompactNavigationInteractionShield() {
+    Spacer(
+        modifier = Modifier
+            .matchParentSize()
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent().changes.forEach { it.consume() }
+                    }
+                }
+            },
+    )
+}
+
+@Composable
 private fun AppShortNavigationItems(
     selectedDestination: TopLevelDestination,
     isMoreSelected: Boolean,
@@ -165,10 +215,10 @@ private fun AppShortNavigationItems(
             selected = selected,
             onClick = { onDestinationSelected(destination) },
             icon = {
-                Icon(
-                    painter = painterResource(destination.icon),
-                    contentDescription = stringResource(destination.label),
-                    modifier = Modifier.semantics { role = Role.Tab },
+                CompactNavigationIcon(
+                    icon = destination.icon,
+                    label = stringResource(destination.label),
+                    selected = selected,
                 )
             },
             label = null,
@@ -179,15 +229,45 @@ private fun AppShortNavigationItems(
         selected = isMoreSelected,
         onClick = onMoreSelected,
         icon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_lucide_ellipsis),
-                contentDescription = stringResource(R.string.action_more),
-                modifier = Modifier.semantics { role = Role.Tab },
+            CompactNavigationIcon(
+                icon = R.drawable.ic_lucide_ellipsis,
+                label = stringResource(R.string.action_more),
+                selected = isMoreSelected,
             )
         },
         label = null,
         colors = itemColors,
     )
+}
+
+@Composable
+private fun CompactNavigationIcon(
+    @DrawableRes icon: Int,
+    label: String,
+    selected: Boolean,
+) {
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
+        },
+        label = "compact navigation selection indicator",
+    )
+    Box(
+        modifier = Modifier
+            .size(UiTokens.CompactNavigationSelectionIndicatorSize)
+            .background(containerColor, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = label,
+            modifier = Modifier
+                .size(UiTokens.NavigationIconSize)
+                .semantics { role = Role.Tab },
+        )
+    }
 }
 
 private fun NavigationSuiteScope.AppNavigationItems(

@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -47,6 +50,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -596,6 +600,142 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
+    fun compactNavigationFooterBlocksPagePointerInputOutsideBar() {
+        var pagePointerStarts = 0
+        var aboveNavigationClicks = 0
+        val destinationSelections = mutableListOf<TopLevelDestination>()
+        var moreNavigationClicks = 0
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
+                        isMoreSelected = false,
+                        onDestinationSelected = { destinationSelections += it },
+                        onMoreSelected = { moreNavigationClicks++ },
+                    ) {
+                        Box(Modifier.fillMaxSize()) {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                pagePointerStarts += awaitPointerEvent(
+                                                    PointerEventPass.Initial,
+                                                ).changes.count { change ->
+                                                    change.pressed && !change.previousPressed
+                                                }
+                                            }
+                                        }
+                                    },
+                            )
+                            Box(
+                                Modifier
+                                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                                    .windowInsetsPadding(appContentWindowInsets())
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .clickable { aboveNavigationClicks++ }
+                                    .testTag(ABOVE_NAVIGATION_CONTROL_TAG),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        val rootBounds = composeRule
+            .onAllNodes(isRoot())
+            .fetchSemanticsNodes()
+            .maxBy { it.boundsInRoot.width * it.boundsInRoot.height }
+            .boundsInRoot
+        val primaryItemBounds = TopLevelDestination.compactPrimary.map { destination ->
+            destination to composeRule
+                .onNodeWithContentDescription(composeRule.activity.getString(destination.label))
+                .fetchSemanticsNode()
+                .boundsInRoot
+        }
+        val homeItemBounds = primaryItemBounds
+            .first { (destination) -> destination == TopLevelDestination.Home }
+            .second
+        val moreItemBounds = composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_more))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val aboveNavigation = composeRule
+            .onNodeWithTag(ABOVE_NAVIGATION_CONTROL_TAG)
+            .assertIsDisplayed()
+        val aboveNavigationBounds = aboveNavigation.fetchSemanticsNode().boundsInRoot
+
+        assertTrue(rootBounds.left < homeItemBounds.left)
+        assertTrue(moreItemBounds.right < rootBounds.right)
+        assertTrue(homeItemBounds.bottom < rootBounds.bottom)
+        assertTrue(aboveNavigationBounds.bottom <= homeItemBounds.top)
+
+        fun rootLocal(position: Offset) = Offset(
+            x = position.x - rootBounds.left,
+            y = position.y - rootBounds.top,
+        )
+
+        val leftX = (rootBounds.left + homeItemBounds.left) / 2f
+        val rightX = (moreItemBounds.right + rootBounds.right) / 2f
+        val bottomY = (homeItemBounds.bottom + rootBounds.bottom) / 2f
+        val leftCenter = Offset(leftX, homeItemBounds.center.y)
+        val rightCenter = Offset(rightX, moreItemBounds.center.y)
+        val bottomCenter = Offset(rootBounds.center.x, bottomY)
+
+        composeRule.onRoot().performTouchInput {
+            click(rootLocal(leftCenter))
+            click(rootLocal(rightCenter))
+            click(rootLocal(bottomCenter))
+        }
+        composeRule.onRoot().performTouchInput {
+            swipe(
+                start = rootLocal(
+                    Offset(leftX, homeItemBounds.top + homeItemBounds.height * 0.25f),
+                ),
+                end = rootLocal(
+                    Offset(leftX, homeItemBounds.bottom - homeItemBounds.height * 0.25f),
+                ),
+                durationMillis = 100,
+            )
+            swipe(
+                start = rootLocal(
+                    Offset(rightX, moreItemBounds.top + moreItemBounds.height * 0.25f),
+                ),
+                end = rootLocal(
+                    Offset(rightX, moreItemBounds.bottom - moreItemBounds.height * 0.25f),
+                ),
+                durationMillis = 100,
+            )
+            swipe(
+                start = rootLocal(
+                    Offset(rootBounds.left + rootBounds.width * 0.25f, bottomY),
+                ),
+                end = rootLocal(
+                    Offset(rootBounds.right - rootBounds.width * 0.25f, bottomY),
+                ),
+                durationMillis = 100,
+            )
+        }
+
+        composeRule.runOnIdle { assertEquals(0, pagePointerStarts) }
+        composeRule.onRoot().performTouchInput {
+            click(rootLocal(aboveNavigationBounds.center))
+            primaryItemBounds.forEach { (_, bounds) -> click(rootLocal(bounds.center)) }
+            click(rootLocal(moreItemBounds.center))
+        }
+        composeRule.runOnIdle {
+            assertEquals(0, pagePointerStarts)
+            assertEquals(1, aboveNavigationClicks)
+            assertEquals(TopLevelDestination.compactPrimary, destinationSelections)
+            assertEquals(1, moreNavigationClicks)
+        }
+    }
+
+    @Test
     fun compactNavigationBarFloatsWithinRootBounds() {
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
@@ -1067,6 +1207,7 @@ class ComposeScreensInstrumentedTest {
         const val CLEARANCE_LIST_TAG = "clearance-list"
         const val FLOATING_ACTION_TAG = "floating-action"
         const val NAVIGATION_CONTENT_TAG = "navigation-content"
+        const val ABOVE_NAVIGATION_CONTROL_TAG = "above-navigation-control"
         const val SCROLLING_PAGE_TAG = "scrolling-page"
         const val SNACKBAR_TAG = "root-snackbar"
         val PROFILE_ID: UUID = UUID.fromString("44e15584-8158-4bf8-bf26-dd7358f392cf")
