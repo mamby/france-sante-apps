@@ -40,13 +40,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.DpOffset
 import net.mamby.health.R
 import net.mamby.health.ui.theme.UiTokens
 
@@ -170,14 +172,24 @@ fun FloatingBackButton(
             modifier = Modifier
                 .minimumInteractiveComponentSize()
                 .size(UiTokens.FloatingBackButtonVisualSize)
-                .shadow(
-                    elevation = UiTokens.FloatingBackButtonElevation,
+                .dropShadow(
                     shape = CircleShape,
-                    ambientColor = MaterialTheme.colorScheme.outline,
-                    spotColor = MaterialTheme.colorScheme.outline,
+                    shadow = Shadow(
+                        radius = UiTokens.FloatingBackButtonShadowRadius,
+                        spread = UiTokens.FloatingBackButtonShadowSpread,
+                        color = MaterialTheme.colorScheme.scrim.copy(
+                            alpha = UiTokens.FloatingBackButtonShadowAlpha,
+                        ),
+                        offset = DpOffset(
+                            x = UiTokens.FloatingBackButtonShadowOffsetX,
+                            y = UiTokens.FloatingBackButtonShadowOffsetY,
+                        ),
+                    ),
                 ),
             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.surface.copy(
+                    alpha = UiTokens.FloatingBackButtonContainerAlpha,
+                ),
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
         ) {
