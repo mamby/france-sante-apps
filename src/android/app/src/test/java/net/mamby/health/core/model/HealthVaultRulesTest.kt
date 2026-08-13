@@ -13,6 +13,16 @@ import org.junit.Test
 
 class HealthVaultRulesTest {
     @Test
+    fun emptyHealthDataIsValidWithoutProfiles() {
+        val empty = HealthVault.empty(Instant.EPOCH)
+
+        assertEquals(empty, empty.requireValid())
+        assertEquals(1, empty.version)
+        assertEquals(0L, empty.revision)
+        assertEquals(emptyList<ProfileRecord>(), empty.profiles)
+    }
+
+    @Test
     fun documentSearchRequiresEveryTermAndHonorsCategory() {
         val now = Instant.parse("2026-07-30T00:00:00Z")
         val matching = document(
@@ -166,7 +176,11 @@ class HealthVaultRulesTest {
 
     @Test
     fun validationRejectsInvalidEndsAndCaseInsensitiveDuplicatePeople() {
-        val duplicatePeople = HealthVault.empty(Instant.EPOCH, displayName = "Owner").copy(
+        val duplicatePeople = HealthVault.withProfile(
+            Instant.EPOCH,
+            UUID.randomUUID(),
+            "Owner",
+        ).copy(
             schedules = listOf(
                 Schedule(
                     id = UUID.randomUUID(),

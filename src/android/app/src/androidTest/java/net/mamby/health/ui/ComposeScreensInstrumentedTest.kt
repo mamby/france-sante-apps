@@ -130,11 +130,11 @@ class ComposeScreensInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun emptyProfileShowsGettingStartedActionsWithoutSampleContent() {
+    fun zeroProfileHomeShowsGettingStartedActionsWithoutSampleContent() {
         composeRule.setContent {
             HealthVaultTheme {
                 DashboardScreen(
-                    records = emptyVault("Amina").profiles,
+                    records = HealthVault.empty(FIXED_INSTANT).profiles,
                     notes = emptyList(),
                     schedules = emptyList(),
                     contacts = emptyList(),
@@ -168,34 +168,47 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun homePreviewCardsOpenTheirRootDestinations() {
+    fun homePreviewTilesShareAnAdaptiveRowAndOpenTheirRootDestinations() {
         var medicationsOpened = false
         var scheduleOpened = false
         composeRule.setContent {
-            HealthVaultTheme {
-                DashboardScreen(
-                    records = emptyVault("Amina").profiles,
-                    notes = emptyList(),
-                    schedules = emptyList(),
-                    contacts = emptyList(),
-                    clock = FIXED_CLOCK,
-                    zoneId = ZoneOffset.UTC,
-                    onMedications = { medicationsOpened = true },
-                    onSchedule = { scheduleOpened = true },
-                    onDocumentSelected = { _, _ -> },
-                    onNoteSelected = {},
-                    onScheduleSelected = {},
-                    onContactSelected = {},
-                    onAddHealthInfo = {},
-                    onImportDocument = {},
-                    onAddMedication = {},
-                    onAddSchedule = {},
-                )
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    DashboardScreen(
+                        records = emptyVault("Amina").profiles,
+                        notes = emptyList(),
+                        schedules = emptyList(),
+                        contacts = emptyList(),
+                        clock = FIXED_CLOCK,
+                        zoneId = ZoneOffset.UTC,
+                        onMedications = { medicationsOpened = true },
+                        onSchedule = { scheduleOpened = true },
+                        onDocumentSelected = { _, _ -> },
+                        onNoteSelected = {},
+                        onScheduleSelected = {},
+                        onContactSelected = {},
+                        onAddHealthInfo = {},
+                        onImportDocument = {},
+                        onAddMedication = {},
+                        onAddSchedule = {},
+                    )
+                }
             }
         }
 
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.nav_medications)).performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.schedule_title)).performClick()
+        val medications = composeRule.onNodeWithText(
+            composeRule.activity.getString(R.string.nav_medications),
+        )
+        val schedule = composeRule.onNodeWithText(
+            composeRule.activity.getString(R.string.schedule_title),
+        )
+        val medicationBounds = medications.fetchSemanticsNode().boundsInRoot
+        val scheduleBounds = schedule.fetchSemanticsNode().boundsInRoot
+        assertEquals(medicationBounds.top, scheduleBounds.top, 0.5f)
+        assertTrue(medicationBounds.right <= scheduleBounds.left)
+
+        medications.performClick()
+        schedule.performClick()
         composeRule.runOnIdle {
             assertTrue(medicationsOpened)
             assertTrue(scheduleOpened)
@@ -1207,7 +1220,7 @@ class ComposeScreensInstrumentedTest {
         assertEquals(LayoutDirection.Rtl.ordinal, arabicContext.resources.configuration.layoutDirection)
     }
 
-    private fun emptyVault(displayName: String): HealthVault = HealthVault.empty(
+    private fun emptyVault(displayName: String): HealthVault = HealthVault.withProfile(
         now = FIXED_INSTANT,
         profileId = PROFILE_ID,
         displayName = displayName,

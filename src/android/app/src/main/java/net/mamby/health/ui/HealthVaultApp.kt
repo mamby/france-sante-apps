@@ -16,7 +16,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,19 +23,12 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
@@ -72,8 +64,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -117,7 +107,7 @@ import net.mamby.health.feature.contacts.ContactEditorScreen
 import net.mamby.health.feature.contacts.ContactsScreen
 import net.mamby.health.feature.records.HealthRecordsHubScreen
 import net.mamby.health.feature.profiles.ProfileManagementScreen
-import net.mamby.health.feature.profiles.ProfileNameDialog
+import net.mamby.health.feature.profiles.ProfileOwnerGateScreen
 import net.mamby.health.feature.schedule.ScheduleScreen
 import net.mamby.health.feature.schedule.ScheduleDetailScreen
 import net.mamby.health.feature.schedule.ScheduleEditorScreen
@@ -182,6 +172,8 @@ import net.mamby.health.navigation.ScheduleEditorRoute
 import net.mamby.health.navigation.SearchRoute
 import net.mamby.health.navigation.SettingsRoute
 import net.mamby.health.navigation.TopLevelDestination
+import net.mamby.health.navigation.ProfileOwnedCreateTarget
+import net.mamby.health.navigation.ProfileOwnerGateRoute
 import net.mamby.health.navigation.VaccinationDetailRoute
 import net.mamby.health.navigation.VaccinationEditorRoute
 import net.mamby.health.navigation.rememberAppNavigationState
@@ -193,7 +185,6 @@ import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.EditorBackgroundPane
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
-import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.appContentWindowInsets
 import net.mamby.health.ui.components.appNavigationSuiteType
@@ -213,7 +204,6 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
     val notice by viewModel.notice.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
-    var startDialog by rememberSaveable { mutableStateOf(false) }
     var resetUnreadableDialog by rememberSaveable { mutableStateOf(false) }
     var recoverySettingsVisible by rememberSaveable { mutableStateOf(false) }
     var nextLocaleRequestId by remember { mutableLongStateOf(0L) }
@@ -310,22 +300,8 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
                     )
                     AppLockState.Disabled, AppLockState.Unlocked -> when (val state = vaultState) {
                         VaultState.Loading -> Unit
-                        VaultState.Missing -> if (recoverySettingsVisible) {
-                            RecoverySettings(
-                                settings = settings,
-                                viewModel = viewModel,
-                                restorePreview = restorePreview,
-                                notice = notice,
-                                activity = activity,
-                                onLocaleChanged = requestLocaleChange,
-                                onBack = { recoverySettingsVisible = false },
-                            )
-                        } else {
-                            MissingVaultScreen(
-                                onStart = { startDialog = true },
-                                onRestore = { recoverySettingsVisible = true },
-                            )
-                        }
+                        // Missing is transient: initialization immediately persists a valid empty data set.
+                        VaultState.Missing -> Unit
                         is VaultState.Unreadable -> if (recoverySettingsVisible) {
                             RecoverySettings(
                                 settings = settings,
@@ -377,17 +353,6 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
             }
         }
 
-        if (startDialog) {
-            ProfileNameDialog(
-                title = stringResource(R.string.start_new_title),
-                initialName = "",
-                onDismiss = { startDialog = false },
-                onSave = {
-                    startDialog = false
-                    viewModel.createVault(it)
-                },
-            )
-        }
         if (resetUnreadableDialog) {
             ResetUnreadableDialog(
                 onDismiss = { resetUnreadableDialog = false },
@@ -454,7 +419,7 @@ private fun VaultNavigation(
     var moreSheetVisible by rememberSaveable { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var searchFilter by remember { mutableStateOf(SearchFilter.ALL) }
-    var pendingOwnerAction by remember { mutableStateOf<ProfileOwnerAction?>(null) }
+    var restoreRequestId by rememberSaveable { mutableLongStateOf(0L) }
     var pendingDeepLink by remember { mutableStateOf<DeepLinkTarget?>(null) }
     var notificationsBlocked by remember { mutableStateOf(viewModel.notificationsBlocked()) }
     var pendingNotificationAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -538,6 +503,8 @@ private fun VaultNavigation(
     val today = now.atZone(zoneId).toLocalDate()
     val message = notice?.let { stringResource(it.resourceId) }
     val activeEditorRoute = navigation.currentBackStack.lastOrNull() as? EditorRoute
+    val activeOwnerGateRoute = navigation.currentBackStack.lastOrNull() as? ProfileOwnerGateRoute
+    val focusedFlowActive = activeEditorRoute != null || activeOwnerGateRoute != null
     val editorSessionValid = activeEditorRoute?.let {
         viewModel.isEditorSessionActive(it.sessionId)
     } ?: true
@@ -555,21 +522,55 @@ private fun VaultNavigation(
         if (activeRoute?.sessionId == sessionId) navigation.goBack()
     }
 
-    fun startOwnerAction(action: ProfileOwnerAction, profileId: UUID) {
-        pendingOwnerAction = null
-        when (action) {
-            ProfileOwnerAction.DOCUMENT_CATEGORIES -> navigation.navigate(
-                ManageDocumentCategoriesRoute(profileId.toString()),
+    fun continueProfileOwnedCreate(
+        target: ProfileOwnedCreateTarget,
+        profileId: UUID,
+        replaceGate: Boolean = false,
+    ) {
+        val owner = profileId.toString()
+        val routes = when (target) {
+            ProfileOwnedCreateTarget.HEALTH_INFO -> arrayOf(
+                HealthInfoRoute(owner),
+                HealthProfileEditorRoute(viewModel.createEditorSession(), owner),
             )
-            ProfileOwnerAction.MEASUREMENT_TYPES -> navigation.navigate(
-                ManageMeasurementTypesRoute(profileId.toString()),
+            ProfileOwnedCreateTarget.DOCUMENT_IMPORT -> arrayOf(
+                DocumentImportEditorRoute(viewModel.createEditorSession(), owner),
             )
+            ProfileOwnedCreateTarget.MEDICATION -> arrayOf(
+                MedicationEditorRoute(viewModel.createEditorSession(), owner),
+            )
+            ProfileOwnedCreateTarget.MEASUREMENT -> arrayOf(
+                MeasurementEditorRoute(viewModel.createEditorSession(), owner),
+            )
+            ProfileOwnedCreateTarget.DOCUMENT_CATEGORIES -> arrayOf(
+                ManageDocumentCategoriesRoute(owner),
+            )
+            ProfileOwnedCreateTarget.MEASUREMENT_TYPES -> arrayOf(
+                ManageMeasurementTypesRoute(owner),
+            )
+        }
+        if (replaceGate) navigation.replaceTop(*routes) else routes.forEach(navigation::navigate)
+    }
+
+    fun requestProfileOwner(target: ProfileOwnedCreateTarget, suggestedProfileId: UUID? = null) {
+        val validSuggestion = suggestedProfileId?.takeIf { suggested ->
+            vault.profiles.any { it.profile.id == suggested }
+        }
+        val owner = validSuggestion ?: vault.profiles.singleOrNull()?.profile?.id
+        if (owner != null) {
+            continueProfileOwnedCreate(target, owner)
+        } else {
+            navigation.navigate(ProfileOwnerGateRoute(target, UUID.randomUUID().toString()))
         }
     }
 
-    fun requestOwner(action: ProfileOwnerAction, profileId: UUID? = null) {
-        val owner = profileId ?: vault.profiles.singleOrNull()?.profile?.id
-        if (owner == null) pendingOwnerAction = action else startOwnerAction(action, owner)
+    LaunchedEffect(activeOwnerGateRoute, vault.profiles) {
+        val route = activeOwnerGateRoute ?: return@LaunchedEffect
+        val proposedId = runCatching { UUID.fromString(route.proposedProfileId) }.getOrNull()
+            ?: return@LaunchedEffect
+        if (vault.profiles.any { it.profile.id == proposedId }) {
+            continueProfileOwnedCreate(route.target, proposedId, replaceGate = true)
+        }
     }
 
     LaunchedEffect(usesMore) {
@@ -584,7 +585,7 @@ private fun VaultNavigation(
             isMoreSelected = isMoreSelected,
             onDestinationSelected = navigation::selectRoot,
             onMoreSelected = { moreSheetVisible = true },
-            navigationVisible = activeEditorRoute == null,
+            navigationVisible = !focusedFlowActive,
         ) {
             Box(Modifier.fillMaxSize()) {
                 CompositionLocalProvider(LocalProfileDisplayLabels provides profileLabels) {
@@ -688,25 +689,16 @@ private fun VaultNavigation(
                             },
                             onAddHealthInfo = {
                                 navigation.selectRoot(TopLevelDestination.HealthRecords)
-                                navigation.navigate(
-                                    HealthInfoRoute(vault.profiles.first().profile.id.toString()),
-                                )
-                                navigation.navigate(
-                                    HealthProfileEditorRoute(viewModel.createEditorSession()),
-                                )
+                                requestProfileOwner(ProfileOwnedCreateTarget.HEALTH_INFO)
                             },
                             onImportDocument = {
                                 navigation.selectRoot(TopLevelDestination.HealthRecords)
                                 navigation.navigate(DocumentsRoute)
-                                navigation.navigate(
-                                    DocumentImportEditorRoute(viewModel.createEditorSession()),
-                                )
+                                requestProfileOwner(ProfileOwnedCreateTarget.DOCUMENT_IMPORT)
                             },
                             onAddMedication = {
                                 navigation.selectRoot(TopLevelDestination.Medications)
-                                navigation.navigate(
-                                    MedicationEditorRoute(viewModel.createEditorSession()),
-                                )
+                                requestProfileOwner(ProfileOwnedCreateTarget.MEDICATION)
                             },
                             onAddSchedule = {
                                 navigation.selectRoot(TopLevelDestination.Schedule)
@@ -714,12 +706,40 @@ private fun VaultNavigation(
                                     ScheduleEditorRoute(viewModel.createEditorSession()),
                                 )
                             },
+                            onAddNote = {
+                                navigation.selectRoot(TopLevelDestination.Notes)
+                                navigation.navigate(
+                                    HealthNoteEditorRoute(viewModel.createEditorSession()),
+                                )
+                            },
+                            onAddContact = {
+                                navigation.selectRoot(TopLevelDestination.Contacts)
+                                navigation.navigate(
+                                    ContactEditorRoute(viewModel.createEditorSession()),
+                                )
+                            },
+                            restorePrompt = if (
+                                vault.profiles.isEmpty() && vault.notes.isEmpty() &&
+                                vault.schedules.isEmpty() && vault.contacts.isEmpty()
+                            ) {
+                                {
+                                    FreshRestorePrompt {
+                                        restoreRequestId += 1
+                                        navigation.selectRoot(TopLevelDestination.Settings)
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                         )
                     }
                     entry<HealthRecordsRoute> {
                         HealthRecordsHubScreen(
                             records = vault.profiles,
                             onHealthInfo = { navigation.navigate(HealthInfoRoute(it.toString())) },
+                            onAddHealthInfo = {
+                                requestProfileOwner(ProfileOwnedCreateTarget.HEALTH_INFO)
+                            },
                             onMeasurements = { navigation.navigate(MeasurementsRoute) },
                             onDocuments = { navigation.navigate(DocumentsRoute) },
                         )
@@ -732,7 +752,7 @@ private fun VaultNavigation(
                         val record = vault.profileRecordOrNull(route.profileId)
                         if (record == null) MissingRecordScreen(navigation::goBack) else {
                             val profileId = record.profile.id.toString()
-                            EditorBackgroundPane(activeEditorRoute != null) {
+                            EditorBackgroundPane(focusedFlowActive) {
                                 SummaryScreen(
                                     record = record,
                                     onBack = navigation::goBack,
@@ -818,20 +838,15 @@ private fun VaultNavigation(
                             detailPlaceholder = { DetailPlaceholder(R.string.no_documents_body) },
                         ),
                     ) {
-                        EditorBackgroundPane(activeEditorRoute != null) {
+                        EditorBackgroundPane(focusedFlowActive) {
                             VaultScreen(
                                 records = vault.profiles,
                                 onBack = navigation::goBack,
                                 onManageCategories = { profileId ->
-                                    requestOwner(ProfileOwnerAction.DOCUMENT_CATEGORIES, profileId)
+                                    requestProfileOwner(ProfileOwnedCreateTarget.DOCUMENT_CATEGORIES, profileId)
                                 },
                                 onImportRequested = { profileId ->
-                                    navigation.navigate(
-                                        DocumentImportEditorRoute(
-                                            viewModel.createEditorSession(),
-                                            profileId?.toString(),
-                                        ),
-                                    )
+                                    requestProfileOwner(ProfileOwnedCreateTarget.DOCUMENT_IMPORT, profileId)
                                 },
                                 onDocumentSelected = { profileId, id ->
                                     navigation.navigate(DocumentDetailRoute(profileId.toString(), id))
@@ -865,21 +880,16 @@ private fun VaultNavigation(
                             detailPlaceholder = { DetailPlaceholder(R.string.no_measurements_body) },
                         ),
                     ) {
-                        EditorBackgroundPane(activeEditorRoute != null) {
+                        EditorBackgroundPane(focusedFlowActive) {
                             MeasurementsScreen(
                                 records = vault.profiles,
                                 zoneId = zoneId,
                                 onBack = navigation::goBack,
                                 onManageTypes = { profileId ->
-                                    requestOwner(ProfileOwnerAction.MEASUREMENT_TYPES, profileId)
+                                    requestProfileOwner(ProfileOwnedCreateTarget.MEASUREMENT_TYPES, profileId)
                                 },
                                 onAdd = { profileId ->
-                                    navigation.navigate(
-                                        MeasurementEditorRoute(
-                                            viewModel.createEditorSession(),
-                                            profileId?.toString(),
-                                        ),
-                                    )
+                                    requestProfileOwner(ProfileOwnedCreateTarget.MEASUREMENT, profileId)
                                 },
                                 onSelected = { profileId, id ->
                                     navigation.navigate(
@@ -931,16 +941,11 @@ private fun VaultNavigation(
                             detailPlaceholder = { DetailPlaceholder(R.string.no_medications_body) },
                         ),
                     ) {
-                        EditorBackgroundPane(activeEditorRoute != null) {
+                        EditorBackgroundPane(focusedFlowActive) {
                             MedicationsScreen(
                                 records = vault.profiles,
                                 onAdd = { profileId ->
-                                    navigation.navigate(
-                                        MedicationEditorRoute(
-                                            viewModel.createEditorSession(),
-                                            profileId?.toString(),
-                                        ),
-                                    )
+                                    requestProfileOwner(ProfileOwnedCreateTarget.MEDICATION, profileId)
                                 },
                                 onSelected = { profileId, id ->
                                     navigation.navigate(MedicationDetailRoute(profileId.toString(), id))
@@ -953,7 +958,7 @@ private fun VaultNavigation(
                             detailPlaceholder = { DetailPlaceholder(R.string.schedule_intro) },
                         ),
                     ) {
-                        EditorBackgroundPane(activeEditorRoute != null) {
+                        EditorBackgroundPane(focusedFlowActive) {
                             ScheduleScreen(
                                 schedules = vault.schedules,
                                 now = now,
@@ -995,19 +1000,20 @@ private fun VaultNavigation(
                         )
                     }
                     entry<DocumentImportEditorRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val initialProfileId = route.profileId?.let { value ->
-                            runCatching { UUID.fromString(value) }.getOrNull()
+                        val initialProfileId = runCatching { UUID.fromString(route.profileId) }.getOrNull()
+                        if (initialProfileId == null || vault.profiles.none { it.profile.id == initialProfileId }) {
+                            MissingRecordScreen { closeEditor(route.sessionId) }
+                        } else {
+                            DocumentImportEditorScreen(
+                                records = vault.profiles,
+                                initialProfileId = initialProfileId,
+                                today = today,
+                                onCancel = { closeEditor(route.sessionId) },
+                                onImport = { profileId, draft, onResult ->
+                                    viewModel.importDocument(profileId, draft, onResult)
+                                },
+                            )
                         }
-                        DocumentImportEditorScreen(
-                            records = vault.profiles,
-                            initialProfileId = initialProfileId,
-                            today = today,
-                            onAddProfile = viewModel::addProfile,
-                            onCancel = { closeEditor(route.sessionId) },
-                            onImport = { profileId, draft, onResult ->
-                                viewModel.importDocument(profileId, draft, onResult)
-                            },
-                        )
                     }
                     entry<DocumentEditorRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
                         val record = vault.profileRecordOrNull(route.profileId)
@@ -1089,14 +1095,12 @@ private fun VaultNavigation(
                         )
                     }
                     entry<MeasurementEditorRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val initialProfileId = route.profileId?.let { value ->
-                            runCatching { UUID.fromString(value) }.getOrNull()
-                        }
-                        val owner = route.profileId?.let(vault::profileRecordOrNull)
+                        val initialProfileId = runCatching { UUID.fromString(route.profileId) }.getOrNull()
+                        val owner = vault.profileRecordOrNull(route.profileId)
                         val measurement = route.id?.let { id ->
                             owner?.measurements?.firstOrNull { it.id.toString() == id }
                         }
-                        if (route.id != null && (owner == null || measurement == null)) {
+                        if (initialProfileId == null || owner == null || (route.id != null && measurement == null)) {
                             MissingRecordScreen { closeEditor(route.sessionId) }
                         } else {
                             MeasurementEditorScreen(
@@ -1106,7 +1110,6 @@ private fun VaultNavigation(
                                 initialProfileId = initialProfileId,
                                 now = now,
                                 zoneId = zoneId,
-                                onAddProfile = viewModel::addProfile,
                                 onCancel = { closeEditor(route.sessionId) },
                                 onSave = { profileId, updated, onResult ->
                                     viewModel.upsertMeasurement(profileId, updated, onResult)
@@ -1242,17 +1245,14 @@ private fun VaultNavigation(
                         )
                     }
                     entry<HealthProfileEditorRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val initialProfileId = route.profileId?.let { value ->
-                            runCatching { UUID.fromString(value) }.getOrNull()
-                        }
-                        val record = route.profileId?.let(vault::profileRecordOrNull)
-                        if (route.profileId != null && record == null) {
+                        val initialProfileId = runCatching { UUID.fromString(route.profileId) }.getOrNull()
+                        val record = vault.profileRecordOrNull(route.profileId)
+                        if (initialProfileId == null || record == null) {
                             MissingRecordScreen { closeEditor(route.sessionId) }
                         } else {
                             HealthProfileEditorScreen(
                                 records = vault.profiles,
                                 initialProfileId = initialProfileId,
-                                onAddProfile = viewModel::addProfile,
                                 onCancel = { closeEditor(route.sessionId) },
                                 onSave = { profileId, profile, onResult ->
                                     viewModel.updateProfile(profileId, profile, onResult)
@@ -1458,14 +1458,12 @@ private fun VaultNavigation(
                         )
                     }
                     entry<MedicationEditorRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                        val initialProfileId = route.profileId?.let { value ->
-                            runCatching { UUID.fromString(value) }.getOrNull()
-                        }
-                        val owner = route.profileId?.let(vault::profileRecordOrNull)
+                        val initialProfileId = runCatching { UUID.fromString(route.profileId) }.getOrNull()
+                        val owner = vault.profileRecordOrNull(route.profileId)
                         val medication = route.id?.let { id ->
                             owner?.medications?.firstOrNull { it.id.toString() == id }
                         }
-                        if (route.id != null && (owner == null || medication == null)) {
+                        if (initialProfileId == null || owner == null || (route.id != null && medication == null)) {
                             MissingRecordScreen { closeEditor(route.sessionId) }
                         } else {
                             MedicationEditorScreen(
@@ -1474,7 +1472,6 @@ private fun VaultNavigation(
                                 existing = medication,
                                 initialProfileId = initialProfileId,
                                 today = today,
-                                onAddProfile = viewModel::addProfile,
                                 onCancel = { closeEditor(route.sessionId) },
                                 onSave = { profileId, updated, onResult ->
                                     withNotificationPermission(updated.remindersEnabled) {
@@ -1526,6 +1523,28 @@ private fun VaultNavigation(
                             )
                         }
                     }
+                    entry<ProfileOwnerGateRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                        val proposedProfileId = runCatching { UUID.fromString(route.proposedProfileId) }.getOrNull()
+                        if (proposedProfileId == null) {
+                            MissingRecordScreen(navigation::goBack)
+                        } else {
+                            ProfileOwnerGateScreen(
+                                profiles = vault.profiles,
+                                proposedProfileId = proposedProfileId,
+                                onBack = navigation::goBack,
+                                onProfileSelected = { selected ->
+                                    continueProfileOwnedCreate(route.target, selected, replaceGate = true)
+                                },
+                                onCreateProfile = { name, id, onResult ->
+                                    viewModel.addProfile(
+                                        displayName = name,
+                                        profileId = id,
+                                        onResult = onResult,
+                                    )
+                                },
+                            )
+                        }
+                    }
                     entry<SettingsRoute> {
                         SettingsScreen(
                             settings = settings,
@@ -1554,6 +1573,8 @@ private fun VaultNavigation(
                                 viewModel.deleteVault()
                                 navigation.resetTo()
                             },
+                            restoreRequestId = restoreRequestId,
+                            onRestoreRequestHandled = { restoreRequestId = 0L },
                         )
                     }
                     entry<ManageProfilesRoute> {
@@ -1593,34 +1614,6 @@ private fun VaultNavigation(
         )
     }
 
-    pendingOwnerAction?.let { action ->
-        ModalBottomSheet(onDismissRequest = { pendingOwnerAction = null }) {
-            LazyColumn(Modifier.fillMaxWidth()) {
-                item {
-                    Text(
-                        stringResource(R.string.choose_profile),
-                        modifier = Modifier.padding(UiTokens.ScreenPadding),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
-                vault.profiles.forEach { candidate ->
-                    item(key = candidate.profile.id) {
-                        ListItem(
-                            headlineContent = {
-                                ProfileMarker(
-                                    profile = candidate.profile,
-                                    displayLabel = profileLabels.getValue(candidate.profile.id),
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                startOwnerAction(action, candidate.profile.id)
-                            },
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
 
 private fun HealthSearchResult.toRoute(): AppRoute {
@@ -1646,39 +1639,11 @@ private fun HealthSearchResult.toRoute(): AppRoute {
 }
 
 @Composable
-internal fun MissingVaultScreen(onStart: () -> Unit, onRestore: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(UiTokens.ScreenPadding),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier
-                    .widthIn(max = UiTokens.FormMaxWidth)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
-            ) {
-                Text(
-                    text = stringResource(R.string.no_vault_title),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                Text(
-                    text = stringResource(R.string.no_vault_body),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                )
-                Button(onClick = onStart) { Text(stringResource(R.string.start_new)) }
-                TextButton(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
-            }
+internal fun FreshRestorePrompt(onRestore: () -> Unit) {
+    SectionCard(stringResource(R.string.fresh_restore_title)) {
+        Text(stringResource(R.string.fresh_restore_body))
+        Button(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.restore_backup))
         }
     }
 }
@@ -1764,11 +1729,6 @@ private fun Context.launchContactAction(intent: Intent, onUnavailable: () -> Uni
 private data class LocaleTransitionRequest(val id: Long, val localeTag: String)
 
 private data class LocalizedContentFrame(val requestId: Long, val localeTag: String)
-
-private enum class ProfileOwnerAction {
-    DOCUMENT_CATEGORIES,
-    MEASUREMENT_TYPES,
-}
 
 private fun HealthVault.profileRecordOrNull(profileId: String): ProfileRecord? =
     runCatching { UUID.fromString(profileId) }.getOrNull()?.let { id ->

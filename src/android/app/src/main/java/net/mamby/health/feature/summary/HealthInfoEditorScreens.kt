@@ -39,14 +39,14 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
-import net.mamby.health.ui.components.ProfilePickerField
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.format.labelResource
 
 data class HealthProfileEditorDraft(
-    val profileId: UUID?,
+    val profileId: UUID,
     val sourceProfileId: UUID?,
     val displayName: String,
     val bloodType: String,
@@ -99,18 +99,22 @@ data class HealthIdentifierEditorDraft(
 @Composable
 fun HealthProfileEditorScreen(
     records: List<ProfileRecord>,
-    initialProfileId: UUID?,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    initialProfileId: UUID,
     onCancel: () -> Unit,
     onSave: (UUID, HealthProfile, (Boolean) -> Unit) -> Unit,
 ) {
-    val initialSelectedRecord = initialProfileId?.let { profileId ->
-        records.firstOrNull { it.profile.id == profileId }
-    }
-    val initialRecord = initialSelectedRecord ?: records.singleOrNull() ?: records.first()
-    val initialOwnerId = initialSelectedRecord?.profile?.id ?: records.singleOrNull()?.profile?.id
+    val initialRecord = records.firstOrNull { it.profile.id == initialProfileId }
     val editorState = rememberEditorState {
-        initialRecord.profile.toEditorDraft(initialOwnerId)
+        initialRecord?.profile?.toEditorDraft(initialProfileId)
+            ?: HealthProfileEditorDraft(
+                profileId = initialProfileId,
+                sourceProfileId = null,
+                displayName = "",
+                bloodType = "",
+                allergies = emptyList(),
+                chronicConditions = emptyList(),
+                surgeries = emptyList(),
+            )
     }
     val draft = editorState.value
     val selectedRecord = records.firstOrNull { it.profile.id == draft.profileId }
@@ -146,18 +150,7 @@ fun HealthProfileEditorScreen(
         },
     ) {
         EditorSection(stringResource(R.string.summary_title)) {
-            if (initialProfileId == null) {
-                ProfilePickerField(
-                    records = records,
-                    selectedProfileId = draft.profileId,
-                    onSelected = { profileId ->
-                        val selected = records.firstOrNull { it.profile.id == profileId }
-                        editorState.value = selected?.profile?.toEditorDraft(profileId)
-                            ?: draft.copy(profileId = profileId, sourceProfileId = null)
-                    },
-                    onAddProfile = onAddProfile,
-                )
-            }
+            selectedRecord?.let { ProfileOwnerHeader(it.profile) }
             EditorFieldPair(
                 first = { modifier ->
                     OutlinedTextField(
@@ -813,7 +806,7 @@ private fun DeleteEditorAction(
     }
 }
 
-private fun HealthProfile.toEditorDraft(selectedProfileId: UUID?): HealthProfileEditorDraft =
+private fun HealthProfile.toEditorDraft(selectedProfileId: UUID): HealthProfileEditorDraft =
     HealthProfileEditorDraft(
         profileId = selectedProfileId,
         sourceProfileId = id.takeIf { selectedProfileId == id },

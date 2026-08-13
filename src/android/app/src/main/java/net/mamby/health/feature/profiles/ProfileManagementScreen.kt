@@ -24,6 +24,7 @@ import net.mamby.health.R
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
 import net.mamby.health.ui.components.SectionCard
@@ -54,6 +55,12 @@ fun ProfileManagementScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()
+            if (profiles.isEmpty()) {
+                EmptyState(
+                    title = stringResource(R.string.people_empty_title),
+                    body = stringResource(R.string.people_empty_body),
+                )
+            }
             profiles.forEach { record ->
                 SectionCard(profileLabels[record.profile.id] ?: record.profile.displayName) {
                     Button(onClick = { renaming = record.profile }) {
@@ -61,7 +68,6 @@ fun ProfileManagementScreen(
                     }
                     OutlinedButton(
                         onClick = { deleting = record.profile },
-                        enabled = profiles.size > 1,
                     ) {
                         Text(stringResource(R.string.delete_profile))
                     }

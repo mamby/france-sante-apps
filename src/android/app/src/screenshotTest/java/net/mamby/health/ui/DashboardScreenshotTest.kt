@@ -1,6 +1,7 @@
 package net.mamby.health.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
@@ -79,27 +80,29 @@ fun dashboardArabicRtl() {
 }
 
 @PreviewTest
-@Preview(name = "No vault compact", widthDp = 400, heightDp = 800)
+@Preview(name = "Fresh home compact", widthDp = 400, heightDp = 800)
 @Preview(
-    name = "No vault dark",
+    name = "Fresh home dark",
     widthDp = 400,
     heightDp = 800,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
 )
-@Preview(name = "No vault expanded", widthDp = 900, heightDp = 700)
-@Preview(name = "No vault large text", widthDp = 400, heightDp = 1_000, fontScale = 1.5f)
-@Preview(name = "No vault Arabic RTL", widthDp = 400, heightDp = 800, locale = "ar")
+@Preview(name = "Fresh home expanded", widthDp = 900, heightDp = 700)
+@Preview(name = "Fresh home short landscape", widthDp = 610, heightDp = 400)
+@Preview(name = "Fresh home French large text", widthDp = 400, heightDp = 1_000, fontScale = 2.0f, locale = "fr")
+@Preview(name = "Fresh home Arabic RTL", widthDp = 400, heightDp = 800, locale = "ar")
 @Composable
-fun missingVaultMatrix() {
-    HealthVaultTheme {
-        MissingVaultScreen(onStart = {}, onRestore = {})
-    }
+fun freshHomeMatrix() {
+    DashboardPreviewContent(vault = HealthVault.empty(FIXED_INSTANT))
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private fun DashboardPreviewContent(darkTheme: Boolean = false) {
-    HealthVaultTheme(darkTheme = darkTheme) {
+private fun DashboardPreviewContent(
+    vault: HealthVault = screenshotVault(),
+    darkTheme: Boolean? = null,
+) {
+    HealthVaultTheme(darkTheme = darkTheme ?: isSystemInDarkTheme()) {
         val adaptiveInfo = currentWindowAdaptiveInfoV2()
         AppNavigationSuite(
             selectedDestination = TopLevelDestination.Home,
@@ -108,7 +111,6 @@ private fun DashboardPreviewContent(darkTheme: Boolean = false) {
             onDestinationSelected = {},
             onMoreSelected = {},
         ) {
-            val vault = screenshotVault()
             DashboardScreen(
                 records = vault.profiles,
                 notes = vault.notes,
@@ -126,6 +128,15 @@ private fun DashboardPreviewContent(darkTheme: Boolean = false) {
                 onImportDocument = {},
                 onAddMedication = {},
                 onAddSchedule = {},
+                restorePrompt = if (vault.profiles.isEmpty() &&
+                    vault.notes.isEmpty() &&
+                    vault.schedules.isEmpty() &&
+                    vault.contacts.isEmpty()
+                ) {
+                    { FreshRestorePrompt(onRestore = {}) }
+                } else {
+                    null
+                },
             )
         }
     }

@@ -64,11 +64,11 @@ import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfileOwnerHeader
-import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
 import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
+import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedValue
@@ -300,7 +300,7 @@ private fun CustomMeasurementTypeDialog(
 }
 
 data class MeasurementDraft(
-    val profileId: UUID?,
+    val profileId: UUID,
     val id: UUID,
     val type: MeasurementTypeRef,
     val value: String,
@@ -320,26 +320,24 @@ fun MeasurementEditorScreen(
     records: List<ProfileRecord>,
     existingOwner: ProfileRecord?,
     existing: HealthMeasurement?,
-    initialProfileId: UUID?,
+    initialProfileId: UUID,
     now: Instant,
     zoneId: ZoneId,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
     onCancel: () -> Unit,
     onSave: (UUID, HealthMeasurement, (Boolean) -> Unit) -> Unit,
 ) {
     val initialOwner = existingOwner
         ?: records.firstOrNull { it.profile.id == initialProfileId }
-        ?: records.first()
     val editorState = rememberEditorState {
-        existing.toDraft(existingOwner?.profile?.id ?: initialProfileId, initialOwner, now, zoneId)
+        existing.toDraft(initialProfileId, initialOwner, now, zoneId)
     }
     val draft = editorState.value
     val selectedOwner = existingOwner?.takeIf { it.profile.id == draft.profileId }
         ?: records.firstOrNull { it.profile.id == draft.profileId }
-    val formRecord = selectedOwner ?: records.first()
+    val formRecord = selectedOwner ?: initialOwner
     val types = remember(formRecord) {
         BuiltInMeasurementType.entries.map { MeasurementTypeRef.BuiltIn(it) } +
-            formRecord.customMeasurementTypes.map { MeasurementTypeRef.Custom(it.id) }
+            formRecord?.customMeasurementTypes.orEmpty().map { MeasurementTypeRef.Custom(it.id) }
     }
     var typeExpanded by remember { mutableStateOf(false) }
     var unitExpanded by remember { mutableStateOf(false) }
@@ -378,10 +376,9 @@ fun MeasurementEditorScreen(
         isSaving = editorState.isSaving,
         onCancel = onCancel,
         onSave = {
-            val profileId = draft.profileId ?: return@AppEditorScaffold
             val validReading = reading ?: return@AppEditorScaffold
             editorState.isSaving = true
-            onSave(profileId, draft.toMeasurement(validReading, zoneId)) { saved ->
+            onSave(draft.profileId, draft.toMeasurement(validReading, zoneId)) { saved ->
                 editorState.isSaving = false
                 if (saved) onCancel()
             }
@@ -390,25 +387,7 @@ fun MeasurementEditorScreen(
         EditorSection(stringResource(R.string.measurements_title)) {
             EditorFieldPair(
                 first = { modifier ->
-                    if (existing == null) {
-                        ProfilePickerField(
-                            records = records,
-                            selectedProfileId = draft.profileId,
-                            onSelected = { profileId ->
-                                val owner = records.firstOrNull { it.profile.id == profileId }
-                                val defaultType = MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT)
-                                editorState.value = draft.copy(
-                                    profileId = profileId,
-                                    type = defaultType,
-                                    unit = defaultUnit(defaultType, owner ?: formRecord),
-                                )
-                            },
-                            onAddProfile = onAddProfile,
-                            modifier = modifier,
-                        )
-                    } else {
-                        selectedOwner?.let { ProfileOwnerHeader(it.profile, modifier) }
-                    }
+                    selectedOwner?.let { ProfileOwnerHeader(it.profile, modifier) }
                 },
                 second = { modifier ->
                     MeasurementTypeField(
@@ -543,7 +522,7 @@ fun MeasurementEditorScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MeasurementTypeField(
-    record: ProfileRecord,
+    record: ProfileRecord?,
     types: List<MeasurementTypeRef>,
     type: MeasurementTypeRef,
     expanded: Boolean,
@@ -557,7 +536,7 @@ private fun MeasurementTypeField(
         modifier = modifier,
     ) {
         OutlinedTextField(
-            value = type.localizedLabel(record),
+            value = type.editorLabel(record),
             onValueChange = {},
             modifier = Modifier
                 .fillMaxWidth()
@@ -569,7 +548,7 @@ private fun MeasurementTypeField(
         ExposedDropdownMenu(expanded, { onExpandedChange(false) }) {
             types.forEach { candidate ->
                 DropdownMenuItem(
-                    text = { Text(candidate.localizedLabel(record)) },
+                    text = { Text(candidate.editorLabel(record)) },
                     onClick = { onSelected(candidate) },
                 )
             }
@@ -578,8 +557,8 @@ private fun MeasurementTypeField(
 }
 
 private fun HealthMeasurement?.toDraft(
-    profileId: UUID?,
-    record: ProfileRecord,
+    profileId: UUID,
+    record: ProfileRecord?,
     now: Instant,
     zoneId: ZoneId,
 ): MeasurementDraft {
@@ -630,9 +609,9 @@ private fun DecimalField(
     )
 }
 
-private fun defaultUnit(type: MeasurementTypeRef, record: ProfileRecord): MeasurementUnitRef = when (type) {
+private fun defaultUnit(type: MeasurementTypeRef, record: ProfileRecord?): MeasurementUnitRef = when (type) {
     is MeasurementTypeRef.Custom -> MeasurementUnitRef.Custom(
-        record.customMeasurementTypes.firstOrNull { it.id == type.id }?.suggestedUnit.orEmpty(),
+        record?.customMeasurementTypes?.firstOrNull { it.id == type.id }?.suggestedUnit.orEmpty(),
     )
     is MeasurementTypeRef.BuiltIn -> MeasurementUnitRef.BuiltIn(
         when (type.type) {
@@ -647,7 +626,7 @@ private fun defaultUnit(type: MeasurementTypeRef, record: ProfileRecord): Measur
     )
 }
 
-private fun allowedUnits(type: MeasurementTypeRef, record: ProfileRecord): List<MeasurementUnitRef> = when (type) {
+private fun allowedUnits(type: MeasurementTypeRef, record: ProfileRecord?): List<MeasurementUnitRef> = when (type) {
     is MeasurementTypeRef.Custom -> listOf(defaultUnit(type, record))
     is MeasurementTypeRef.BuiltIn -> when (type.type) {
         BuiltInMeasurementType.WEIGHT -> listOf(MeasurementUnit.KILOGRAM, MeasurementUnit.POUND)
@@ -661,6 +640,13 @@ private fun allowedUnits(type: MeasurementTypeRef, record: ProfileRecord): List<
             MeasurementUnit.MILLIMOLES_PER_LITER,
         )
     }.map { MeasurementUnitRef.BuiltIn(it) }
+}
+
+@Composable
+private fun MeasurementTypeRef.editorLabel(record: ProfileRecord?): String = when {
+    record != null -> localizedLabel(record)
+    this is MeasurementTypeRef.BuiltIn -> stringResource(type.labelResource())
+    else -> stringResource(R.string.measurement_custom)
 }
 
 private fun MeasurementUnitRef.displaySymbol(): String = when (this) {

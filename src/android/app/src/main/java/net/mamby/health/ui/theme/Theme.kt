@@ -29,6 +29,43 @@ internal class ProfileAccentPalette(
     }
 }
 
+@Immutable
+internal data class HomeTileColors(
+    val container: Color,
+    val content: Color,
+)
+
+internal enum class HomeTileTone {
+    YELLOW,
+    MINT,
+    SKY,
+    LAVENDER,
+    CORAL,
+    PEACH,
+    AQUA,
+}
+
+@Immutable
+internal data class HomeTilePalette(
+    val yellow: HomeTileColors,
+    val mint: HomeTileColors,
+    val sky: HomeTileColors,
+    val lavender: HomeTileColors,
+    val coral: HomeTileColors,
+    val peach: HomeTileColors,
+    val aqua: HomeTileColors,
+) {
+    fun colorsFor(tone: HomeTileTone): HomeTileColors = when (tone) {
+        HomeTileTone.YELLOW -> yellow
+        HomeTileTone.MINT -> mint
+        HomeTileTone.SKY -> sky
+        HomeTileTone.LAVENDER -> lavender
+        HomeTileTone.CORAL -> coral
+        HomeTileTone.PEACH -> peach
+        HomeTileTone.AQUA -> aqua
+    }
+}
+
 private val LightProfileAccents = ProfileAccentPalette(
     accents = listOf(
         ProfileAccentColors(ProfileBlueLight, OnProfileBlueLight),
@@ -52,6 +89,28 @@ private val DarkProfileAccents = ProfileAccentPalette(
 )
 
 internal val LocalProfileAccentPalette = staticCompositionLocalOf { LightProfileAccents }
+
+private val LightHomeTiles = HomeTilePalette(
+    yellow = HomeTileColors(HomeTileYellowLight, OnHomeTileYellowLight),
+    mint = HomeTileColors(HomeTileMintLight, OnHomeTileMintLight),
+    sky = HomeTileColors(HomeTileSkyLight, OnHomeTileSkyLight),
+    lavender = HomeTileColors(HomeTileLavenderLight, OnHomeTileLavenderLight),
+    coral = HomeTileColors(HomeTileCoralLight, OnHomeTileCoralLight),
+    peach = HomeTileColors(HomeTilePeachLight, OnHomeTilePeachLight),
+    aqua = HomeTileColors(HomeTileAquaLight, OnHomeTileAquaLight),
+)
+
+private val DarkHomeTiles = HomeTilePalette(
+    yellow = HomeTileColors(HomeTileYellowDark, OnHomeTileYellowDark),
+    mint = HomeTileColors(HomeTileMintDark, OnHomeTileMintDark),
+    sky = HomeTileColors(HomeTileSkyDark, OnHomeTileSkyDark),
+    lavender = HomeTileColors(HomeTileLavenderDark, OnHomeTileLavenderDark),
+    coral = HomeTileColors(HomeTileCoralDark, OnHomeTileCoralDark),
+    peach = HomeTileColors(HomeTilePeachDark, OnHomeTilePeachDark),
+    aqua = HomeTileColors(HomeTileAquaDark, OnHomeTileAquaDark),
+)
+
+internal val LocalHomeTilePalette = staticCompositionLocalOf { LightHomeTiles }
 
 private val LightColors = lightColorScheme(
     primary = Teal,
@@ -120,6 +179,7 @@ fun HealthVaultTheme(
 ) {
     CompositionLocalProvider(
         LocalProfileAccentPalette provides if (darkTheme) DarkProfileAccents else LightProfileAccents,
+        LocalHomeTilePalette provides if (darkTheme) DarkHomeTiles else LightHomeTiles,
     ) {
         MaterialTheme(colorScheme = if (darkTheme) DarkColors else LightColors, content = content)
     }

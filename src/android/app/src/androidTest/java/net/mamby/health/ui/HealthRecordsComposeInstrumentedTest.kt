@@ -44,6 +44,7 @@ import net.mamby.health.feature.vault.ManageDocumentCategoriesScreen
 import net.mamby.health.feature.vault.DocumentImportEditorScreen
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,12 +55,14 @@ class HealthRecordsComposeInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun healthRecordsHubExposesOnlyProfileOwnedHealthSections() {
+    fun healthRecordsHubWithoutPeopleOffersProfileCreationAndKeepsAllSectionsAvailable() {
+        var addHealthInfoRequested = false
         composeRule.setContent {
             HealthVaultTheme {
                 HealthRecordsHubScreen(
-                    records = listOf(record()),
+                    records = emptyList(),
                     onHealthInfo = {},
+                    onAddHealthInfo = { addHealthInfoRequested = true },
                     onMeasurements = {},
                     onDocuments = {},
                 )
@@ -73,6 +76,10 @@ class HealthRecordsComposeInstrumentedTest {
         ).forEach { resource ->
             composeRule.onNodeWithText(composeRule.activity.getString(resource)).assertIsDisplayed()
         }
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.start_new))
+            .performClick()
+        composeRule.runOnIdle { assertTrue(addHealthInfoRequested) }
     }
 
     @Test
@@ -111,7 +118,6 @@ class HealthRecordsComposeInstrumentedTest {
                     initialProfileId = record.profile.id,
                     now = NOW,
                     zoneId = ZoneOffset.UTC,
-                    onAddProfile = { _, _ -> },
                     onCancel = {},
                     onSave = { _, measurement, complete ->
                         savedMeasurement = measurement
@@ -173,7 +179,6 @@ class HealthRecordsComposeInstrumentedTest {
                         records = listOf(record),
                         initialProfileId = record.profile.id,
                         today = LocalDate.of(2026, 7, 30),
-                        onAddProfile = { _, _ -> },
                         onCancel = { canceled = true },
                         onImport = { _, _, _ -> },
                     )
@@ -307,7 +312,7 @@ class HealthRecordsComposeInstrumentedTest {
         }
     }
 
-    private fun record() = HealthVault.empty(NOW, PROFILE_ID, "Owner").profiles.single()
+    private fun record() = HealthVault.withProfile(NOW, PROFILE_ID, "Owner").profiles.single()
 
     private companion object {
         val NOW: Instant = Instant.parse("2026-07-30T08:00:00Z")

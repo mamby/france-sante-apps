@@ -14,6 +14,22 @@ sealed interface EditorRoute : AppRoute {
     val sessionId: String
 }
 
+@Serializable
+enum class ProfileOwnedCreateTarget {
+    HEALTH_INFO,
+    DOCUMENT_IMPORT,
+    MEDICATION,
+    MEASUREMENT,
+    DOCUMENT_CATEGORIES,
+    MEASUREMENT_TYPES,
+}
+
+@Serializable
+data class ProfileOwnerGateRoute(
+    val target: ProfileOwnedCreateTarget,
+    val proposedProfileId: String,
+) : AppRoute
+
 @Serializable data object HomeRoute : TopLevelRoute
 @Serializable data object SearchRoute : TopLevelRoute
 @Serializable data object HealthRecordsRoute : TopLevelRoute
@@ -48,14 +64,14 @@ data class ContactEditorRoute(
 @Serializable
 data class MedicationEditorRoute(
     override val sessionId: String,
-    val profileId: String? = null,
+    val profileId: String,
     val id: String? = null,
 ) : EditorRoute
 
 @Serializable
 data class MeasurementEditorRoute(
     override val sessionId: String,
-    val profileId: String? = null,
+    val profileId: String,
     val id: String? = null,
 ) : EditorRoute
 
@@ -74,7 +90,7 @@ data class HealthNoteEditorRoute(
 @Serializable
 data class DocumentImportEditorRoute(
     override val sessionId: String,
-    val profileId: String? = null,
+    val profileId: String,
 ) : EditorRoute
 
 @Serializable
@@ -87,7 +103,7 @@ data class DocumentEditorRoute(
 @Serializable
 data class HealthProfileEditorRoute(
     override val sessionId: String,
-    val profileId: String? = null,
+    val profileId: String,
 ) : EditorRoute
 
 @Serializable

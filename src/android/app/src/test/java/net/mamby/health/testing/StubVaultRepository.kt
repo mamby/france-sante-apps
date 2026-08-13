@@ -30,8 +30,7 @@ import net.mamby.health.data.VaultState
 open class StubVaultRepository : VaultRepository {
     override val state: StateFlow<VaultState> = MutableStateFlow(VaultState.Loading)
     override suspend fun initialize(): Unit = unused()
-    override suspend fun createVault(firstProfileName: String): Unit = unused()
-    override suspend fun addProfile(displayName: String): UUID = unused()
+    override suspend fun addProfile(displayName: String, profileId: UUID?): UUID = unused()
     override suspend fun updateProfile(profileId: UUID, profile: HealthProfile): Unit = unused()
     override suspend fun deleteProfile(profileId: UUID): Unit = unused()
     override suspend fun upsertEmergencyContact(profileId: UUID, contact: EmergencyContact): Unit = unused()

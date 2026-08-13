@@ -87,6 +87,44 @@ class VaultReminderSourceTest {
         )
     }
 
+    @Test
+    fun rootWideScheduleReminderIsAvailableWithoutProfiles() = runTest {
+        val schedule = Schedule(
+            id = SCHEDULE,
+            title = "Check-in",
+            timing = ScheduleTiming.LocalTimed(LocalDate.of(2026, 7, 30), LocalTime.of(8, 30)),
+            alert = ScheduleAlert.Timed(10),
+            updatedAt = NOW,
+        )
+        val vault = HealthVault(
+            revision = 1,
+            profiles = emptyList(),
+            schedules = listOf(schedule),
+            updatedAt = NOW,
+        )
+        val repository = object : StubVaultRepository() {
+            override val state: StateFlow<VaultState> = MutableStateFlow(VaultState.Ready(vault))
+        }
+        val source = VaultReminderSource(
+            repository,
+            object : ZoneIdProvider {
+                override fun current() = ZoneOffset.UTC
+            },
+            Clock.fixed(NOW, ZoneOffset.UTC),
+        )
+
+        val request = source.activeReminderRequests().single()
+        val occurrence = (request.recurrence as ReminderRecurrence.Once).occurrence
+
+        assertEquals(ReminderTarget.Schedule(SCHEDULE.toString()), request.target)
+        assertEquals(Instant.parse("2026-07-30T08:20:00Z"), occurrence)
+        assertTrue(request.target !is ReminderTarget.Medication)
+        assertEquals(
+            request,
+            source.requestForDelivery(ReminderScheduleKey.from(request.id), occurrence),
+        )
+    }
+
     private fun profileRecord(profileId: UUID, medicationId: UUID) = ProfileRecord(
         profile = HealthProfile(profileId, "Owner", lastUpdatedAt = NOW),
         medications = listOf(

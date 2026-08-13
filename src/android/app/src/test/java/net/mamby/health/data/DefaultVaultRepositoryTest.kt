@@ -26,7 +26,6 @@ import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.profileRecord
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,12 +35,16 @@ class DefaultVaultRepositoryTest {
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
 
     @Test
-    fun missingStorageProducesExplicitMissingState() = runTest {
-        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
+    fun missingStorageIsPersistedAsReadyEmptyHealthData() = runTest {
+        val store = FakeVaultStore()
+        val repository = repository(store, FakeDocumentBlobStore())
 
         repository.initialize()
 
-        assertEquals(VaultState.Missing, repository.state.value)
+        val ready = repository.state.value as VaultState.Ready
+        assertEquals(HealthVault.empty(now), ready.vault)
+        assertEquals(ready.vault, store.stored)
+        assertEquals(1, store.saveCount)
     }
 
     @Test
@@ -57,10 +60,66 @@ class DefaultVaultRepositoryTest {
     }
 
     @Test
+    fun callerSuppliedProfileIdMakesCreationIdempotent() = runTest {
+        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
+        repository.initialize()
+        val profileId = UUID.fromString("24001d96-72ac-43d6-89f8-d9b807f0e0c2")
+
+        assertEquals(profileId, repository.addProfile("  Amina  ", profileId))
+        val afterCreate = repository.exportSnapshot()
+        assertEquals(profileId, repository.addProfile("Amina", profileId))
+
+        assertEquals(afterCreate, repository.exportSnapshot())
+        val conflict = runCatching { repository.addProfile("Someone else", profileId) }.exceptionOrNull()
+        assertTrue(conflict is IllegalArgumentException)
+        assertEquals(afterCreate, repository.exportSnapshot())
+    }
+
+    @Test
+    fun deletingAllHealthDataCreatesFreshReadyDataAtRevisionZero() = runTest {
+        val store = FakeVaultStore()
+        val blobs = FakeDocumentBlobStore()
+        val repository = repository(store, blobs)
+        repository.initialize()
+        repository.addProfile("Owner")
+        repository.upsertHealthNote(
+            HealthNote(UUID.randomUUID(), "Shared", "Private", now, Instant.EPOCH),
+        )
+        blobs.contents[UUID.randomUUID()] = "encrypted placeholder".encodeToByteArray()
+
+        repository.deleteVault()
+
+        val ready = repository.state.value as VaultState.Ready
+        assertEquals(HealthVault.empty(now), ready.vault)
+        assertEquals(ready.vault, store.stored)
+        assertEquals(1, store.deleteCount)
+        assertTrue(blobs.contents.isEmpty())
+    }
+
+    @Test
+    fun resetSaveFailureNeverReexposesDeletedHealthDataInMemory() = runTest {
+        val store = FakeVaultStore()
+        val repository = repository(store, FakeDocumentBlobStore())
+        repository.initialize()
+        repository.addProfile("Owner")
+        repository.upsertHealthNote(
+            HealthNote(UUID.randomUUID(), "Shared", "Private", now, Instant.EPOCH),
+        )
+        store.failNextSave = true
+
+        val failure = runCatching { repository.deleteVault() }.exceptionOrNull()
+
+        assertTrue(failure is TestStorageFailure)
+        assertEquals(HealthVault.empty(now), (repository.state.value as VaultState.Ready).vault)
+        assertEquals(null, store.stored)
+        assertEquals(1, store.deleteCount)
+    }
+
+    @Test
     fun explicitProfileOwnershipRejectsStaleWork() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Amina")
+        repository.addProfile("Amina")
         val first = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
         val second = repository.addProfile("Sam")
         val revisionAfterAdd = repository.exportSnapshot().revision
@@ -84,25 +143,37 @@ class DefaultVaultRepositoryTest {
     }
 
     @Test
-    fun vaultWideNotesSurviveProfileDeletionAndAdvanceRevision() = runTest {
+    fun sharedDataSurvivesDeletionOfTheFinalProfile() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("First")
+        repository.addProfile("First")
         val first = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
         val second = repository.addProfile("Second")
         val note = HealthNote(UUID.randomUUID(), "Shared", "Vault context", now, Instant.EPOCH)
+        val schedule = Schedule(
+            UUID.randomUUID(),
+            "Shared schedule",
+            ScheduleTiming.InstantTimed(now.plusSeconds(3_600)),
+            updatedAt = Instant.EPOCH,
+        )
+        val contact = VaultContact(UUID.randomUUID(), "Dr Martin", updatedAt = Instant.EPOCH)
         val beforeNote = repository.exportSnapshot().revision
 
         repository.upsertHealthNote(note)
+        repository.upsertSchedule(schedule)
+        repository.upsertContact(contact)
 
         val afterNote = repository.exportSnapshot()
-        assertEquals(beforeNote + 1, afterNote.revision)
+        assertEquals(beforeNote + 3, afterNote.revision)
         assertEquals(now, afterNote.notes.single().updatedAt)
         repository.deleteProfile(second)
         assertEquals(note.id, repository.exportSnapshot().notes.single().id)
-        assertThrows(IllegalArgumentException::class.java) {
-            kotlinx.coroutines.test.runTest { repository.deleteProfile(first) }
-        }
+        repository.deleteProfile(first)
+        val withoutProfiles = repository.exportSnapshot()
+        assertTrue(withoutProfiles.profiles.isEmpty())
+        assertEquals(note.id, withoutProfiles.notes.single().id)
+        assertEquals(schedule.id, withoutProfiles.schedules.single().id)
+        assertEquals(contact.id, withoutProfiles.contacts.single().id)
 
         repository.deleteHealthNote(note.id)
         assertTrue(repository.exportSnapshot().notes.isEmpty())
@@ -114,7 +185,7 @@ class DefaultVaultRepositoryTest {
         val blobs = FakeDocumentBlobStore()
         val repository = repository(store, blobs)
         repository.initialize()
-        repository.createVault("Owner")
+        repository.addProfile("Owner")
         val profileId = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
         val content = "%PDF-private".encodeToByteArray()
         store.failNextSave = true
@@ -139,9 +210,9 @@ class DefaultVaultRepositoryTest {
         val store = FakeVaultStore()
         val repository = repository(store, FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Existing")
+        repository.addProfile("Existing")
         val before = repository.exportSnapshot()
-        val replacement = HealthVault.empty(
+        val replacement = HealthVault.withProfile(
             now,
             UUID.fromString("a8e0a4ad-3b5b-41ca-a1f1-ff9c280aa094"),
             "Replacement",
@@ -166,7 +237,7 @@ class DefaultVaultRepositoryTest {
     fun contactsAreVaultWideNormalizedAndAdvanceOneRevisionPerMutation() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Owner")
+        repository.addProfile("Owner")
         val secondProfileId = repository.addProfile("Second")
         val contactId = UUID.randomUUID()
         val beforeUpsert = repository.exportSnapshot().revision
@@ -222,7 +293,7 @@ class DefaultVaultRepositoryTest {
     fun documentDeletionCleansDirectiveReferencesAtomicallyWithOneRevision() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Owner")
+        repository.addProfile("Owner")
         val profileId = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
         val document = repository.importDocument(
             profileId,
@@ -260,7 +331,7 @@ class DefaultVaultRepositoryTest {
     fun schedulesNormalizePeopleAndRemainIndependentOfProfileChanges() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Owner")
+        repository.addProfile("Owner")
         val initial = repository.exportSnapshot().profiles.single().profile
         val scheduleId = UUID.randomUUID()
 
@@ -294,7 +365,7 @@ class DefaultVaultRepositoryTest {
     fun deletingUsedCustomCategoryReclassifiesDocumentsInOneMutation() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Owner")
+        repository.addProfile("Owner")
         val profileId = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
         val categoryId = UUID.randomUUID()
         repository.upsertCustomDocumentCategory(
@@ -333,7 +404,7 @@ class DefaultVaultRepositoryTest {
     fun customMeasurementTypeEditsDoNotReinterpretHistoryAndDeletionIsBlockedWhileUsed() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
-        repository.createVault("Owner")
+        repository.addProfile("Owner")
         val profileId = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
         val typeId = UUID.randomUUID()
         val measurementId = UUID.randomUUID()
@@ -388,6 +459,7 @@ private class FakeVaultStore : VaultStore {
     var replaceFailure: Exception? = null
     var failNextSave = false
     var saveCount = 0
+    var deleteCount = 0
     override suspend fun load(): HealthVault? { loadFailure?.let { throw it }; return stored }
     override suspend fun save(vault: HealthVault) {
         if (failNextSave) { failNextSave = false; throw TestStorageFailure() }
@@ -399,7 +471,10 @@ private class FakeVaultStore : VaultStore {
         documentBlobs.forEach { it.openStream().use { input -> input.readBytes() } }
         stored = vault
     }
-    override suspend fun delete() { stored = null }
+    override suspend fun delete() {
+        stored = null
+        deleteCount++
+    }
 }
 
 private class FakeDocumentBlobStore : DocumentBlobStore {

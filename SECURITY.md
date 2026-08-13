@@ -36,9 +36,10 @@ Android Keystore may use hardware-backed protection when the device provides it,
 ## Data-loss safeguards
 
 - An unreadable vault is never treated as an empty vault or sample workspace.
+- Absence of persisted data on a fresh install creates a valid encrypted schema-v1 empty root; this path never runs when ciphertext exists but is unreadable.
 - Local replacement occurs only after staged ciphertext has been completely validated.
 - Restore authenticates the manifest and every document before replacing current data.
 - Wrong passphrases, unsupported versions, missing entries, and failed provider writes leave the current vault unchanged.
-- Deleting the local vault does not delete copies already written to a user-selected external provider.
+- Deleting local health data does not delete copies already written to a user-selected external provider.
 
 See [Recovery](docs/RECOVERY.md) before testing destructive or restore flows.

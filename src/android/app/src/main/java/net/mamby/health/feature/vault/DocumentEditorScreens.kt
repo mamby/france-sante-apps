@@ -32,13 +32,14 @@ import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
-import net.mamby.health.ui.components.ProfilePickerField
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.rememberEditorState
+import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedLabel
 
 data class DocumentImportDraft(
-    val profileId: UUID?,
+    val profileId: UUID,
     val uri: Uri?,
     val pickerRequested: Boolean,
     val title: String,
@@ -62,21 +63,16 @@ data class DocumentEditorDraft(
 @Composable
 fun DocumentImportEditorScreen(
     records: List<ProfileRecord>,
-    initialProfileId: UUID?,
+    initialProfileId: UUID,
     today: LocalDate,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
     onCancel: () -> Unit,
     onImport: (UUID, DocumentImportDraft, (Boolean) -> Unit) -> Unit,
 ) {
-    val initialRecord = initialProfileId
-        ?.let { profileId -> records.firstOrNull { it.profile.id == profileId } }
-        ?: records.singleOrNull()
-        ?: records.first()
-    val initialOwnerId = initialProfileId ?: records.singleOrNull()?.profile?.id
+    val initialRecord = records.firstOrNull { it.profile.id == initialProfileId }
     val initialCategories = remember(initialRecord) { availableDocumentCategories(initialRecord) }
     val editorState = rememberEditorState {
         DocumentImportDraft(
-            profileId = initialOwnerId,
+            profileId = initialProfileId,
             uri = null,
             pickerRequested = false,
             title = "",
@@ -131,11 +127,10 @@ fun DocumentImportEditorScreen(
         isSaving = editorState.isSaving,
         onCancel = onCancel,
         onSave = {
-            val profileId = draft.profileId ?: return@AppEditorScaffold
             if (draft.uri == null) return@AppEditorScaffold
             editorState.isSaving = true
             onImport(
-                profileId,
+                draft.profileId,
                 draft.copy(
                     title = draft.title.trim(),
                     source = draft.source.trim(),
@@ -148,20 +143,7 @@ fun DocumentImportEditorScreen(
         },
     ) {
         EditorSection(stringResource(R.string.document_file)) {
-            ProfilePickerField(
-                records = records,
-                selectedProfileId = draft.profileId,
-                onSelected = { profileId ->
-                    val record = records.firstOrNull { it.profile.id == profileId }
-                    val categories = record?.let(::availableDocumentCategories).orEmpty()
-                    editorState.value = draft.copy(
-                        profileId = profileId,
-                        category = categories.firstOrNull()
-                            ?: BuiltInDocumentCategory.OTHER.asReference(),
-                    )
-                },
-                onAddProfile = onAddProfile,
-            )
+            selectedRecord?.let { ProfileOwnerHeader(it.profile) }
             Text(stringResource(R.string.import_limit))
             OutlinedTextField(
                 value = draft.title,
@@ -178,7 +160,7 @@ fun DocumentImportEditorScreen(
                         modifier = modifier,
                     ) {
                         OutlinedTextField(
-                            value = draft.category.localizedLabel(categoryRecord),
+                            value = draft.category.editorLabel(categoryRecord),
                             onValueChange = {},
                             readOnly = true,
                             modifier = Modifier
@@ -193,7 +175,7 @@ fun DocumentImportEditorScreen(
                         ) {
                             availableCategories.forEach { candidate ->
                                 DropdownMenuItem(
-                                    text = { Text(candidate.localizedLabel(categoryRecord)) },
+                                    text = { Text(candidate.editorLabel(categoryRecord)) },
                                     onClick = {
                                         editorState.value = draft.copy(category = candidate)
                                         categoryExpanded = false
@@ -357,15 +339,22 @@ fun DocumentEditorScreen(
     }
 }
 
-private fun availableDocumentCategories(record: ProfileRecord): List<DocumentCategoryRef> =
+private fun availableDocumentCategories(record: ProfileRecord?): List<DocumentCategoryRef> =
     BuiltInDocumentCategory.entries
         .filter { builtIn ->
-            record.builtInDocumentCategoryPreferences
-                .firstOrNull { it.category == builtIn }
+            record?.builtInDocumentCategoryPreferences
+                ?.firstOrNull { it.category == builtIn }
                 ?.isHidden != true
         }
         .map(BuiltInDocumentCategory::asReference) +
-        record.customDocumentCategories.map { DocumentCategoryRef.Custom(it.id) }
+        record?.customDocumentCategories.orEmpty().map { DocumentCategoryRef.Custom(it.id) }
+
+@Composable
+private fun DocumentCategoryRef.editorLabel(record: ProfileRecord?): String = when {
+    record != null -> localizedLabel(record)
+    this is DocumentCategoryRef.BuiltIn -> stringResource(category.labelResource())
+    else -> stringResource(R.string.category_other)
+}
 
 private val DOCUMENT_MIME_TYPES = arrayOf(
     "application/pdf",

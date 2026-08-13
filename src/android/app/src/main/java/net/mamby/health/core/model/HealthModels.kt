@@ -431,14 +431,19 @@ data class HealthVault(
     val updatedAt: Instant,
 ) {
     companion object {
-        const val CURRENT_VERSION: Int = 6
+        const val CURRENT_VERSION: Int = 1
 
-        fun empty(
-            now: Instant,
-            profileId: UUID = UUID.randomUUID(),
-            displayName: String,
-        ): HealthVault = HealthVault(
+        fun empty(now: Instant): HealthVault = HealthVault(
             revision = 0,
+            profiles = emptyList(),
+            updatedAt = now,
+        )
+
+        fun withProfile(
+            now: Instant,
+            profileId: UUID,
+            displayName: String,
+        ): HealthVault = empty(now).copy(
             profiles = listOf(
                 ProfileRecord(
                     profile = HealthProfile(
@@ -448,7 +453,6 @@ data class HealthVault(
                     ),
                 ),
             ),
-            updatedAt = now,
         )
     }
 }

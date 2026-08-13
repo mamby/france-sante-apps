@@ -12,6 +12,7 @@
 - Create state-driven Compose UI and follow official Android architecture guidance.
 - Use the existing domain, repository, encryption, backup, security, and notification boundaries.
 - Add every user-facing string to English, French, and Arabic resources with matching positional placeholders.
+- Keep user-facing language non-technical: use records, health data, backup, and people, never “vault.” Internal storage types may retain the existing name.
 - Use the central Material theme; do not place raw colors in feature code.
 - Keep machine paths, signing material, credentials, personal documents, and real health information out of version control.
 
@@ -33,6 +34,7 @@ Run `:app:connectedDevDebugAndroidTest` when the change affects Android Keystore
 - Do not persist health data, imported documents, keys, or backup passphrases in plaintext.
 - Do not weaken authenticated encryption, atomic replacement, corruption handling, or the app-lock gate.
 - Do not make medical, diagnostic, emergency, prescription, regulatory, or clinical claims.
+- Treat schema v1 as the deliberate current baseline. Do not add decoders, migrations, or compatibility claims for pre-reset development schemas.
 
 ## Tests
 

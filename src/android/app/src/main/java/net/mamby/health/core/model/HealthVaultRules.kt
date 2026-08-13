@@ -73,7 +73,6 @@ fun HealthVault.requireValid(): HealthVault = apply {
         throw UnsupportedVaultVersionException(version)
     }
     requireVault(revision >= 0) { "Vault revision cannot be negative." }
-    requireVault(profiles.isNotEmpty()) { "A vault must contain at least one profile." }
     requireDistinct("profile", profiles.map { it.profile.id })
     requireDistinct("emergency contact", profiles.flatMap { it.profile.emergencyContacts }.map(EmergencyContact::id))
     requireDistinct("document", profiles.flatMap(ProfileRecord::documents).map(MedicalDocument::id))

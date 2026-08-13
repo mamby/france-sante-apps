@@ -208,7 +208,7 @@ class WorkManagerReminderSchedulerInstrumentedTest {
         enabled = enabled,
     )
 
-    private fun healthVault(revision: Long): HealthVault = HealthVault.empty(
+    private fun healthVault(revision: Long): HealthVault = HealthVault.withProfile(
         now = FIXED_NOW,
         profileId = PROFILE_ID,
         displayName = "Owner",

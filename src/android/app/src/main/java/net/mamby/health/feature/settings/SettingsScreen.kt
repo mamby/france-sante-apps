@@ -21,12 +21,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -68,6 +70,8 @@ fun SettingsScreen(
     onCommitRestore: (RestorePreview, Boolean) -> Unit,
     onDiscardRestore: (RestorePreview) -> Unit,
     onDeleteVault: () -> Unit,
+    restoreRequestId: Long = 0L,
+    onRestoreRequestHandled: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val selectedLocaleTag = remember(configuration) {
@@ -92,6 +96,13 @@ fun SettingsScreen(
     }
     val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         restoreUri = uri
+    }
+
+    LaunchedEffect(restoreRequestId) {
+        if (restoreRequestId > 0L) {
+            onRestoreRequestHandled()
+            openBackup.launch(arrayOf(PortableBackupFormat.MIME_TYPE, "application/octet-stream", "application/zip"))
+        }
     }
 
     AppScreenScaffold(title = stringResource(R.string.settings_title), onBack = onBack) { innerPadding ->
@@ -204,13 +215,22 @@ fun SettingsScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                    val people = pluralStringResource(
+                        R.plurals.restore_people_count,
+                        preview.profileCount,
+                        preview.profileCount,
+                    )
+                    val documents = pluralStringResource(
+                        R.plurals.restore_documents_count,
+                        preview.documentCount,
+                        preview.documentCount,
+                    )
                     Text(
                         stringResource(
                             R.string.restore_ready_summary,
-                            preview.revision,
-                            preview.profileCount,
-                            preview.documentCount,
                             preview.updatedAt.localizedDateTime(zoneId),
+                            people,
+                            documents,
                         ),
                     )
                     if (preview.requiresCrossFlavorConfirmation) {

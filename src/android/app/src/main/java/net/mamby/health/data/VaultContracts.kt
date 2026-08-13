@@ -107,9 +107,7 @@ interface VaultRepository {
 
     suspend fun initialize()
 
-    suspend fun createVault(firstProfileName: String)
-
-    suspend fun addProfile(displayName: String): UUID
+    suspend fun addProfile(displayName: String, profileId: UUID? = null): UUID
 
     suspend fun updateProfile(profileId: UUID, profile: HealthProfile)
 

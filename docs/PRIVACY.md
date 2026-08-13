@@ -1,16 +1,16 @@
 # Privacy Model
 
-Personal Health Vault is an offline personal record organizer. It does not require an account and does not send health information to an application server.
+Personal Health Vault is an offline personal record organizer. It does not require an account and does not send health information to an application server. Outside the product name, its interface uses plain terms such as records, health data, backup, and people.
 
 ## Data kept by the application
 
-The vault may contain multiple profiles, each with profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medications, health measurements, family history, personal directives, health identifiers, category preferences, document metadata, and imported PDF or image contents. Notes, generic schedules, and contacts are vault-wide and are not assigned to profiles. Contacts may contain names, phone numbers, email addresses, websites, free-form addresses, and notes. A schedule’s optional concerned people are copied names, not links to profiles. Invoices, receipts, and reimbursement records are encrypted documents rather than a financial ledger.
+The app may contain zero or more people. Each person can have profile details, allergies, conditions, surgeries, emergency contacts, vaccinations, medications, health measurements, family history, personal directives, health identifiers, category preferences, document metadata, and imported PDF or image contents. Notes, generic schedules, and contacts belong to the shared root and are not assigned to a person. Contacts may contain names, phone numbers, email addresses, websites, free-form addresses, and notes. A schedule’s optional concerned people are copied names, not links to profiles. Invoices, receipts, and reimbursement records are encrypted documents rather than a financial ledger.
 
 User health information is persisted only as authenticated ciphertext in app-private storage that is excluded from Android platform backup. Profile filters and search state exist only in unlocked UI memory and are not persisted. Theme, language, app-lock preference, timeout, and backup-destination state are non-health preferences stored separately.
 
-Fresh install contains no sample health data. Starting new asks who the first profile is for and creates an empty encrypted profile.
+Fresh install contains no sample health data. The app immediately persists a valid encrypted empty root and opens Home. It does not require or invent a person. If the user later creates person-owned health information, the app asks who it is for and lets them select or add that person before continuing. Creating a note, schedule, or contact never triggers that step.
 
-Global search examines all profiles, vault-wide notes, vault-wide schedules, and vault-wide contacts by default and may narrow profile-owned groups with its screen-local profile filter. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms. Profile-owned results retain their owning profile, while note, schedule, and contact results are explicitly vault-scoped and never display a profile marker. Identifier values are never indexed or displayed in result lists. They remain masked until the user explicitly reveals a detail value, and that reveal state is temporary.
+Global search examines all profiles, shared notes, shared schedules, and shared contacts by default and may narrow person-owned groups with its screen-local profile filter. Its query, filters, and results remain in unlocked process memory; the app does not create a plaintext search index or persist search terms. Person-owned results retain their owning profile, while note, schedule, and contact results are explicitly shared and never display a profile marker. Identifier values are never indexed or displayed in result lists. They remain masked until the user explicitly reveals a detail value, and that reveal state is temporary.
 
 ## Network and third parties
 
@@ -35,11 +35,11 @@ Medication and schedule alert calculation happens entirely on the device. Notifi
 
 ## Backup and restore
 
-Portable backups contain every profile and every vault-wide note, schedule, and contact, and are encrypted before they are written to the chosen provider. The passphrase is not stored. Scheduled backup retains only a locally wrapped backup key.
+Portable backups contain the complete root, including every profile and every shared note, schedule, and contact, and are encrypted before they are written to the chosen provider. A zero-profile root is valid. The passphrase is not stored. Scheduled backup retains only a locally wrapped backup key.
 
-Restore validates the entire selected backup before replacing local data. It does not combine records with the current vault. A failed restore leaves current data unchanged.
+Restore validates the entire selected backup before replacing local data. It does not combine records with the current data set. A failed restore leaves current data unchanged.
 
-Deleting the local vault removes local ciphertext, local keys, notification work, and saved provider permissions. It does not delete backup files already stored outside the application; the user must remove those through the selected provider.
+Deleting local health data removes local ciphertext, local keys, notification work, and saved provider permissions, then returns the app to a new valid empty Home state. It does not delete backup files already stored outside the application; the user must remove those through the selected provider.
 
 ## Product limits
 

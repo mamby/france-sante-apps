@@ -62,7 +62,9 @@ class DefaultVaultRepository @Inject constructor(
             try {
                 val vault = vaultStore.load()
                 if (vault == null) {
-                    mutableState.value = VaultState.Missing
+                    val empty = HealthVault.empty(clock.instant()).requireValid()
+                    vaultStore.save(empty)
+                    mutableState.value = VaultState.Ready(empty)
                     return@withLock
                 }
                 documentBlobStore.cleanupOrphans(vault.allDocuments().map(MedicalDocument::blobId).toSet())
@@ -86,32 +88,21 @@ class DefaultVaultRepository @Inject constructor(
         }
     }
 
-    override suspend fun createVault(firstProfileName: String) {
-        mutex.withLock {
-            check(mutableState.value is VaultState.Missing) {
-                "A new vault can only be created when no vault exists."
-            }
-            val displayName = firstProfileName.trim()
-            require(displayName.isNotEmpty()) { "Profile name is required." }
-            val now = clock.instant()
-            val profileId = uuidGenerator.next()
-            val vault = HealthVault.empty(now, profileId, displayName)
-                .copy(revision = 1)
-                .requireValid()
-            vaultStore.save(vault)
-            mutableState.value = VaultState.Ready(vault)
-        }
-    }
-
-    override suspend fun addProfile(displayName: String): UUID = mutex.withLock {
+    override suspend fun addProfile(displayName: String, profileId: UUID?): UUID = mutex.withLock {
         val current = readyState()
         val normalizedName = displayName.trim()
         require(normalizedName.isNotEmpty()) { "Profile name is required." }
+        val id = profileId ?: uuidGenerator.next()
+        current.vault.profiles.singleOrNull { it.profile.id == id }?.let { existing ->
+            require(existing.profile.displayName == normalizedName) {
+                "A different profile already uses this identifier."
+            }
+            return@withLock id
+        }
         val now = clock.instant()
-        val profileId = uuidGenerator.next()
         val record = ProfileRecord(
             profile = HealthProfile(
-                id = profileId,
+                id = id,
                 displayName = normalizedName,
                 lastUpdatedAt = now,
             ),
@@ -119,7 +110,7 @@ class DefaultVaultRepository @Inject constructor(
         val next = current.vault.copy(profiles = current.vault.profiles + record).nextRevision(now)
         vaultStore.save(next)
         mutableState.value = VaultState.Ready(next)
-        profileId
+        id
     }
 
     override suspend fun updateProfile(profileId: UUID, profile: HealthProfile) {
@@ -133,7 +124,6 @@ class DefaultVaultRepository @Inject constructor(
     override suspend fun deleteProfile(profileId: UUID) {
         mutex.withLock {
             val current = readyState()
-            require(current.vault.profiles.size > 1) { "The final profile cannot be deleted." }
             val index = current.vault.profiles.indexOfFirst { it.profile.id == profileId }
             if (index < 0) throw NoSuchElementException("Profile not found: $profileId")
             val removed = current.vault.profiles[index]
@@ -281,7 +271,13 @@ class DefaultVaultRepository @Inject constructor(
 
     override suspend fun upsertHealthNote(note: HealthNote) =
         mutateVault { vault, now ->
-            vault.copy(notes = vault.notes.upsert(note.copy(updatedAt = now), HealthNote::id))
+            val createdAt = vault.notes.firstOrNull { it.id == note.id }?.notedAt ?: now
+            vault.copy(
+                notes = vault.notes.upsert(
+                    note.copy(notedAt = createdAt, updatedAt = now),
+                    HealthNote::id,
+                ),
+            )
         }
 
     override suspend fun deleteHealthNote(noteId: UUID) =
@@ -490,8 +486,11 @@ class DefaultVaultRepository @Inject constructor(
 
     override suspend fun deleteVault() {
         mutex.withLock {
+            val empty = HealthVault.empty(clock.instant()).requireValid()
             vaultStore.delete()
-            mutableState.value = VaultState.Missing
+            mutableState.value = VaultState.Ready(empty)
+            vaultStore.save(empty)
+            runCatching { documentBlobStore.cleanupOrphans(emptySet()) }
         }
     }
 
@@ -522,7 +521,7 @@ class DefaultVaultRepository @Inject constructor(
 
     private fun readyState(): VaultState.Ready = when (val current = mutableState.value) {
         is VaultState.Ready -> current
-        VaultState.Missing -> error("Create a vault before changing health data.")
+        VaultState.Missing -> error("Health data has not been initialized.")
         VaultState.Loading -> error("Vault has not finished loading.")
         is VaultState.Unreadable -> error("Vault is unreadable and must be recovered or deleted.")
     }

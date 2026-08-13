@@ -25,6 +25,7 @@ import net.mamby.health.ui.theme.UiTokens
 fun HealthRecordsHubScreen(
     records: List<ProfileRecord>,
     onHealthInfo: (UUID) -> Unit,
+    onAddHealthInfo: () -> Unit,
     onMeasurements: () -> Unit,
     onDocuments: () -> Unit,
 ) {
@@ -40,6 +41,16 @@ fun HealthRecordsHubScreen(
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 PageHeader()
+            }
+            if (records.isEmpty()) {
+                item {
+                    HubCard(
+                        title = stringResource(R.string.health_info_title),
+                        body = stringResource(R.string.health_info_hub_body),
+                        actionLabel = stringResource(R.string.start_new),
+                        onOpen = onAddHealthInfo,
+                    )
+                }
             }
             items(records, key = { it.profile.id }) { record ->
                 HubCard(
@@ -72,11 +83,14 @@ private fun HubCard(
     title: String,
     body: String,
     profile: ProfileRecord? = null,
+    actionLabel: String? = null,
     onOpen: () -> Unit,
 ) {
     SectionCard(title) {
         profile?.let { ProfileMarker(it.profile) }
         Text(body)
-        Button(onClick = onOpen) { Text(stringResource(R.string.common_open)) }
+        Button(onClick = onOpen) {
+            Text(actionLabel ?: stringResource(R.string.common_open))
+        }
     }
 }

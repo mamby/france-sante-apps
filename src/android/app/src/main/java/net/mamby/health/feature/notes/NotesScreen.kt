@@ -27,8 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import net.mamby.health.R
@@ -36,12 +34,9 @@ import net.mamby.health.core.model.HealthNote
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DateField
-import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.SectionCard
-import net.mamby.health.ui.components.TimeField
 import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
@@ -149,14 +144,12 @@ fun HealthNoteEditorScreen(
     onCancel: () -> Unit,
     onSave: (HealthNote, (Boolean) -> Unit) -> Unit,
 ) {
-    val initial = existing?.notedAt ?: now
     val state = rememberEditorState {
         HealthNoteDraft(
             id = existing?.id ?: UUID.randomUUID(),
             title = existing?.title.orEmpty(),
             body = existing?.body.orEmpty(),
-            date = initial.atZone(zoneId).toLocalDate(),
-            time = initial.atZone(zoneId).toLocalTime(),
+            notedAt = existing?.notedAt ?: now,
             updatedAt = existing?.updatedAt ?: Instant.EPOCH,
         )
     }
@@ -174,7 +167,7 @@ fun HealthNoteEditorScreen(
                     id = draft.id,
                     title = draft.title.trim(),
                     body = draft.body.trim(),
-                    notedAt = draft.date.atTime(draft.time).atZone(zoneId).toInstant(),
+                    notedAt = draft.notedAt,
                     updatedAt = draft.updatedAt,
                 ),
             ) { saved ->
@@ -198,26 +191,6 @@ fun HealthNoteEditorScreen(
                 label = { Text(stringResource(R.string.health_note_body)) },
                 minLines = 4,
             )
-            EditorFieldPair(
-                first = { modifier ->
-                    Column(modifier) {
-                        DateField(
-                            stringResource(R.string.health_note_date),
-                            draft.date,
-                            { state.value = draft.copy(date = it) },
-                        )
-                    }
-                },
-                second = { modifier ->
-                    Column(modifier) {
-                        TimeField(
-                            stringResource(R.string.health_note_time),
-                            draft.time,
-                            { state.value = draft.copy(time = it) },
-                        )
-                    }
-                },
-            )
         }
     }
 }
@@ -226,7 +199,6 @@ private data class HealthNoteDraft(
     val id: UUID,
     val title: String,
     val body: String,
-    val date: LocalDate,
-    val time: LocalTime,
+    val notedAt: Instant,
     val updatedAt: Instant,
 )

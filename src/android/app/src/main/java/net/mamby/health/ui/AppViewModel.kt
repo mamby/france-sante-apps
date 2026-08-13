@@ -133,13 +133,13 @@ class AppViewModel @Inject constructor(
         mutableNotice.value = UiNotice(R.string.editor_draft_discarded)
     }
 
-    fun createVault(displayName: String) = launchOperation {
-        vaultRepository.createVault(displayName)
-        reconcileReminders()
-    }
-
-    fun addProfile(displayName: String, onCreated: (UUID) -> Unit = {}) = launchOperation {
-        onCreated(vaultRepository.addProfile(displayName))
+    fun addProfile(
+        displayName: String,
+        profileId: UUID? = null,
+        onResult: (Boolean) -> Unit = {},
+        onCreated: (UUID) -> Unit = {},
+    ) = launchOperation(onResult = onResult) {
+        onCreated(vaultRepository.addProfile(displayName, profileId))
     }
 
     fun deleteProfile(profileId: UUID) = launchOperation {

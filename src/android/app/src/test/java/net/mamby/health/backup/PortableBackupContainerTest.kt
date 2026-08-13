@@ -14,16 +14,21 @@ import kotlinx.serialization.json.Json
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectiveKind
+import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.ScheduleAlert
+import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.asReference
 import net.mamby.health.data.VaultCodec
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -90,8 +95,8 @@ class PortableBackupContainerTest {
     }
 
     @Test
-    fun formatV1ContainerRoundTripsSchemaV6ContactsInvoiceAndDirectiveAttachment(): Unit = runBlocking {
-        val target = temporaryFolder.newFile("schema-v6.phvbackup")
+    fun formatV1ContainerRoundTripsSchemaV1ContactsInvoiceAndDirectiveAttachment(): Unit = runBlocking {
+        val target = temporaryFolder.newFile("schema-v1.phvbackup")
         val key = ByteArray(BackupKeyDeriver.KEY_SIZE_BYTES) { (it + 5).toByte() }
         val documentBytes = "encrypted invoice".encodeToByteArray()
         val now = Instant.parse("2026-07-30T12:00:00Z")
@@ -168,6 +173,72 @@ class PortableBackupContainerTest {
         } finally {
             key.fill(0)
             documentBytes.fill(0)
+            vaultBytes.fill(0)
+        }
+    }
+
+    @Test
+    fun containerRestoresRootWideDataWithoutProfiles(): Unit = runBlocking {
+        val target = temporaryFolder.newFile("zero-profiles.phvbackup")
+        val key = ByteArray(BackupKeyDeriver.KEY_SIZE_BYTES) { (it + 6).toByte() }
+        val now = Instant.parse("2026-08-13T09:00:00Z")
+        val note = HealthNote(
+            id = UUID.fromString("b230ffaf-ad1e-405b-87a7-385f1fcc0824"),
+            title = "Questions",
+            body = "Ask at the next appointment",
+            notedAt = now,
+            updatedAt = now,
+        )
+        val schedule = Schedule(
+            id = UUID.fromString("dff0174f-fadd-47eb-b606-8a248d9fc1c2"),
+            title = "Appointment",
+            timing = ScheduleTiming.InstantTimed(now.plusSeconds(86_400)),
+            alert = ScheduleAlert.Timed(minutesBefore = 30),
+            updatedAt = now,
+        )
+        val contact = VaultContact(
+            id = UUID.fromString("c951c279-48db-4ead-a756-bd9d40707593"),
+            name = "Community clinic",
+            phoneNumbers = listOf("+33 1 23 45 67 89"),
+            updatedAt = now,
+        )
+        val vault = HealthVault(
+            revision = 4,
+            profiles = emptyList(),
+            notes = listOf(note),
+            schedules = listOf(schedule),
+            contacts = listOf(contact),
+            updatedAt = now,
+        )
+        val vaultBytes = VaultCodec.encode(vault)
+        val manifest = BackupManifest(
+            sourceEnvironment = "dev",
+            vaultSchemaVersion = HealthVault.CURRENT_VERSION,
+            revision = vault.revision,
+            updatedAt = vault.updatedAt.toString(),
+            vaultJsonBase64 = Base64.getEncoder().encodeToString(vaultBytes),
+            documents = emptyList(),
+        )
+
+        try {
+            container.write(target, header(), manifest, key) { _, _ ->
+                error("A backup without profiles cannot contain profile documents")
+            }
+
+            val restoredManifest = container.readManifest(target, key)
+            container.validateStructure(target, restoredManifest)
+            container.verifyDocuments(target, restoredManifest, key)
+            val restoredVault = VaultCodec.decode(
+                Base64.getDecoder().decode(restoredManifest.vaultJsonBase64),
+            ).vault
+
+            assertEquals(vault, restoredVault)
+            assertTrue(restoredVault.profiles.isEmpty())
+            assertEquals(listOf(note), restoredVault.notes)
+            assertEquals(listOf(schedule), restoredVault.schedules)
+            assertEquals(listOf(contact), restoredVault.contacts)
+        } finally {
+            key.fill(0)
             vaultBytes.fill(0)
         }
     }

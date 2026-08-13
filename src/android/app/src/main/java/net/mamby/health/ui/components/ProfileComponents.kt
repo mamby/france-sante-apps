@@ -11,17 +11,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +58,15 @@ fun ProfileFilterChip(
     onSelected: (UUID?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    LaunchedEffect(records, selectedProfileId) {
+        val shouldClearSelection = selectedProfileId != null &&
+            (records.size <= 1 || records.none { it.profile.id == selectedProfileId })
+        if (shouldClearSelection) {
+            onSelected(null)
+        }
+    }
+    if (records.size <= 1) return
+
     var chooserVisible by remember { mutableStateOf(false) }
     val labels = LocalProfileDisplayLabels.current
     ProfileFilterChip(
@@ -90,78 +97,6 @@ fun ProfileFilterChip(
                     )
                 }
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ProfilePickerField(
-    records: List<ProfileRecord>,
-    selectedProfileId: UUID?,
-    onSelected: (UUID) -> Unit,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var chooserVisible by remember { mutableStateOf(false) }
-    var addVisible by remember { mutableStateOf(false) }
-    val labels = LocalProfileDisplayLabels.current
-    OutlinedButton(
-        onClick = { chooserVisible = true },
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Text(selectedProfileId?.let { labels[it] } ?: stringResource(R.string.choose_profile))
-    }
-    if (chooserVisible) {
-        ModalBottomSheet(onDismissRequest = { chooserVisible = false }) {
-            LazyColumn(Modifier.fillMaxWidth()) {
-                items(records, key = { it.profile.id }) { record ->
-                    ListItem(
-                        headlineContent = { ProfileMarker(record.profile) },
-                        modifier = Modifier.clickable {
-                            onSelected(record.profile.id)
-                            chooserVisible = false
-                        },
-                    )
-                }
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.add_profile)) },
-                        leadingContent = {
-                            Icon(
-                                painterResource(R.drawable.ic_lucide_plus),
-                                contentDescription = null,
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            chooserVisible = false
-                            addVisible = true
-                        },
-                    )
-                }
-            }
-        }
-    }
-    if (addVisible) {
-        var name by remember { mutableStateOf("") }
-        FormDialog(
-            title = stringResource(R.string.add_profile),
-            saveEnabled = name.isNotBlank(),
-            onDismiss = { addVisible = false },
-            onSave = {
-                onAddProfile(name.trim()) { profileId ->
-                    onSelected(profileId)
-                    addVisible = false
-                }
-            },
-        ) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.display_name)) },
-                singleLine = true,
-            )
         }
     }
 }

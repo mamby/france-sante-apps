@@ -58,8 +58,10 @@ fun SearchScreen(
     onFilterChanged: (SearchFilter) -> Unit,
 ) {
     var filterProfileId by remember { mutableStateOf<UUID?>(null) }
-    val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
     val recordsById = remember(records) { records.associateBy { it.profile.id } }
+    val selectedFilterRecord = filterProfileId?.let(recordsById::get)
+    val effectiveProfileId = selectedFilterRecord?.profile?.id
+    val filteredRecords = selectedFilterRecord?.let { listOf(it) } ?: records
     val results = remember(filteredRecords, notes, schedules, contacts, query, filter) {
         HealthSearch.search(filteredRecords, notes, schedules, contacts, query).filter { result ->
             when (filter) {
@@ -90,7 +92,7 @@ fun SearchScreen(
                 PageHeader()
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
+                ProfileFilterChip(records, effectiveProfileId, { filterProfileId = it })
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 OutlinedTextField(
@@ -107,7 +109,7 @@ fun SearchScreen(
                     label = {
                         Text(
                             stringResource(
-                                if (filterProfileId == null) R.string.search_hint_all else R.string.search_hint,
+                                if (effectiveProfileId == null) R.string.search_hint_all else R.string.search_hint,
                             ),
                         )
                     },
@@ -128,12 +130,12 @@ fun SearchScreen(
             when {
                 query.isBlank() -> item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
-                        if (filterProfileId == null) {
+                        if (effectiveProfileId == null) {
                             stringResource(R.string.search_initial_title_all)
                         } else {
                             stringResource(
                                 R.string.search_initial_title,
-                                recordsById.getValue(requireNotNull(filterProfileId)).profile.displayName,
+                                selectedFilterRecord.profile.displayName,
                             )
                         },
                         stringResource(R.string.search_initial_body),
@@ -142,12 +144,12 @@ fun SearchScreen(
                 results.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
                         stringResource(R.string.search_no_results_title),
-                        if (filterProfileId == null) {
+                        if (effectiveProfileId == null) {
                             stringResource(R.string.search_no_results_body_all)
                         } else {
                             stringResource(
                                 R.string.search_no_results_body,
-                                recordsById.getValue(requireNotNull(filterProfileId)).profile.displayName,
+                                selectedFilterRecord.profile.displayName,
                             )
                         },
                     )
@@ -155,7 +157,7 @@ fun SearchScreen(
                 else -> items(results, key = { "${it.scope}:${it.target}" }) { result ->
                     val owner = (result.scope as? HealthSearchScope.Profile)
                         ?.profileId
-                        ?.let(recordsById::getValue)
+                        ?.let(recordsById::get)
                     val primaryText = when (val target = result.target) {
                         is HealthSearchTarget.Measurement -> owner?.let { record ->
                             record.measurements
@@ -167,7 +169,7 @@ fun SearchScreen(
                         else -> result.primaryText
                     }
                     SectionCard(primaryText) {
-                        if (owner != null && filterProfileId == null && records.size > 1) {
+                        if (owner != null && effectiveProfileId == null && records.size > 1) {
                             ProfileMarker(owner.profile)
                         }
                         result.secondaryText?.takeIf(String::isNotBlank)?.let { Text(it) }

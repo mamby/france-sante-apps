@@ -1,26 +1,28 @@
 package net.mamby.health.feature.dashboard
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -38,14 +40,13 @@ import net.mamby.health.core.model.index
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
-import net.mamby.health.ui.components.LabeledValue
-import net.mamby.health.ui.components.MetricCard
 import net.mamby.health.ui.components.ProfileMarker
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.format.localizedLabel
+import net.mamby.health.ui.theme.HomeTileTone
+import net.mamby.health.ui.theme.LocalHomeTilePalette
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
@@ -69,7 +70,12 @@ fun DashboardScreen(
     onImportDocument: () -> Unit,
     onAddMedication: () -> Unit,
     onAddSchedule: () -> Unit,
+    onAddNote: () -> Unit = {},
+    onAddContact: () -> Unit = {},
+    restorePrompt: (@Composable () -> Unit)? = null,
 ) {
+    val adaptiveTileMinWidth = UiTokens.HomeTileMinWidth *
+        LocalDensity.current.fontScale.coerceAtLeast(1f)
     val now = clock.instant()
     val nextMedication = records.ownedItems(ProfileRecord::medications)
         .asSequence()
@@ -111,7 +117,7 @@ fun DashboardScreen(
         title = stringResource(R.string.dashboard_title),
     ) { innerPadding ->
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(UiTokens.CardMinWidth),
+            columns = GridCells.Adaptive(adaptiveTileMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
             contentPadding = innerPadding.withPagePadding(),
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
@@ -120,16 +126,22 @@ fun DashboardScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 PageHeader()
             }
+            restorePrompt?.let { prompt ->
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    prompt()
+                }
+            }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(stringResource(R.string.dashboard_greeting_all))
+                DashboardSectionHeading(stringResource(R.string.dashboard_greeting_all))
             }
 
             item {
-                DashboardPreviewCard(
+                DashboardTile(
                     title = stringResource(R.string.nav_medications),
+                    tone = HomeTileTone.CORAL,
                     onClick = onMedications,
                 ) {
-                    LabeledValue(
+                    DashboardLabeledValue(
                         stringResource(R.string.medications_metric),
                         activeMedications.toString(),
                     )
@@ -149,11 +161,12 @@ fun DashboardScreen(
                 }
             }
             item {
-                DashboardPreviewCard(
+                DashboardTile(
                     title = stringResource(R.string.schedule_title),
+                    tone = HomeTileTone.MINT,
                     onClick = onSchedule,
                 ) {
-                    LabeledValue(
+                    DashboardLabeledValue(
                         stringResource(R.string.schedules_metric),
                         upcomingSchedules.toString(),
                     )
@@ -174,27 +187,72 @@ fun DashboardScreen(
 
             if (isEmpty) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    SectionCard(stringResource(R.string.getting_started_title)) {
-                        Button(onClick = onAddHealthInfo) { Text(stringResource(R.string.getting_started_health)) }
-                        Button(onClick = onImportDocument) { Text(stringResource(R.string.import_document)) }
-                        Button(onClick = onAddMedication) { Text(stringResource(R.string.add_medication)) }
-                        Button(onClick = onAddSchedule) { Text(stringResource(R.string.add_schedule)) }
-                    }
+                    DashboardSectionHeading(stringResource(R.string.getting_started_title))
+                }
+                item {
+                    DashboardActionTile(
+                        title = stringResource(R.string.add_health_note),
+                        tone = HomeTileTone.YELLOW,
+                        onClick = onAddNote,
+                    )
+                }
+                item {
+                    DashboardActionTile(
+                        title = stringResource(R.string.add_schedule),
+                        tone = HomeTileTone.MINT,
+                        onClick = onAddSchedule,
+                    )
+                }
+                item {
+                    DashboardActionTile(
+                        title = stringResource(R.string.add_contact),
+                        tone = HomeTileTone.SKY,
+                        onClick = onAddContact,
+                    )
+                }
+                item {
+                    DashboardActionTile(
+                        title = stringResource(R.string.getting_started_health),
+                        tone = HomeTileTone.LAVENDER,
+                        onClick = onAddHealthInfo,
+                    )
+                }
+                item {
+                    DashboardActionTile(
+                        title = stringResource(R.string.import_document),
+                        tone = HomeTileTone.PEACH,
+                        onClick = onImportDocument,
+                    )
+                }
+                item {
+                    DashboardActionTile(
+                        title = stringResource(R.string.add_medication),
+                        tone = HomeTileTone.CORAL,
+                        onClick = onAddMedication,
+                    )
                 }
             }
 
-            item { MetricCard(stringResource(R.string.documents_metric), records.sumOf { it.documents.size }.toString()) }
+            item {
+                DashboardMetricTile(
+                    title = stringResource(R.string.documents_metric),
+                    value = records.sumOf { it.documents.size }.toString(),
+                    tone = HomeTileTone.PEACH,
+                )
+            }
 
             items(
                 items = records,
                 key = { "summary:${it.profile.id}" },
-                span = { GridItemSpan(maxLineSpan) },
             ) { record ->
-                SectionCard(stringResource(R.string.quick_health_summary)) {
+                DashboardTile(
+                    title = stringResource(R.string.quick_health_summary),
+                    tone = HomeTileTone.LAVENDER,
+                ) {
                     if (records.size > 1) ProfileMarker(record.profile)
-                    LabeledValue(stringResource(R.string.blood_type), record.profile.bloodType.orEmpty())
-                    LabeledValue(stringResource(R.string.allergies), record.profile.allergies.joinToString())
-                    LabeledValue(
+                    DashboardLabeledValue(stringResource(R.string.blood_type), record.profile.bloodType.orEmpty())
+                    DashboardLabeledValue(stringResource(R.string.allergies), record.profile.allergies.joinToString())
+                    DashboardLabeledValue(
                         stringResource(R.string.last_updated),
                         record.profile.lastUpdatedAt.atZone(zoneId).toLocalDate().localizedDate(),
                     )
@@ -203,7 +261,7 @@ fun DashboardScreen(
 
             if (recentItems.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(stringResource(R.string.recent_health_items))
+                    DashboardSectionHeading(stringResource(R.string.recent_health_items))
                 }
                 items(
                     items = recentItems,
@@ -222,21 +280,23 @@ fun DashboardScreen(
                                 ?: item.title
                         } else item.title
                     }
-                    SectionCard(title, modifier = Modifier) {
-                        if (recent is RecentDashboardItem.ProfileItem && records.size > 1) {
-                            ProfileMarker(recent.owned.profile)
-                        }
-                        Text(item.updatedAt.localizedDateTime(zoneId))
-                        Button(onClick = {
+                    DashboardTile(
+                        title = title,
+                        tone = recent.homeTileTone,
+                        onClick = {
                             when (recent) {
                                 is RecentDashboardItem.NoteItem -> onNoteSelected(recent.note.id)
                                 is RecentDashboardItem.ScheduleItem -> onScheduleSelected(recent.schedule.id)
                                 is RecentDashboardItem.ContactItem -> onContactSelected(recent.contact.id)
                                 is RecentDashboardItem.ProfileItem -> onRecentItem(recent.owned.profileId, item)
                             }
-                        }) {
-                            Text(stringResource(R.string.common_open))
+                        },
+                    ) {
+                        if (recent is RecentDashboardItem.ProfileItem && records.size > 1) {
+                            ProfileMarker(recent.owned.profile)
                         }
+                        Text(item.updatedAt.localizedDateTime(zoneId))
+                        Text(stringResource(R.string.common_open), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -257,26 +317,101 @@ private fun ProfileRecord.isHealthDataEmpty(): Boolean =
         profile.chronicConditions.isEmpty() && profile.surgeries.isEmpty()
 
 @Composable
-private fun DashboardPreviewCard(
+private fun DashboardSectionHeading(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.semantics { heading() },
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
+}
+
+@Composable
+private fun DashboardActionTile(
     title: String,
+    tone: HomeTileTone,
     onClick: () -> Unit,
-    content: @Composable () -> Unit,
 ) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
+    DashboardTile(title = title, tone = tone, onClick = onClick)
+}
+
+@Composable
+private fun DashboardMetricTile(
+    title: String,
+    value: String,
+    tone: HomeTileTone,
+) {
+    DashboardTile(title = title, tone = tone) {
+        Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun DashboardLabeledValue(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        Text(value.ifBlank { stringResource(R.string.common_not_set) })
+    }
+}
+
+@Composable
+private fun DashboardTile(
+    title: String,
+    tone: HomeTileTone,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit = {},
+) {
+    val colors = LocalHomeTilePalette.current.colorsFor(tone)
+    val cardColors = CardDefaults.cardColors(
+        containerColor = colors.container,
+        contentColor = colors.content,
+    )
+    val cardElevation = CardDefaults.cardElevation(defaultElevation = UiTokens.HomeTileElevation)
+    val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(
-            modifier = Modifier.padding(UiTokens.ScreenPadding),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = UiTokens.HomeTileMinHeight)
+                .padding(UiTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             content()
         }
     }
+
+    if (onClick == null) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = cardColors,
+            elevation = cardElevation,
+            content = cardContent,
+        )
+    } else {
+        Card(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth(),
+            colors = cardColors,
+            elevation = cardElevation,
+            content = cardContent,
+        )
+    }
 }
+
+private val RecentDashboardItem.homeTileTone: HomeTileTone
+    get() = when (item.kind) {
+        VaultItemKind.DOCUMENT -> HomeTileTone.PEACH
+        VaultItemKind.MEDICATION -> HomeTileTone.CORAL
+        VaultItemKind.SCHEDULE -> HomeTileTone.MINT
+        VaultItemKind.VACCINATION -> HomeTileTone.MINT
+        VaultItemKind.NOTE -> HomeTileTone.YELLOW
+        VaultItemKind.MEASUREMENT -> HomeTileTone.AQUA
+        VaultItemKind.CONTACT -> HomeTileTone.SKY
+        VaultItemKind.FAMILY_HISTORY -> HomeTileTone.LAVENDER
+        VaultItemKind.DIRECTIVE -> HomeTileTone.LAVENDER
+        VaultItemKind.IDENTIFIER -> HomeTileTone.SKY
+    }
 
 private data class MedicationPreview(
     val occurrence: Instant,

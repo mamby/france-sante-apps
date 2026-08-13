@@ -7,6 +7,7 @@
 - The Android application ID is `net.mamby.health` for production.
 - This is an offline, self-custody application. Do not add a backend, network client, accounts, telemetry, ads, tracking, or artificial-intelligence features.
 - Do not make medical, diagnostic, emergency, regulatory, or clinical-certification claims.
+- The user-facing product name is **Personal Health Vault** in every locale and channel. Do not rename or translate the product name. Outside the product name, prefer plain UI terms such as health data, records, backup, and people. Internal types and repository documentation may retain `HealthVault` or “vault” where they describe the encrypted storage boundary.
 
 ## Android stack
 
@@ -36,7 +37,10 @@
 - Store vault metadata and imported document bodies only as authenticated ciphertext under app-private, non-backed-up storage.
 - Keep the local vault key non-exportable in Android Keystore.
 - Treat app lock as an access gate separate from vault encryption.
-- `Missing`, locked, ready schema-v6 multi-profile, and unreadable vaults are distinct states. Production sample data is prohibited, and unreadable data is never treated as missing.
+- Schema v1 is the only supported domain schema. It deliberately replaces the former development schemas; do not add legacy decoding or migrations.
+- A valid ready schema-v1 root may contain zero profiles. On first launch, initialize and persist that empty encrypted root and open Home directly; `Missing` is not an onboarding screen.
+- Locked, ready, and unreadable vaults are distinct states. Production sample data is prohibited, and unreadable data is never treated as missing or replaced by a fresh root.
+- Notes, schedules, and contacts belong to the root and never require a profile. A profile is created or selected only when the user creates profile-owned health information.
 - Profile filters are transient, screen-local UI state, default to `All profiles`, and must not be persisted, change the vault revision, or trigger backup.
 - Backups contain every profile. Filtered multi-profile search stays in unlocked memory and must never create plaintext indexes or persisted queries.
 - Backup providers may receive only the portable encrypted backup container. Never retain the user's backup passphrase.
@@ -63,4 +67,5 @@
 - Test domain behavior, encrypted persistence, backup recovery, reminder scheduling, app locking, permissions, navigation, localization, RTL, and adaptive layouts.
 - Use JUnit, AndroidX Test, Compose testing APIs, and WorkManager test utilities.
 - Do not add trivial tests or brittle timing-based tests.
+- Screenshot-test reference images and generated captures are local artifacts. Never commit files under `src/android/app/src/screenshotTest*/reference`.
 - Before handoff, run `:app:assembleDevDebug`, `:app:testDevDebugUnitTest`, `:app:lintDevDebug`, and the applicable device tests.

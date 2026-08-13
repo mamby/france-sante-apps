@@ -92,16 +92,16 @@ class ContactsScreenInstrumentedTest {
             .performTextInput("Samira")
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_cancel)).performClick()
         composeRule
-            .onNodeWithText(composeRule.activity.getString(R.string.discard_changes_title))
+            .onNodeWithText(composeRule.activity.getString(R.string.unsaved_changes_title))
             .assertIsDisplayed()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.keep_editing_action)).performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.unsaved_changes_keep_editing)).performClick()
         composeRule.onNode(hasText("Samira") and hasSetTextAction()).assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(false, canceled) }
 
         composeRule.runOnUiThread {
             composeRule.activity.onBackPressedDispatcher.onBackPressed()
         }
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.discard_changes_action)).performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.unsaved_changes_discard)).performClick()
         composeRule.runOnIdle { assertEquals(true, canceled) }
     }
 
@@ -124,7 +124,7 @@ class ContactsScreenInstrumentedTest {
 
         composeRule.runOnIdle { assertEquals(true, canceled) }
         composeRule
-            .onNodeWithText(composeRule.activity.getString(R.string.discard_changes_title))
+            .onNodeWithText(composeRule.activity.getString(R.string.unsaved_changes_title))
             .assertDoesNotExist()
     }
 

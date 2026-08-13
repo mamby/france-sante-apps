@@ -137,4 +137,48 @@ class HealthSearchTest {
                 assertEquals(HealthSearchTarget.Contact(contact.id), result.target)
             }
     }
+
+    @Test
+    fun searchFindsAllRootWideContentWithoutProfiles() {
+        val note = HealthNote(
+            id = UUID.randomUUID(),
+            title = "Shared questions",
+            body = "For the next visit",
+            notedAt = now,
+            updatedAt = now,
+        )
+        val schedule = Schedule(
+            id = UUID.randomUUID(),
+            title = "Shared appointment",
+            timing = ScheduleTiming.InstantTimed(now.plusSeconds(3_600)),
+            updatedAt = now,
+        )
+        val contact = VaultContact(
+            id = UUID.randomUUID(),
+            name = "Shared care team",
+            updatedAt = now,
+        )
+
+        val results = HealthSearch.search(
+            records = emptyList(),
+            notes = listOf(note),
+            schedules = listOf(schedule),
+            contacts = listOf(contact),
+            query = "shared",
+        )
+
+        assertEquals(
+            setOf(
+                HealthSearchTarget.Note(note.id),
+                HealthSearchTarget.Schedule(schedule.id),
+                HealthSearchTarget.Contact(contact.id),
+            ),
+            results.map(HealthSearchResult::target).toSet(),
+        )
+        assertEquals(
+            setOf(HealthSearchGroup.NOTES, HealthSearchGroup.SCHEDULE, HealthSearchGroup.CONTACTS),
+            results.map(HealthSearchResult::group).toSet(),
+        )
+        assertTrue(results.all { it.scope == HealthSearchScope.Vault })
+    }
 }

@@ -30,6 +30,9 @@ object UiTokens {
     val ContentSpacing = 12.dp
     val SectionSpacing = 24.dp
     val CardMinWidth = 280.dp
+    val HomeTileMinWidth = 156.dp
+    val HomeTileMinHeight = 144.dp
+    val HomeTileElevation = 0.dp
     val FormMaxWidth = 640.dp
     val EditorFieldMinWidth = 280.dp
     val EditorMaxWidth = 1040.dp

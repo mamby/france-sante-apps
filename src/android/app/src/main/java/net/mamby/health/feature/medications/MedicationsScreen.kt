@@ -51,7 +51,6 @@ import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfileOwnerHeader
-import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
@@ -130,7 +129,7 @@ fun MedicationsScreen(
 }
 
 data class MedicationDraft(
-    val profileId: UUID?,
+    val profileId: UUID,
     val id: UUID,
     val name: String,
     val dose: String,
@@ -155,14 +154,13 @@ fun MedicationEditorScreen(
     records: List<ProfileRecord>,
     existingOwner: ProfileRecord?,
     existing: Medication?,
-    initialProfileId: UUID?,
+    initialProfileId: UUID,
     today: LocalDate,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
     onCancel: () -> Unit,
     onSave: (UUID, Medication, (Boolean) -> Unit) -> Unit,
 ) {
     val editorState = rememberEditorState {
-        existing.toDraft(existingOwner?.profile?.id ?: initialProfileId, today)
+        existing.toDraft(initialProfileId, today)
     }
     val draft = editorState.value
     val selectedOwner = existingOwner?.takeIf { it.profile.id == draft.profileId }
@@ -177,24 +175,14 @@ fun MedicationEditorScreen(
         isSaving = editorState.isSaving,
         onCancel = onCancel,
         onSave = {
-            val profileId = draft.profileId ?: return@AppEditorScaffold
             editorState.isSaving = true
-            onSave(profileId, draft.toMedication()) { saved ->
+            onSave(draft.profileId, draft.toMedication()) { saved ->
                 editorState.isSaving = false
                 if (saved) onCancel()
             }
         },
     ) {
-        if (existing == null) {
-            ProfilePickerField(
-                records = records,
-                selectedProfileId = draft.profileId,
-                onSelected = { editorState.value = draft.copy(profileId = it) },
-                onAddProfile = onAddProfile,
-            )
-        } else {
-            selectedOwner?.let { ProfileOwnerHeader(it.profile) }
-        }
+        selectedOwner?.let { ProfileOwnerHeader(it.profile) }
         EditorFieldPair(
             first = { modifier ->
                 OutlinedTextField(
@@ -349,7 +337,7 @@ private fun WeekdaySelector(
     }
 }
 
-private fun Medication?.toDraft(profileId: UUID?, today: LocalDate): MedicationDraft = MedicationDraft(
+private fun Medication?.toDraft(profileId: UUID, today: LocalDate): MedicationDraft = MedicationDraft(
     profileId = profileId,
     id = this?.id ?: UUID.randomUUID(),
     name = this?.name.orEmpty(),

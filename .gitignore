@@ -6,6 +6,9 @@
 captures/
 *.iml
 
+# Generated screenshot-test baselines
+src/android/app/src/screenshotTest*/reference/
+
 # Local Android SDK configuration
 local.properties
 

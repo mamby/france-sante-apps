@@ -48,6 +48,12 @@ class AppNavigationState internal constructor(
         backStacks.getValue(destination).addAll(routes)
     }
 
+    fun replaceTop(vararg routes: AppRoute) {
+        check(currentBackStack.size > 1) { "A top-level root cannot be replaced." }
+        currentBackStack.removeLastOrNull()
+        currentBackStack.addAll(routes)
+    }
+
     fun goBack() {
         if (currentBackStack.size > 1) {
             currentBackStack.removeLastOrNull()
@@ -71,10 +77,10 @@ class AppNavigationState internal constructor(
 
 @Composable
 fun rememberAppNavigationState(): AppNavigationState {
-    val selected = rememberSaveable("navigation_state_v5") {
+    val selected = rememberSaveable("navigation_state_v6") {
         androidx.compose.runtime.mutableStateOf(TopLevelDestination.Home)
     }
-    val backStacks = key("navigation_state_v5") {
+    val backStacks = key("navigation_state_v6") {
         listOf(
             rememberNavBackStack(HomeRoute),
             rememberNavBackStack(SearchRoute),
