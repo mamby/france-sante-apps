@@ -19,7 +19,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,17 +27,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthNote
+import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
+import net.mamby.health.ui.components.EditorFieldPair
+import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
-import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
+import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.theme.UiTokens
@@ -46,24 +50,17 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun NotesScreen(
     notes: List<HealthNote>,
-    now: Instant,
     zoneId: ZoneId,
-    onUpsert: (HealthNote) -> Unit,
+    onAdd: () -> Unit,
     onSelected: (UUID) -> Unit,
-    creationRequest: Long = 0,
 ) {
-    var creationVisible by remember { mutableStateOf(false) }
-    fun startCreation() { creationVisible = true }
-    LaunchedEffect(creationRequest) {
-        if (creationRequest > 0) startCreation()
-    }
     val sortedNotes = remember(notes) {
         notes.sortedWith(compareByDescending(HealthNote::notedAt).thenBy(HealthNote::id))
     }
     AppScreenScaffold(
         title = stringResource(R.string.health_notes_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = ::startCreation) {
+            FloatingActionButton(onClick = onAdd) {
                 Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_health_note))
             }
         },
@@ -98,30 +95,16 @@ fun NotesScreen(
             }
         }
     }
-    if (creationVisible) {
-        HealthNoteDialog(
-            existing = null,
-            now = now,
-            zoneId = zoneId,
-            onDismiss = { creationVisible = false },
-            onSave = {
-                onUpsert(it)
-                creationVisible = false
-            },
-        )
-    }
 }
 
 @Composable
 fun NoteDetailScreen(
     note: HealthNote,
-    now: Instant,
     zoneId: ZoneId,
     onBack: (() -> Unit)?,
-    onUpsert: (HealthNote) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var editing by remember(note.id) { mutableStateOf(false) }
     var deleting by remember(note.id) { mutableStateOf(false) }
     AppScreenScaffold(
         title = note.title,
@@ -141,21 +124,9 @@ fun NoteDetailScreen(
                 Text(note.notedAt.localizedDateTime(zoneId))
                 Text(note.body)
             }
-            Button(onClick = { editing = true }) { Text(stringResource(R.string.common_edit)) }
+            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
             OutlinedButton(onClick = { deleting = true }) { Text(stringResource(R.string.common_delete)) }
         }
-    }
-    if (editing) {
-        HealthNoteDialog(
-            existing = note,
-            now = now,
-            zoneId = zoneId,
-            onDismiss = { editing = false },
-            onSave = {
-                onUpsert(it)
-                editing = false
-            },
-        )
     }
     if (deleting) {
         ConfirmDeleteDialog(
@@ -171,51 +142,91 @@ fun NoteDetailScreen(
 }
 
 @Composable
-private fun HealthNoteDialog(
+fun HealthNoteEditorScreen(
     existing: HealthNote?,
     now: Instant,
     zoneId: ZoneId,
-    onDismiss: () -> Unit,
-    onSave: (HealthNote) -> Unit,
+    onCancel: () -> Unit,
+    onSave: (HealthNote, (Boolean) -> Unit) -> Unit,
 ) {
     val initial = existing?.notedAt ?: now
-    var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
-    var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
-    var date by remember(existing?.id) { mutableStateOf(initial.atZone(zoneId).toLocalDate()) }
-    var time by remember(existing?.id) { mutableStateOf(initial.atZone(zoneId).toLocalTime()) }
-    FormDialog(
+    val state = rememberEditorState {
+        HealthNoteDraft(
+            id = existing?.id ?: UUID.randomUUID(),
+            title = existing?.title.orEmpty(),
+            body = existing?.body.orEmpty(),
+            date = initial.atZone(zoneId).toLocalDate(),
+            time = initial.atZone(zoneId).toLocalTime(),
+            updatedAt = existing?.updatedAt ?: Instant.EPOCH,
+        )
+    }
+    val draft = state.value
+    AppEditorScaffold(
         title = stringResource(if (existing == null) R.string.add_health_note else R.string.edit_health_note),
-        saveEnabled = title.isNotBlank() && body.isNotBlank(),
-        onDismiss = onDismiss,
+        isDirty = state.isDirty,
+        saveEnabled = draft.title.isNotBlank() && draft.body.isNotBlank(),
+        isSaving = state.isSaving,
+        onCancel = onCancel,
         onSave = {
+            state.isSaving = true
             onSave(
                 HealthNote(
-                    id = existing?.id ?: UUID.randomUUID(),
-                    title = title.trim(),
-                    body = body.trim(),
-                    notedAt = date.atTime(time).atZone(zoneId).toInstant(),
-                    updatedAt = existing?.updatedAt ?: Instant.EPOCH,
+                    id = draft.id,
+                    title = draft.title.trim(),
+                    body = draft.body.trim(),
+                    notedAt = draft.date.atTime(draft.time).atZone(zoneId).toInstant(),
+                    updatedAt = draft.updatedAt,
                 ),
-            )
+            ) { saved ->
+                state.isSaving = false
+                if (saved) onCancel()
+            }
         },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+        EditorSection(stringResource(R.string.health_note)) {
             OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
+                value = draft.title,
+                onValueChange = { state.value = draft.copy(title = it) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.health_note_title)) },
                 singleLine = true,
             )
             OutlinedTextField(
-                value = body,
-                onValueChange = { body = it },
+                value = draft.body,
+                onValueChange = { state.value = draft.copy(body = it) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.health_note_body)) },
                 minLines = 4,
             )
-            DateField(stringResource(R.string.health_note_date), date, { date = it })
-            TimeField(stringResource(R.string.health_note_time), time, { time = it })
+            EditorFieldPair(
+                first = { modifier ->
+                    Column(modifier) {
+                        DateField(
+                            stringResource(R.string.health_note_date),
+                            draft.date,
+                            { state.value = draft.copy(date = it) },
+                        )
+                    }
+                },
+                second = { modifier ->
+                    Column(modifier) {
+                        TimeField(
+                            stringResource(R.string.health_note_time),
+                            draft.time,
+                            { state.value = draft.copy(time = it) },
+                        )
+                    }
+                },
+            )
         }
     }
 }
+
+private data class HealthNoteDraft(
+    val id: UUID,
+    val title: String,
+    val body: String,
+    val date: LocalDate,
+    val time: LocalTime,
+    val updatedAt: Instant,
+)

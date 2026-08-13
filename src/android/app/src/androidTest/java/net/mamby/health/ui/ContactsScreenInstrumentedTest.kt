@@ -3,19 +3,28 @@ package net.mamby.health.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.input.key.Key
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.VaultContact
 import net.mamby.health.feature.contacts.ContactDetailScreen
-import net.mamby.health.feature.contacts.ContactsScreen
+import net.mamby.health.feature.contacts.ContactEditorScreen
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -33,22 +42,26 @@ class ContactsScreenInstrumentedTest {
         var savedContact: VaultContact? = null
         composeRule.setContent {
             HealthVaultTheme {
-                ContactsScreen(
-                    contacts = emptyList(),
-                    onUpsert = { savedContact = it },
-                    onSelected = {},
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = {},
+                    onSave = { contact, onResult ->
+                        savedContact = contact
+                        onResult(true)
+                    },
                 )
             }
         }
 
         composeRule
-            .onNodeWithContentDescription(composeRule.activity.getString(R.string.add_contact))
-            .performClick()
-        composeRule
             .onNodeWithText(composeRule.activity.getString(R.string.contact_name))
             .performTextInput("  Samira Haddad  ")
         composeRule
+            .onNode(hasText("Samira Haddad", substring = true) and hasSetTextAction())
+            .assertTextContains("Samira Haddad", substring = true)
+        composeRule
             .onNodeWithText(composeRule.activity.getString(R.string.common_save))
+            .assertIsEnabled()
             .performClick()
 
         composeRule.runOnIdle {
@@ -59,6 +72,136 @@ class ContactsScreenInstrumentedTest {
             assertEquals(emptyList<String>(), savedContact?.websites)
             assertEquals(emptyList<String>(), savedContact?.addresses)
         }
+    }
+
+    @Test
+    fun dirtyCancelKeepsTheDraftUntilDiscardIsConfirmed() {
+        var canceled = false
+        composeRule.setContent {
+            HealthVaultTheme {
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = { canceled = true },
+                    onSave = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.contact_name)) and hasSetTextAction())
+            .performTextInput("Samira")
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_cancel)).performClick()
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.discard_changes_title))
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.keep_editing_action)).performClick()
+        composeRule.onNode(hasText("Samira") and hasSetTextAction()).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(false, canceled) }
+
+        composeRule.runOnUiThread {
+            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.discard_changes_action)).performClick()
+        composeRule.runOnIdle { assertEquals(true, canceled) }
+    }
+
+    @Test
+    fun cleanBackExitsWithoutDiscardConfirmation() {
+        var canceled = false
+        composeRule.setContent {
+            HealthVaultTheme {
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = { canceled = true },
+                    onSave = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.runOnUiThread {
+            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        }
+
+        composeRule.runOnIdle { assertEquals(true, canceled) }
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.discard_changes_title))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun failedSaveRetainsTheDraftAndReEnablesSave() {
+        var completion: ((Boolean) -> Unit)? = null
+        composeRule.setContent {
+            HealthVaultTheme {
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = {},
+                    onSave = { _, onResult -> completion = onResult },
+                )
+            }
+        }
+
+        composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.contact_name)) and hasSetTextAction())
+            .performTextInput("Samira")
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).assertDoesNotExist()
+
+        composeRule.runOnIdle { requireNotNull(completion)(false) }
+
+        composeRule.onNode(hasText("Samira") and hasSetTextAction()).assertIsDisplayed()
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.common_save))
+            .assertIsEnabled()
+    }
+
+    @Test
+    fun invalidWebsiteShowsInlineValidationAndDisablesSave() {
+        composeRule.setContent {
+            HealthVaultTheme {
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = {},
+                    onSave = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.contact_name)) and hasSetTextAction())
+            .performTextInput("Samira")
+        composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.contact_websites)) and hasSetTextAction())
+            .performTextInput("ftp://example.test")
+
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.invalid_contact_website))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.common_save))
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun hardwareTabTraversalFollowsTheVisualFieldOrder() {
+        composeRule.setContent {
+            HealthVaultTheme {
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = {},
+                    onSave = { _, _ -> },
+                )
+            }
+        }
+        val nameField = composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.contact_name)) and hasSetTextAction())
+        val phoneField = composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.contact_phone_numbers)) and hasSetTextAction())
+
+        nameField.performClick().assertIsFocused()
+        nameField.performKeyInput { pressKey(Key.Tab) }
+
+        phoneField.assertIsFocused()
     }
 
     @Test
@@ -79,7 +222,7 @@ class ContactsScreenInstrumentedTest {
                 ContactDetailScreen(
                     contact = contact,
                     onBack = null,
-                    onUpsert = {},
+                    onEdit = {},
                     onDelete = {},
                     onDialPhone = { invokedActions += "phone:$it" },
                     onComposeEmail = { invokedActions += "email:$it" },

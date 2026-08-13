@@ -591,4 +591,10 @@
     <string name="delete_document_category_title">Delete document category?</string>
     <string name="delete_document_category_message">Documents using it will be moved to the selected replacement.</string>
     <string name="recent_health_items">Recent health items</string>
+    <string name="editor_background_unavailable">Unavailable while editing</string>
+    <string name="editor_draft_discarded">The unfinished editor was closed to protect your private data.</string>
+    <string name="editor_saving">Saving changes</string>
+    <string name="editor_section_basic">Basic information</string>
+    <string name="editor_section_contact_channels">Contact channels</string>
+    <string name="editor_section_location_online">Location and online</string>
 </resources>

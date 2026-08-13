@@ -31,6 +31,7 @@ import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
+import net.mamby.health.core.model.EmergencyContact
 import net.mamby.health.core.model.FamilyHistoryEntry
 import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.HealthMeasurement
@@ -56,6 +57,7 @@ import net.mamby.health.notifications.ReminderScheduler
 import net.mamby.health.notifications.ReminderSource
 import net.mamby.health.notifications.ZoneIdProvider
 import net.mamby.health.navigation.DeepLinkCoordinator
+import net.mamby.health.navigation.EditorSessionRegistry
 import net.mamby.health.security.AppLockManager
 import net.mamby.health.security.AppLockState
 import net.mamby.health.security.UnlockResult
@@ -99,6 +101,8 @@ class AppViewModel @Inject constructor(
     private val mutableNotice = MutableStateFlow<UiNotice?>(null)
     val notice: StateFlow<UiNotice?> = mutableNotice.asStateFlow()
 
+    private val editorSessions = EditorSessionRegistry()
+
     val zoneId get() = zoneIdProvider.current()
 
     fun clearNotice() {
@@ -111,6 +115,22 @@ class AppViewModel @Inject constructor(
 
     fun showContactActionUnavailable() {
         mutableNotice.value = UiNotice(R.string.contact_action_unavailable)
+    }
+
+    fun createEditorSession(): String = editorSessions.create()
+
+    fun isEditorSessionActive(sessionId: String): Boolean = editorSessions.contains(sessionId)
+
+    fun closeEditorSession(sessionId: String) {
+        editorSessions.close(sessionId)
+    }
+
+    fun clearEditorSessions() {
+        editorSessions.clear()
+    }
+
+    fun showEditorDraftDiscarded() {
+        mutableNotice.value = UiNotice(R.string.editor_draft_discarded)
     }
 
     fun createVault(displayName: String) = launchOperation {
@@ -128,11 +148,26 @@ class AppViewModel @Inject constructor(
         reconcileReminders()
     }
 
-    fun updateProfile(profileId: UUID, profile: HealthProfile) = launchOperation {
+    fun updateProfile(profileId: UUID, profile: HealthProfile) =
+        updateProfile(profileId, profile) {}
+
+    fun updateProfile(
+        profileId: UUID,
+        profile: HealthProfile,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.updateProfile(profileId, profile)
     }
 
-    fun importDocument(profileId: UUID, draft: DocumentImportDraft) = launchOperation(
+    fun importDocument(profileId: UUID, draft: DocumentImportDraft) =
+        importDocument(profileId, draft) {}
+
+    fun importDocument(
+        profileId: UUID,
+        draft: DocumentImportDraft,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(
+        onResult = onResult,
         failureNotice = { error ->
             when ((error as? DocumentImportException)?.reason) {
                 DocumentImportFailure.FILE_TOO_LARGE -> R.string.import_error_too_large
@@ -145,7 +180,7 @@ class AppViewModel @Inject constructor(
             }
         },
     ) {
-        val imported = documentImporter.import(draft.uri)
+        val imported = documentImporter.import(requireNotNull(draft.uri))
         vaultRepository.importDocument(
             profileId,
             MedicalDocumentDraft(
@@ -161,11 +196,24 @@ class AppViewModel @Inject constructor(
         mutableNotice.value = UiNotice(R.string.import_success)
     }
 
-    fun updateDocument(profileId: UUID, document: MedicalDocument) = launchOperation {
+    fun updateDocument(profileId: UUID, document: MedicalDocument) =
+        updateDocument(profileId, document) {}
+
+    fun updateDocument(
+        profileId: UUID,
+        document: MedicalDocument,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.updateDocument(profileId, document)
     }
 
-    fun deleteDocument(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteDocument(profileId: UUID, id: UUID) = deleteDocument(profileId, id) {}
+
+    fun deleteDocument(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteDocument(profileId, id)
         resetPreview()
         mutableNotice.value = UiNotice(R.string.document_deleted)
@@ -202,47 +250,114 @@ class AppViewModel @Inject constructor(
         mutablePreview.value = DocumentPreviewState.Idle
     }
 
-    fun upsertMedication(profileId: UUID, medication: Medication) = launchOperation {
+    fun upsertMedication(profileId: UUID, medication: Medication) =
+        upsertMedication(profileId, medication) {}
+
+    fun upsertMedication(
+        profileId: UUID,
+        medication: Medication,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.upsertMedication(profileId, medication)
         reconcileReminders()
     }
 
-    fun deleteMedication(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteMedication(profileId: UUID, id: UUID) = deleteMedication(profileId, id) {}
+
+    fun deleteMedication(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteMedication(profileId, id)
         reconcileReminders()
     }
 
-    fun upsertSchedule(schedule: Schedule) = launchOperation {
+    fun upsertSchedule(schedule: Schedule) = upsertSchedule(schedule) {}
+
+    fun upsertSchedule(schedule: Schedule, onResult: (Boolean) -> Unit) =
+        launchOperation(onResult = onResult) {
         vaultRepository.upsertSchedule(schedule)
         reconcileReminders()
     }
 
-    fun upsertVaccination(profileId: UUID, vaccination: Vaccination) = launchOperation {
+    fun upsertEmergencyContact(
+        profileId: UUID,
+        contact: EmergencyContact,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
+        vaultRepository.upsertEmergencyContact(profileId, contact)
+    }
+
+    fun deleteEmergencyContact(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
+        vaultRepository.deleteEmergencyContact(profileId, id)
+    }
+
+    fun upsertVaccination(profileId: UUID, vaccination: Vaccination) =
+        upsertVaccination(profileId, vaccination) {}
+
+    fun upsertVaccination(
+        profileId: UUID,
+        vaccination: Vaccination,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.upsertVaccination(profileId, vaccination)
     }
 
-    fun deleteVaccination(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteVaccination(profileId: UUID, id: UUID) = deleteVaccination(profileId, id) {}
+
+    fun deleteVaccination(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteVaccination(profileId, id)
     }
 
-    fun deleteSchedule(id: UUID) = launchOperation {
+    fun deleteSchedule(id: UUID) = deleteSchedule(id) {}
+
+    fun deleteSchedule(id: UUID, onResult: (Boolean) -> Unit) =
+        launchOperation(onResult = onResult) {
         vaultRepository.deleteSchedule(id)
         reconcileReminders()
     }
 
-    fun upsertHealthNote(note: HealthNote) = launchOperation {
+    fun upsertHealthNote(note: HealthNote) = upsertHealthNote(note) {}
+
+    fun upsertHealthNote(note: HealthNote, onResult: (Boolean) -> Unit) =
+        launchOperation(onResult = onResult) {
         vaultRepository.upsertHealthNote(note)
     }
 
-    fun deleteHealthNote(id: UUID) = launchOperation {
+    fun deleteHealthNote(id: UUID) = deleteHealthNote(id) {}
+
+    fun deleteHealthNote(id: UUID, onResult: (Boolean) -> Unit) =
+        launchOperation(onResult = onResult) {
         vaultRepository.deleteHealthNote(id)
     }
 
-    fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement) = launchOperation {
+    fun upsertMeasurement(profileId: UUID, measurement: HealthMeasurement) =
+        upsertMeasurement(profileId, measurement) {}
+
+    fun upsertMeasurement(
+        profileId: UUID,
+        measurement: HealthMeasurement,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.upsertMeasurement(profileId, measurement)
     }
 
-    fun deleteMeasurement(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteMeasurement(profileId: UUID, id: UUID) = deleteMeasurement(profileId, id) {}
+
+    fun deleteMeasurement(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteMeasurement(profileId, id)
     }
 
@@ -254,35 +369,81 @@ class AppViewModel @Inject constructor(
         vaultRepository.deleteCustomMeasurementType(profileId, id)
     }
 
-    fun upsertContact(contact: VaultContact) = launchOperation {
+    fun upsertContact(contact: VaultContact) = upsertContact(contact) {}
+
+    fun upsertContact(contact: VaultContact, onResult: (Boolean) -> Unit) =
+        launchOperation(onResult = onResult) {
         vaultRepository.upsertContact(contact)
     }
 
-    fun deleteContact(id: UUID) = launchOperation {
+    fun deleteContact(id: UUID) = deleteContact(id) {}
+
+    fun deleteContact(id: UUID, onResult: (Boolean) -> Unit) =
+        launchOperation(onResult = onResult) {
         vaultRepository.deleteContact(id)
     }
 
-    fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry) = launchOperation {
+    fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry) =
+        upsertFamilyHistoryEntry(profileId, entry) {}
+
+    fun upsertFamilyHistoryEntry(
+        profileId: UUID,
+        entry: FamilyHistoryEntry,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.upsertFamilyHistoryEntry(profileId, entry)
     }
 
-    fun deleteFamilyHistoryEntry(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteFamilyHistoryEntry(profileId: UUID, id: UUID) =
+        deleteFamilyHistoryEntry(profileId, id) {}
+
+    fun deleteFamilyHistoryEntry(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteFamilyHistoryEntry(profileId, id)
     }
 
-    fun upsertCareDirective(profileId: UUID, directive: CareDirective) = launchOperation {
+    fun upsertCareDirective(profileId: UUID, directive: CareDirective) =
+        upsertCareDirective(profileId, directive) {}
+
+    fun upsertCareDirective(
+        profileId: UUID,
+        directive: CareDirective,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.upsertCareDirective(profileId, directive)
     }
 
-    fun deleteCareDirective(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteCareDirective(profileId: UUID, id: UUID) = deleteCareDirective(profileId, id) {}
+
+    fun deleteCareDirective(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteCareDirective(profileId, id)
     }
 
-    fun upsertHealthIdentifier(profileId: UUID, identifier: HealthIdentifier) = launchOperation {
+    fun upsertHealthIdentifier(profileId: UUID, identifier: HealthIdentifier) =
+        upsertHealthIdentifier(profileId, identifier) {}
+
+    fun upsertHealthIdentifier(
+        profileId: UUID,
+        identifier: HealthIdentifier,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.upsertHealthIdentifier(profileId, identifier)
     }
 
-    fun deleteHealthIdentifier(profileId: UUID, id: UUID) = launchOperation {
+    fun deleteHealthIdentifier(profileId: UUID, id: UUID) = deleteHealthIdentifier(profileId, id) {}
+
+    fun deleteHealthIdentifier(
+        profileId: UUID,
+        id: UUID,
+        onResult: (Boolean) -> Unit,
+    ) = launchOperation(onResult = onResult) {
         vaultRepository.deleteHealthIdentifier(profileId, id)
     }
 
@@ -337,6 +498,7 @@ class AppViewModel @Inject constructor(
     }
 
     fun lockNow() {
+        editorSessions.clear()
         mutablePreview.value = DocumentPreviewState.Idle
         appLockManager.lock()
     }
@@ -382,6 +544,7 @@ class AppViewModel @Inject constructor(
     fun commitRestore(preview: RestorePreview, crossFlavorConfirmed: Boolean) = launchOperation {
         when (backupRepository.commitRestore(preview.token, crossFlavorConfirmed)) {
             RestoreCommitResult.Success -> {
+                editorSessions.clear()
                 mutableRestorePreview.value = null
                 mutablePreview.value = DocumentPreviewState.Idle
                 reconcileReminders()
@@ -399,14 +562,17 @@ class AppViewModel @Inject constructor(
         mutableRestorePreview.value = null
     }
 
-    fun deleteVault() = launchOperation {
-        backupRepository.clearConfiguration()
-        reminderScheduler.cancelAll()
-        context.getSystemService(NotificationManager::class.java)?.cancelAll()
-        vaultRepository.deleteVault()
-        mutableRestorePreview.value = null
-        mutablePreview.value = DocumentPreviewState.Idle
-        mutableNotice.value = UiNotice(R.string.delete_vault_success)
+    fun deleteVault() {
+        editorSessions.clear()
+        launchOperation {
+            backupRepository.clearConfiguration()
+            reminderScheduler.cancelAll()
+            context.getSystemService(NotificationManager::class.java)?.cancelAll()
+            vaultRepository.deleteVault()
+            mutableRestorePreview.value = null
+            mutablePreview.value = DocumentPreviewState.Idle
+            mutableNotice.value = UiNotice(R.string.delete_vault_success)
+        }
     }
 
     fun notificationsBlocked(): Boolean =
@@ -421,16 +587,20 @@ class AppViewModel @Inject constructor(
     private fun launchOperation(
         reportFailure: Boolean = true,
         failureNotice: (Throwable) -> Int = { R.string.error_generic },
+        onResult: (Boolean) -> Unit = {},
         operation: suspend () -> Unit,
     ) {
         viewModelScope.launch {
-            try {
+            val succeeded = try {
                 operation()
+                true
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
                 if (reportFailure) mutableNotice.value = UiNotice(failureNotice(error))
+                false
             }
+            onResult(succeeded)
         }
     }
 

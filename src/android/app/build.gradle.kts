@@ -124,8 +124,8 @@ jacoco {
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
     val lifecycleVersion = "2.11.0"
-    val navigation3Version = "1.1.5"
-    val adaptiveVersion = "1.3.0-rc01"
+    val navigation3Version = "1.1.6"
+    val adaptiveVersion = "1.3.0"
     val workVersion = "2.11.2"
 
     implementation(composeBom)

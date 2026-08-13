@@ -17,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import java.time.LocalDate
 import net.mamby.health.R
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.HealthProfile
@@ -35,12 +34,10 @@ import net.mamby.health.ui.theme.UiTokens
 fun MedicationDetailScreen(
     medication: Medication,
     profile: HealthProfile,
-    today: LocalDate,
     onBack: (() -> Unit)?,
-    onUpsert: (Medication) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var editorVisible by remember(profile.id) { mutableStateOf(false) }
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
     AppScreenScaffold(
         medication.name,
@@ -68,20 +65,9 @@ fun MedicationDetailScreen(
                 LabeledValue(stringResource(R.string.medication_times), medication.schedule.reminderTimes.localizedTimes())
                 LabeledValue(stringResource(R.string.medication_notes), medication.notes.orEmpty())
             }
-            Button(onClick = { editorVisible = true }) { Text(stringResource(R.string.common_edit)) }
+            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
             OutlinedButton(onClick = { deleteVisible = true }) { Text(stringResource(R.string.common_delete)) }
         }
-    }
-    if (editorVisible) {
-        MedicationDialog(
-            existing = medication,
-            today = today,
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onUpsert(it)
-                editorVisible = false
-            },
-        )
     }
     if (deleteVisible) {
         ConfirmDeleteDialog(

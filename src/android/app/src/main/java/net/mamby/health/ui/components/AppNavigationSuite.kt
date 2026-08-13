@@ -59,6 +59,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -75,6 +76,7 @@ fun AppNavigationSuite(
     isMoreSelected: Boolean,
     onDestinationSelected: (TopLevelDestination) -> Unit,
     onMoreSelected: () -> Unit,
+    navigationVisible: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val usesMore = layoutType == NavigationSuiteType.ShortNavigationBarCompact
@@ -97,6 +99,7 @@ fun AppNavigationSuite(
             onDestinationSelected = onDestinationSelected,
             onMoreSelected = onMoreSelected,
             itemColors = navigationSuiteItemColors,
+            enabled = navigationVisible,
         )
     }
     val compactNavigationItems: @Composable () -> Unit = {
@@ -113,7 +116,7 @@ fun AppNavigationSuite(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
-                Box(Modifier.fillMaxWidth()) {
+                if (navigationVisible) Box(Modifier.fillMaxWidth()) {
                     EdgeProtection(
                         edge = EdgeProtectionEdge.Bottom,
                         color = MaterialTheme.colorScheme.background,
@@ -282,6 +285,7 @@ private fun NavigationSuiteScope.AppNavigationItems(
     onDestinationSelected: (TopLevelDestination) -> Unit,
     onMoreSelected: () -> Unit,
     itemColors: NavigationSuiteItemColors,
+    enabled: Boolean,
 ) {
     (if (usesMore) TopLevelDestination.compactPrimary else TopLevelDestination.entries)
         .forEach { destination ->
@@ -289,10 +293,12 @@ private fun NavigationSuiteScope.AppNavigationItems(
             item(
                 selected = selected,
                 onClick = { onDestinationSelected(destination) },
+                enabled = enabled,
                 icon = {
                     NavigationIcon(
                         icon = destination.icon,
                         label = stringResource(destination.label),
+                        enabled = enabled,
                     )
                 },
                 label = null,
@@ -303,10 +309,12 @@ private fun NavigationSuiteScope.AppNavigationItems(
         item(
             selected = isMoreSelected,
             onClick = onMoreSelected,
+            enabled = enabled,
             icon = {
                 NavigationIcon(
                     icon = R.drawable.ic_lucide_ellipsis,
                     label = stringResource(R.string.action_more),
+                    enabled = enabled,
                 )
             },
             label = null,
@@ -373,7 +381,11 @@ internal fun AppMoreSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NavigationIcon(@DrawableRes icon: Int, label: String) {
+private fun NavigationIcon(
+    @DrawableRes icon: Int,
+    label: String,
+    enabled: Boolean,
+) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Above,
@@ -384,7 +396,10 @@ private fun NavigationIcon(@DrawableRes icon: Int, label: String) {
         Icon(
             painter = painterResource(icon),
             contentDescription = label,
-            modifier = Modifier.semantics { role = Role.Tab },
+            modifier = Modifier.semantics {
+                role = Role.Tab
+                if (!enabled) disabled()
+            },
         )
     }
 }

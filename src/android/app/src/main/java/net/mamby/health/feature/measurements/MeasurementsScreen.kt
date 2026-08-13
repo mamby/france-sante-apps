@@ -25,7 +25,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +37,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import java.text.NumberFormat
 import java.text.ParsePosition
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import net.mamby.health.R
@@ -51,11 +52,14 @@ import net.mamby.health.core.model.MeasurementUnitRef
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
+import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.DropdownTrailingIcon
+import net.mamby.health.ui.components.EditorFieldPair
+import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
@@ -63,6 +67,7 @@ import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
+import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
 import net.mamby.health.ui.format.localizedLabel
@@ -73,23 +78,13 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun MeasurementsScreen(
     records: List<ProfileRecord>,
-    now: Instant,
     zoneId: ZoneId,
     onBack: () -> Unit,
     onManageTypes: (UUID?) -> Unit,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
-    onUpsert: (UUID, HealthMeasurement) -> Unit,
+    onAdd: (UUID?) -> Unit,
     onSelected: (UUID, UUID) -> Unit,
-    creationRequest: Long = 0,
 ) {
     var filterProfileId by remember { mutableStateOf<UUID?>(null) }
-    var creationVisible by remember { mutableStateOf(false) }
-    var creationProfileId by remember { mutableStateOf<UUID?>(null) }
-    fun startCreation() {
-        creationProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
-        creationVisible = true
-    }
-    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
     val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
     val measurements = remember(filteredRecords) {
         filteredRecords.ownedItems(ProfileRecord::measurements).sortedWith(
@@ -110,7 +105,9 @@ fun MeasurementsScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = ::startCreation) {
+            FloatingActionButton(
+                onClick = { onAdd(filterProfileId ?: records.singleOrNull()?.profile?.id) },
+            ) {
                 Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_measurement))
             }
         },
@@ -154,37 +151,17 @@ fun MeasurementsScreen(
             }
         }
     }
-    if (creationVisible) {
-        val owner = records.firstOrNull { it.profile.id == creationProfileId }
-        MeasurementDialog(
-            record = owner ?: records.first(),
-            existing = null,
-            now = now,
-            zoneId = zoneId,
-            ownerSelected = owner != null,
-            profilePicker = {
-                ProfilePickerField(records, creationProfileId, { creationProfileId = it }, onAddProfile)
-            },
-            onDismiss = { creationVisible = false },
-            onSave = {
-                onUpsert(requireNotNull(creationProfileId), it)
-                creationVisible = false
-            },
-        )
-    }
 }
 
 @Composable
 fun MeasurementDetailScreen(
     record: ProfileRecord,
     measurement: HealthMeasurement,
-    now: Instant,
     zoneId: ZoneId,
     onBack: (() -> Unit)?,
-    onUpsert: (HealthMeasurement) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var editing by remember(measurement.id) { mutableStateOf(false) }
     var deleting by remember(measurement.id) { mutableStateOf(false) }
     AppScreenScaffold(
         title = measurement.type.localizedLabel(record),
@@ -206,22 +183,9 @@ fun MeasurementDetailScreen(
                 Text(measurement.measuredAt.localizedDateTime(zoneId))
                 measurement.notes?.let { Text(it) }
             }
-            Button(onClick = { editing = true }) { Text(stringResource(R.string.common_edit)) }
+            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
             OutlinedButton(onClick = { deleting = true }) { Text(stringResource(R.string.common_delete)) }
         }
-    }
-    if (editing) {
-        MeasurementDialog(
-            record = record,
-            existing = measurement,
-            now = now,
-            zoneId = zoneId,
-            onDismiss = { editing = false },
-            onSave = {
-                onUpsert(it)
-                editing = false
-            },
-        )
     }
     if (deleting) {
         ConfirmDeleteDialog(
@@ -335,171 +299,331 @@ private fun CustomMeasurementTypeDialog(
     }
 }
 
+data class MeasurementDraft(
+    val profileId: UUID?,
+    val id: UUID,
+    val type: MeasurementTypeRef,
+    val value: String,
+    val unit: MeasurementUnitRef,
+    val systolic: String,
+    val diastolic: String,
+    val pulse: String,
+    val notes: String,
+    val date: LocalDate,
+    val time: LocalTime,
+    val updatedAt: Instant,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MeasurementDialog(
-    record: ProfileRecord,
+fun MeasurementEditorScreen(
+    records: List<ProfileRecord>,
+    existingOwner: ProfileRecord?,
     existing: HealthMeasurement?,
+    initialProfileId: UUID?,
     now: Instant,
     zoneId: ZoneId,
-    onDismiss: () -> Unit,
-    onSave: (HealthMeasurement) -> Unit,
-    ownerSelected: Boolean = true,
-    profilePicker: (@Composable () -> Unit)? = null,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onCancel: () -> Unit,
+    onSave: (UUID, HealthMeasurement, (Boolean) -> Unit) -> Unit,
 ) {
-    val types = remember(record) {
+    val initialOwner = existingOwner
+        ?: records.firstOrNull { it.profile.id == initialProfileId }
+        ?: records.first()
+    val editorState = rememberEditorState {
+        existing.toDraft(existingOwner?.profile?.id ?: initialProfileId, initialOwner, now, zoneId)
+    }
+    val draft = editorState.value
+    val selectedOwner = existingOwner?.takeIf { it.profile.id == draft.profileId }
+        ?: records.firstOrNull { it.profile.id == draft.profileId }
+    val formRecord = selectedOwner ?: records.first()
+    val types = remember(formRecord) {
         BuiltInMeasurementType.entries.map { MeasurementTypeRef.BuiltIn(it) } +
-            record.customMeasurementTypes.map { MeasurementTypeRef.Custom(it.id) }
+            formRecord.customMeasurementTypes.map { MeasurementTypeRef.Custom(it.id) }
     }
-    val initialType = existing?.type ?: MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT)
-    val initialInstant = existing?.measuredAt ?: now
-    var type by remember(existing?.id) { mutableStateOf(initialType) }
-    var value by remember(existing?.id) {
-        mutableStateOf((existing?.reading as? MeasurementReading.Scalar)?.value?.toString().orEmpty())
-    }
-    var unit by remember(existing?.id) {
-        mutableStateOf(
-            (existing?.reading as? MeasurementReading.Scalar)?.unit ?: defaultUnit(initialType, record),
-        )
-    }
-    var systolic by remember(existing?.id) {
-        mutableStateOf((existing?.reading as? MeasurementReading.BloodPressure)?.systolic?.toString().orEmpty())
-    }
-    var diastolic by remember(existing?.id) {
-        mutableStateOf((existing?.reading as? MeasurementReading.BloodPressure)?.diastolic?.toString().orEmpty())
-    }
-    var pulse by remember(existing?.id) {
-        mutableStateOf((existing?.reading as? MeasurementReading.BloodPressure)?.pulseBeatsPerMinute?.toString().orEmpty())
-    }
-    var notes by remember(existing?.id) { mutableStateOf(existing?.notes.orEmpty()) }
-    var date by remember(existing?.id) { mutableStateOf(initialInstant.atZone(zoneId).toLocalDate()) }
-    var time by remember(existing?.id) { mutableStateOf(initialInstant.atZone(zoneId).toLocalTime()) }
     var typeExpanded by remember { mutableStateOf(false) }
     var unitExpanded by remember { mutableStateOf(false) }
-    LaunchedEffect(record.profile.id) {
-        if (existing == null) {
-            type = MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT)
-            unit = defaultUnit(type, record)
-        }
-    }
     val locale = LocalConfiguration.current.locales[0]
-    val isBloodPressure = type == MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.BLOOD_PRESSURE)
-    val allowedUnits = allowedUnits(type, record)
+    val isBloodPressure = draft.type == MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.BLOOD_PRESSURE)
+    val allowedUnits = allowedUnits(draft.type, formRecord)
     val reading = if (isBloodPressure) {
-        val systolicValue = parseNumber(systolic, locale)
-        val diastolicValue = parseNumber(diastolic, locale)
-        val pulseValue = pulse.takeIf(String::isNotBlank)?.let { parseNumber(it, locale) }
+        val systolicValue = parseNumber(draft.systolic, locale)
+        val diastolicValue = parseNumber(draft.diastolic, locale)
+        val pulseValue = draft.pulse.takeIf(String::isNotBlank)?.let { parseNumber(it, locale) }
         if (
             systolicValue != null && systolicValue > 0 &&
             diastolicValue != null && diastolicValue > 0 &&
-            (pulse.isBlank() || pulseValue != null && pulseValue > 0)
+            (draft.pulse.isBlank() || pulseValue != null && pulseValue > 0)
         ) {
             MeasurementReading.BloodPressure(
                 systolicValue,
                 diastolicValue,
                 pulseValue,
-                unit,
+                draft.unit,
             )
         } else null
     } else {
-        parseNumber(value, locale)
+        parseNumber(draft.value, locale)
             ?.takeIf { candidate ->
-                val builtIn = (type as? MeasurementTypeRef.BuiltIn)?.type
+                val builtIn = (draft.type as? MeasurementTypeRef.BuiltIn)?.type
                 builtIn == null || builtIn == BuiltInMeasurementType.TEMPERATURE || candidate > 0
             }
-            ?.let { MeasurementReading.Scalar(it, unit) }
+            ?.let { MeasurementReading.Scalar(it, draft.unit) }
     }
-    FormDialog(
+
+    AppEditorScaffold(
         title = stringResource(if (existing == null) R.string.add_measurement else R.string.edit_measurement),
-        saveEnabled = ownerSelected && reading != null,
-        onDismiss = onDismiss,
+        isDirty = editorState.isDirty,
+        saveEnabled = selectedOwner != null && reading != null,
+        isSaving = editorState.isSaving,
+        onCancel = onCancel,
         onSave = {
-            reading?.let {
-                onSave(
-                    HealthMeasurement(
-                        id = existing?.id ?: UUID.randomUUID(),
-                        type = type,
-                        reading = it,
-                        measuredAt = date.atTime(time).atZone(zoneId).toInstant(),
-                        notes = notes.trim().ifBlank { null },
-                        updatedAt = existing?.updatedAt ?: Instant.EPOCH,
-                    ),
-                )
+            val profileId = draft.profileId ?: return@AppEditorScaffold
+            val validReading = reading ?: return@AppEditorScaffold
+            editorState.isSaving = true
+            onSave(profileId, draft.toMeasurement(validReading, zoneId)) { saved ->
+                editorState.isSaving = false
+                if (saved) onCancel()
             }
         },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
-            profilePicker?.invoke()
-            ExposedDropdownMenuBox(typeExpanded, { typeExpanded = it }) {
-                OutlinedTextField(
-                    value = type.localizedLabel(record),
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.measurement_type)) },
-                    trailingIcon = { DropdownTrailingIcon(typeExpanded) },
-                )
-                ExposedDropdownMenu(typeExpanded, { typeExpanded = false }) {
-                    types.forEach { candidate ->
-                        DropdownMenuItem(
-                            text = { Text(candidate.localizedLabel(record)) },
-                            onClick = {
-                                type = candidate
-                                unit = defaultUnit(candidate, record)
-                                typeExpanded = false
+        EditorSection(stringResource(R.string.measurements_title)) {
+            EditorFieldPair(
+                first = { modifier ->
+                    if (existing == null) {
+                        ProfilePickerField(
+                            records = records,
+                            selectedProfileId = draft.profileId,
+                            onSelected = { profileId ->
+                                val owner = records.firstOrNull { it.profile.id == profileId }
+                                val defaultType = MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT)
+                                editorState.value = draft.copy(
+                                    profileId = profileId,
+                                    type = defaultType,
+                                    unit = defaultUnit(defaultType, owner ?: formRecord),
+                                )
                             },
+                            onAddProfile = onAddProfile,
+                            modifier = modifier,
                         )
+                    } else {
+                        selectedOwner?.let { ProfileOwnerHeader(it.profile, modifier) }
                     }
-                }
-            }
+                },
+                second = { modifier ->
+                    MeasurementTypeField(
+                        record = formRecord,
+                        types = types,
+                        type = draft.type,
+                        expanded = typeExpanded,
+                        onExpandedChange = { typeExpanded = it },
+                        onSelected = { candidate ->
+                            editorState.value = draft.copy(
+                                type = candidate,
+                                unit = defaultUnit(candidate, formRecord),
+                            )
+                            typeExpanded = false
+                        },
+                        modifier = modifier,
+                    )
+                },
+            )
+        }
+        EditorSection(stringResource(R.string.measurement_value)) {
             if (isBloodPressure) {
-                DecimalField(systolic, { systolic = it }, stringResource(R.string.measurement_systolic))
-                DecimalField(diastolic, { diastolic = it }, stringResource(R.string.measurement_diastolic))
-                DecimalField(pulse, { pulse = it }, stringResource(R.string.measurement_optional_pulse))
-                OutlinedTextField(
-                    value = unit.displaySymbol(),
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.measurement_unit)) },
+                EditorFieldPair(
+                    first = { modifier ->
+                        DecimalField(
+                            draft.systolic,
+                            { editorState.value = draft.copy(systolic = it) },
+                            stringResource(R.string.measurement_systolic),
+                            modifier,
+                        )
+                    },
+                    second = { modifier ->
+                        DecimalField(
+                            draft.diastolic,
+                            { editorState.value = draft.copy(diastolic = it) },
+                            stringResource(R.string.measurement_diastolic),
+                            modifier,
+                        )
+                    },
+                )
+                EditorFieldPair(
+                    first = { modifier ->
+                        DecimalField(
+                            draft.pulse,
+                            { editorState.value = draft.copy(pulse = it) },
+                            stringResource(R.string.measurement_optional_pulse),
+                            modifier,
+                        )
+                    },
+                    second = { modifier ->
+                        OutlinedTextField(
+                            value = draft.unit.displaySymbol(),
+                            onValueChange = {},
+                            modifier = modifier,
+                            readOnly = true,
+                            label = { Text(stringResource(R.string.measurement_unit)) },
+                        )
+                    },
                 )
             } else {
-                DecimalField(value, { value = it }, stringResource(R.string.measurement_value))
-                ExposedDropdownMenuBox(unitExpanded, { unitExpanded = it }) {
-                    OutlinedTextField(
-                        value = unit.displaySymbol(),
-                        onValueChange = {},
-                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.measurement_unit)) },
-                        trailingIcon = { DropdownTrailingIcon(unitExpanded) },
-                    )
-                    ExposedDropdownMenu(unitExpanded, { unitExpanded = false }) {
-                        allowedUnits.forEach { candidate ->
-                            DropdownMenuItem(
-                                text = { Text(candidate.displaySymbol()) },
-                                onClick = {
-                                    unit = candidate
-                                    unitExpanded = false
-                                },
+                EditorFieldPair(
+                    first = { modifier ->
+                        DecimalField(
+                            draft.value,
+                            { editorState.value = draft.copy(value = it) },
+                            stringResource(R.string.measurement_value),
+                            modifier,
+                        )
+                    },
+                    second = { modifier ->
+                        ExposedDropdownMenuBox(
+                            expanded = unitExpanded,
+                            onExpandedChange = { unitExpanded = it },
+                            modifier = modifier,
+                        ) {
+                            OutlinedTextField(
+                                value = draft.unit.displaySymbol(),
+                                onValueChange = {},
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                                readOnly = true,
+                                label = { Text(stringResource(R.string.measurement_unit)) },
+                                trailingIcon = { DropdownTrailingIcon(unitExpanded) },
                             )
+                            ExposedDropdownMenu(unitExpanded, { unitExpanded = false }) {
+                                allowedUnits.forEach { candidate ->
+                                    DropdownMenuItem(
+                                        text = { Text(candidate.displaySymbol()) },
+                                        onClick = {
+                                            editorState.value = draft.copy(unit = candidate)
+                                            unitExpanded = false
+                                        },
+                                    )
+                                }
+                            }
                         }
-                    }
-                }
+                    },
+                )
             }
-            DateField(stringResource(R.string.measurement_date), date, { date = it })
-            TimeField(stringResource(R.string.measurement_time), time, { time = it })
-            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.common_notes)) }, minLines = 2)
+            EditorFieldPair(
+                first = { modifier ->
+                    Column(modifier) {
+                        DateField(
+                            stringResource(R.string.measurement_date),
+                            draft.date,
+                            { editorState.value = draft.copy(date = it) },
+                        )
+                    }
+                },
+                second = { modifier ->
+                    Column(modifier) {
+                        TimeField(
+                            stringResource(R.string.measurement_time),
+                            draft.time,
+                            { editorState.value = draft.copy(time = it) },
+                        )
+                    }
+                },
+            )
+        }
+        OutlinedTextField(
+            value = draft.notes,
+            onValueChange = { editorState.value = draft.copy(notes = it) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.common_notes)) },
+            minLines = 2,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MeasurementTypeField(
+    record: ProfileRecord,
+    types: List<MeasurementTypeRef>,
+    type: MeasurementTypeRef,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelected: (MeasurementTypeRef) -> Unit,
+    modifier: Modifier,
+) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = modifier,
+    ) {
+        OutlinedTextField(
+            value = type.localizedLabel(record),
+            onValueChange = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            readOnly = true,
+            label = { Text(stringResource(R.string.measurement_type)) },
+            trailingIcon = { DropdownTrailingIcon(expanded) },
+        )
+        ExposedDropdownMenu(expanded, { onExpandedChange(false) }) {
+            types.forEach { candidate ->
+                DropdownMenuItem(
+                    text = { Text(candidate.localizedLabel(record)) },
+                    onClick = { onSelected(candidate) },
+                )
+            }
         }
     }
 }
 
+private fun HealthMeasurement?.toDraft(
+    profileId: UUID?,
+    record: ProfileRecord,
+    now: Instant,
+    zoneId: ZoneId,
+): MeasurementDraft {
+    val initialType = this?.type ?: MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT)
+    val initialInstant = this?.measuredAt ?: now
+    return MeasurementDraft(
+        profileId = profileId,
+        id = this?.id ?: UUID.randomUUID(),
+        type = initialType,
+        value = (this?.reading as? MeasurementReading.Scalar)?.value?.toString().orEmpty(),
+        unit = (this?.reading as? MeasurementReading.Scalar)?.unit ?: defaultUnit(initialType, record),
+        systolic = (this?.reading as? MeasurementReading.BloodPressure)?.systolic?.toString().orEmpty(),
+        diastolic = (this?.reading as? MeasurementReading.BloodPressure)?.diastolic?.toString().orEmpty(),
+        pulse = (this?.reading as? MeasurementReading.BloodPressure)?.pulseBeatsPerMinute?.toString().orEmpty(),
+        notes = this?.notes.orEmpty(),
+        date = initialInstant.atZone(zoneId).toLocalDate(),
+        time = initialInstant.atZone(zoneId).toLocalTime(),
+        updatedAt = this?.updatedAt ?: Instant.EPOCH,
+    )
+}
+
+private fun MeasurementDraft.toMeasurement(
+    reading: MeasurementReading,
+    zoneId: ZoneId,
+): HealthMeasurement = HealthMeasurement(
+    id = id,
+    type = type,
+    reading = reading,
+    measuredAt = date.atTime(time).atZone(zoneId).toInstant(),
+    notes = notes.trim().ifBlank { null },
+    updatedAt = updatedAt,
+)
+
 @Composable
-private fun DecimalField(value: String, onValueChange: (String) -> Unit, label: String) {
+private fun DecimalField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,

@@ -11,12 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,20 +26,13 @@ import androidx.compose.ui.res.stringResource
 import android.text.format.Formatter
 import java.util.UUID
 import net.mamby.health.R
-import net.mamby.health.core.model.BuiltInDocumentCategory
-import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.core.model.asReference
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DateField
-import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
-import net.mamby.health.ui.components.StringListEditor
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
@@ -70,12 +58,11 @@ fun DocumentDetailScreen(
     preview: DocumentPreviewState,
     onBack: (() -> Unit)?,
     onLoadPreview: (Int) -> Unit,
-    onEdit: (MedicalDocument) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val profile = record.profile
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
-    var editorVisible by remember(profile.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val visiblePreview = preview.takeIf { state ->
         when (state) {
@@ -150,24 +137,13 @@ fun DocumentDetailScreen(
                     }
                 }
             }
-            Button(onClick = { editorVisible = true }) {
+            Button(onClick = onEdit) {
                 Text(stringResource(R.string.edit_document))
             }
             OutlinedButton(onClick = { deleteVisible = true }) {
                 Text(stringResource(R.string.common_delete))
             }
         }
-    }
-    if (editorVisible) {
-        DocumentEditDialog(
-            document = document,
-            record = record,
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onEdit(it)
-                editorVisible = false
-            },
-        )
     }
     if (deleteVisible) {
         ConfirmDeleteDialog(
@@ -179,78 +155,5 @@ fun DocumentDetailScreen(
                 onDelete()
             },
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DocumentEditDialog(
-    document: MedicalDocument,
-    record: ProfileRecord,
-    onDismiss: () -> Unit,
-    onSave: (MedicalDocument) -> Unit,
-) {
-    val availableCategories = remember(record) {
-        BuiltInDocumentCategory.entries
-            .filter { builtIn ->
-                record.builtInDocumentCategoryPreferences
-                    .firstOrNull { it.category == builtIn }
-                    ?.isHidden != true
-            }
-            .map(BuiltInDocumentCategory::asReference) +
-            record.customDocumentCategories.map { DocumentCategoryRef.Custom(it.id) }
-    }
-    var title by remember { mutableStateOf(document.title) }
-    var source by remember { mutableStateOf(document.source) }
-    var notes by remember { mutableStateOf(document.notes.orEmpty()) }
-    var tags by remember { mutableStateOf(document.tags) }
-    var date by remember { mutableStateOf(document.documentDate) }
-    var category by remember { mutableStateOf(document.category) }
-    var categoryExpanded by remember { mutableStateOf(false) }
-    FormDialog(
-        title = stringResource(R.string.edit_document),
-        saveEnabled = title.isNotBlank() && source.isNotBlank(),
-        onDismiss = onDismiss,
-        onSave = {
-            onSave(
-                document.copy(
-                    title = title.trim(),
-                    category = category,
-                    documentDate = date,
-                    source = source.trim(),
-                    notes = notes.trim().ifBlank { null },
-                    tags = tags,
-                ),
-            )
-        },
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
-            OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_title)) })
-            ExposedDropdownMenuBox(categoryExpanded, { categoryExpanded = it }) {
-                OutlinedTextField(
-                    value = category.localizedLabel(record),
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.document_category)) },
-                    trailingIcon = { DropdownTrailingIcon(categoryExpanded) },
-                )
-                ExposedDropdownMenu(categoryExpanded, { categoryExpanded = false }) {
-                    availableCategories.forEach { candidate ->
-                            DropdownMenuItem(
-                                text = { Text(candidate.localizedLabel(record)) },
-                                onClick = {
-                                    category = candidate
-                                    categoryExpanded = false
-                                },
-                            )
-                        }
-                }
-            }
-            DateField(stringResource(R.string.document_date), date, { date = it })
-            OutlinedTextField(source, { source = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_source)) })
-            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_notes)) }, minLines = 2)
-            StringListEditor(stringResource(R.string.document_tags), tags, { tags = it })
-        }
     }
 }

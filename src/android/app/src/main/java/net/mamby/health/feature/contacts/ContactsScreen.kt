@@ -24,7 +24,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,26 +42,24 @@ import java.util.Locale
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.VaultContact
+import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.EditorFieldPair
+import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
-import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun ContactsScreen(
     contacts: List<VaultContact>,
-    onUpsert: (VaultContact) -> Unit,
+    onAdd: () -> Unit,
     onSelected: (UUID) -> Unit,
-    creationRequest: Long = 0,
 ) {
-    var editorVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) {
-        if (creationRequest > 0) editorVisible = true
-    }
     val sortedContacts = remember(contacts) {
         contacts.sortedWith(
             compareBy<VaultContact> { it.name.lowercase(Locale.getDefault()) }
@@ -73,7 +70,7 @@ fun ContactsScreen(
     AppScreenScaffold(
         title = stringResource(R.string.contacts_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = { editorVisible = true }) {
+            FloatingActionButton(onClick = onAdd) {
                 Icon(
                     painter = painterResource(R.drawable.ic_lucide_plus),
                     contentDescription = stringResource(R.string.add_contact),
@@ -112,31 +109,19 @@ fun ContactsScreen(
             }
         }
     }
-
-    if (editorVisible) {
-        ContactDialog(
-            existing = null,
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onUpsert(it)
-                editorVisible = false
-            },
-        )
-    }
 }
 
 @Composable
 fun ContactDetailScreen(
     contact: VaultContact,
     onBack: (() -> Unit)?,
-    onUpsert: (VaultContact) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onDialPhone: (String) -> Unit,
     onComposeEmail: (String) -> Unit,
     onOpenWebsite: (String) -> Unit,
     onSearchAddress: (String) -> Unit,
 ) {
-    var editorVisible by remember(contact.id) { mutableStateOf(false) }
     var deleteVisible by remember(contact.id) { mutableStateOf(false) }
 
     AppScreenScaffold(
@@ -183,7 +168,7 @@ fun ContactDetailScreen(
                     value = contact.notes.orEmpty(),
                 )
             }
-            Button(onClick = { editorVisible = true }) {
+            Button(onClick = onEdit) {
                 Text(stringResource(R.string.common_edit))
             }
             OutlinedButton(onClick = { deleteVisible = true }) {
@@ -192,16 +177,6 @@ fun ContactDetailScreen(
         }
     }
 
-    if (editorVisible) {
-        ContactDialog(
-            existing = contact,
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onUpsert(it)
-                editorVisible = false
-            },
-        )
-    }
     if (deleteVisible) {
         ConfirmDeleteDialog(
             title = stringResource(R.string.delete_saved_contact_title),
@@ -253,84 +228,111 @@ private fun ContactActionGroup(
 }
 
 @Composable
-private fun ContactDialog(
+fun ContactEditorScreen(
     existing: VaultContact?,
-    onDismiss: () -> Unit,
-    onSave: (VaultContact) -> Unit,
+    onCancel: () -> Unit,
+    onSave: (VaultContact, (Boolean) -> Unit) -> Unit,
 ) {
-    var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
-    var phoneNumbers by remember(existing?.id) {
-        mutableStateOf(existing?.phoneNumbers.toEditorValues())
+    val state = rememberEditorState {
+        ContactDraft(
+            id = existing?.id ?: UUID.randomUUID(),
+            name = existing?.name.orEmpty(),
+            phoneNumbers = existing?.phoneNumbers.toEditorValues(),
+            emailAddresses = existing?.emailAddresses.toEditorValues(),
+            websites = existing?.websites.toEditorValues(),
+            addresses = existing?.addresses.toEditorValues(),
+            notes = existing?.notes.orEmpty(),
+            updatedAt = existing?.updatedAt ?: Instant.EPOCH,
+        )
     }
-    var emailAddresses by remember(existing?.id) {
-        mutableStateOf(existing?.emailAddresses.toEditorValues())
-    }
-    var websites by remember(existing?.id) {
-        mutableStateOf(existing?.websites.toEditorValues())
-    }
-    var addresses by remember(existing?.id) {
-        mutableStateOf(existing?.addresses.toEditorValues())
-    }
-    var notes by remember(existing?.id) { mutableStateOf(existing?.notes.orEmpty()) }
-    val websitesValid = websites.all { it.isBlank() || normalizeWebsite(it) != null }
+    val draft = state.value
+    val websitesValid = draft.websites.all { it.isBlank() || normalizeWebsite(it) != null }
 
-    FormDialog(
+    AppEditorScaffold(
         title = stringResource(if (existing == null) R.string.add_contact else R.string.edit_contact),
-        saveEnabled = name.isNotBlank() && websitesValid,
-        onDismiss = onDismiss,
+        isDirty = state.isDirty,
+        saveEnabled = draft.name.isNotBlank() && websitesValid,
+        isSaving = state.isSaving,
+        onCancel = onCancel,
         onSave = {
+            state.isSaving = true
             onSave(
                 VaultContact(
-                    id = existing?.id ?: UUID.randomUUID(),
-                    name = name.trim(),
-                    phoneNumbers = phoneNumbers.normalizedValues(),
-                    emailAddresses = emailAddresses.normalizedValues(),
-                    websites = websites.mapNotNull(::normalizeWebsite).deduplicatedValues(),
-                    addresses = addresses.normalizedValues(),
-                    notes = notes.trim().ifBlank { null },
-                    updatedAt = existing?.updatedAt ?: Instant.EPOCH,
+                    id = draft.id,
+                    name = draft.name.trim(),
+                    phoneNumbers = draft.phoneNumbers.normalizedValues(),
+                    emailAddresses = draft.emailAddresses.normalizedValues(),
+                    websites = draft.websites.mapNotNull(::normalizeWebsite).deduplicatedValues(),
+                    addresses = draft.addresses.normalizedValues(),
+                    notes = draft.notes.trim().ifBlank { null },
+                    updatedAt = draft.updatedAt,
                 ),
-            )
+            ) { saved ->
+                state.isSaving = false
+                if (saved) onCancel()
+            }
         },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
+        EditorSection(stringResource(R.string.editor_section_basic)) {
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
+                value = draft.name,
+                onValueChange = { state.value = draft.copy(name = it) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.contact_name)) },
                 singleLine = true,
             )
-            ContactValueEditor(
-                label = stringResource(R.string.contact_phone_numbers),
-                values = phoneNumbers,
-                onValuesChange = { phoneNumbers = it },
-                keyboardType = KeyboardType.Phone,
+        }
+        EditorSection(stringResource(R.string.editor_section_contact_channels)) {
+            EditorFieldPair(
+                first = { modifier ->
+                    ContactValueEditor(
+                        label = stringResource(R.string.contact_phone_numbers),
+                        values = draft.phoneNumbers,
+                        onValuesChange = { state.value = draft.copy(phoneNumbers = it) },
+                        keyboardType = KeyboardType.Phone,
+                        modifier = modifier,
+                    )
+                },
+                second = { modifier ->
+                    ContactValueEditor(
+                        label = stringResource(R.string.contact_email_addresses),
+                        values = draft.emailAddresses,
+                        onValuesChange = { state.value = draft.copy(emailAddresses = it) },
+                        keyboardType = KeyboardType.Email,
+                        modifier = modifier,
+                    )
+                },
             )
-            ContactValueEditor(
-                label = stringResource(R.string.contact_email_addresses),
-                values = emailAddresses,
-                onValuesChange = { emailAddresses = it },
-                keyboardType = KeyboardType.Email,
+        }
+        EditorSection(stringResource(R.string.editor_section_location_online)) {
+            EditorFieldPair(
+                first = { modifier ->
+                    ContactValueEditor(
+                        label = stringResource(R.string.contact_websites),
+                        values = draft.websites,
+                        onValuesChange = { state.value = draft.copy(websites = it) },
+                        keyboardType = KeyboardType.Uri,
+                        modifier = modifier,
+                        invalidValueMessage = stringResource(R.string.invalid_contact_website),
+                        isValid = { it.isBlank() || normalizeWebsite(it) != null },
+                    )
+                },
+                second = { modifier ->
+                    ContactValueEditor(
+                        label = stringResource(R.string.contact_addresses),
+                        values = draft.addresses,
+                        onValuesChange = { state.value = draft.copy(addresses = it) },
+                        keyboardType = KeyboardType.Text,
+                        modifier = modifier,
+                        multiline = true,
+                    )
+                },
             )
-            ContactValueEditor(
-                label = stringResource(R.string.contact_websites),
-                values = websites,
-                onValuesChange = { websites = it },
-                keyboardType = KeyboardType.Uri,
-                invalidValueMessage = stringResource(R.string.invalid_contact_website),
-                isValid = { it.isBlank() || normalizeWebsite(it) != null },
-            )
-            ContactValueEditor(
-                label = stringResource(R.string.contact_addresses),
-                values = addresses,
-                onValuesChange = { addresses = it },
-                keyboardType = KeyboardType.Text,
-                multiline = true,
-            )
+        }
+        EditorSection(stringResource(R.string.common_notes)) {
             OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
+                value = draft.notes,
+                onValueChange = { state.value = draft.copy(notes = it) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.common_notes)) },
                 minLines = 3,
@@ -345,11 +347,15 @@ private fun ContactValueEditor(
     values: List<String>,
     onValuesChange: (List<String>) -> Unit,
     keyboardType: KeyboardType,
+    modifier: Modifier = Modifier,
     multiline: Boolean = false,
     invalidValueMessage: String? = null,
     isValid: (String) -> Boolean = { true },
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+    ) {
         Text(label, style = MaterialTheme.typography.titleSmall)
         values.forEachIndexed { index, value ->
             val valid = isValid(value)
@@ -400,6 +406,17 @@ private fun ContactValueEditor(
         }
     }
 }
+
+private data class ContactDraft(
+    val id: UUID,
+    val name: String,
+    val phoneNumbers: List<String>,
+    val emailAddresses: List<String>,
+    val websites: List<String>,
+    val addresses: List<String>,
+    val notes: String,
+    val updatedAt: Instant,
+)
 
 private fun VaultContact.firstContactValue(): String? = sequenceOf(
     phoneNumbers,

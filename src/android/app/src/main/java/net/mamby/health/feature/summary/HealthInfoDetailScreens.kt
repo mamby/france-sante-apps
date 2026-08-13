@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +37,8 @@ fun EmergencyContactDetailScreen(
     record: ProfileRecord,
     contact: EmergencyContact,
     onBack: (() -> Unit)?,
-) = HealthInfoDetailScaffold(record, contact.name, onBack) {
+    onEdit: (() -> Unit)? = null,
+) = HealthInfoDetailScaffold(record, contact.name, onBack, onEdit) {
     LabeledValue(stringResource(R.string.contact_relationship), contact.relationship)
     LabeledValue(stringResource(R.string.contact_phone), contact.phoneNumber)
     contact.notes?.let { LabeledValue(stringResource(R.string.common_notes), it) }
@@ -47,7 +49,8 @@ fun VaccinationDetailScreen(
     record: ProfileRecord,
     vaccination: Vaccination,
     onBack: (() -> Unit)?,
-) = HealthInfoDetailScaffold(record, vaccination.name, onBack) {
+    onEdit: (() -> Unit)? = null,
+) = HealthInfoDetailScaffold(record, vaccination.name, onBack, onEdit) {
     LabeledValue(stringResource(R.string.vaccination_date), vaccination.dateAdministered.localizedDate())
     vaccination.provider?.let { LabeledValue(stringResource(R.string.vaccination_provider), it) }
     vaccination.lotNumber?.let { LabeledValue(stringResource(R.string.vaccination_lot_number), it) }
@@ -60,7 +63,8 @@ fun FamilyHistoryDetailScreen(
     record: ProfileRecord,
     entry: FamilyHistoryEntry,
     onBack: (() -> Unit)?,
-) = HealthInfoDetailScaffold(record, entry.condition, onBack) {
+    onEdit: (() -> Unit)? = null,
+) = HealthInfoDetailScaffold(record, entry.condition, onBack, onEdit) {
     LabeledValue(stringResource(R.string.family_relationship), entry.relationship)
     entry.ageAtOnsetYears?.let {
         LabeledValue(stringResource(R.string.family_age_at_onset), it.toString())
@@ -73,7 +77,8 @@ fun CareDirectiveDetailScreen(
     record: ProfileRecord,
     directive: CareDirective,
     onBack: (() -> Unit)?,
-) = HealthInfoDetailScaffold(record, directive.title, onBack) {
+    onEdit: (() -> Unit)? = null,
+) = HealthInfoDetailScaffold(record, directive.title, onBack, onEdit) {
     Text(stringResource(R.string.directives_disclaimer))
     LabeledValue(stringResource(R.string.directive_kind), stringResource(directive.kind.labelResource()))
     LabeledValue(stringResource(R.string.directive_date), directive.recordedOn.localizedDate())
@@ -91,9 +96,10 @@ fun HealthIdentifierDetailScreen(
     record: ProfileRecord,
     identifier: HealthIdentifier,
     onBack: (() -> Unit)?,
+    onEdit: (() -> Unit)? = null,
 ) {
     var revealed by remember(identifier.id) { mutableStateOf(false) }
-    HealthInfoDetailScaffold(record, identifier.label, onBack) {
+    HealthInfoDetailScaffold(record, identifier.label, onBack, onEdit) {
         LabeledValue(stringResource(R.string.identifier_kind), stringResource(identifier.kind.labelResource()))
         LabeledValue(
             stringResource(R.string.identifier_value),
@@ -113,11 +119,19 @@ private fun HealthInfoDetailScaffold(
     record: ProfileRecord,
     title: String,
     onBack: (() -> Unit)?,
+    onEdit: (() -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     AppScreenScaffold(
         title = title,
         onBack = onBack,
+        actions = {
+            onEdit?.let { edit ->
+                TextButton(onClick = edit) {
+                    Text(stringResource(R.string.common_edit))
+                }
+            }
+        },
     ) { padding ->
         Column(
             modifier = Modifier

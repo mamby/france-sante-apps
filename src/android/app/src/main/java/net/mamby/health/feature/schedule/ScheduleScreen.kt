@@ -23,11 +23,11 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,16 +51,19 @@ import net.mamby.health.core.model.ScheduleCalculator
 import net.mamby.health.core.model.ScheduleOccurrence
 import net.mamby.health.core.model.ScheduleRecurrence
 import net.mamby.health.core.model.ScheduleTiming
+import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.DropdownTrailingIcon
-import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.EditorFieldPair
+import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
+import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDate
 import net.mamby.health.ui.format.localizedDateTime
@@ -70,18 +73,13 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun ScheduleScreen(
     schedules: List<Schedule>,
-    profileNames: List<String>,
-    today: LocalDate,
     now: Instant,
     zoneId: ZoneId,
     notificationsBlocked: Boolean,
-    onUpsert: (Schedule) -> Unit,
+    onAdd: () -> Unit,
     onSelected: (String) -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    creationRequest: Long = 0,
 ) {
-    var editorVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(creationRequest) { if (creationRequest > 0) editorVisible = true }
     val entries = remember(schedules, now, zoneId) {
         schedules.map { schedule -> ScheduleListEntry(schedule, displayOccurrence(schedule, now, zoneId)) }
     }
@@ -92,7 +90,7 @@ fun ScheduleScreen(
     AppScreenScaffold(
         title = stringResource(R.string.schedule_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = { editorVisible = true }) {
+            FloatingActionButton(onClick = onAdd) {
                 Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_schedule))
             }
         },
@@ -136,32 +134,16 @@ fun ScheduleScreen(
             item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.schedule_delivery_notice)) }
         }
     }
-    if (editorVisible) {
-        ScheduleDialog(
-            existing = null,
-            profileNames = profileNames,
-            today = today,
-            zoneId = zoneId,
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onUpsert(it)
-                editorVisible = false
-            },
-        )
-    }
 }
 
 @Composable
 fun ScheduleDetailScreen(
     schedule: Schedule,
-    profileNames: List<String>,
-    today: LocalDate,
     zoneId: ZoneId,
     onBack: (() -> Unit)?,
-    onUpsert: (Schedule) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var editorVisible by remember(schedule.id) { mutableStateOf(false) }
     var deleteVisible by remember(schedule.id) { mutableStateOf(false) }
     AppScreenScaffold(schedule.title, onBack = onBack) { innerPadding ->
         Column(
@@ -182,22 +164,9 @@ fun ScheduleDetailScreen(
                 LabeledValue(stringResource(R.string.schedule_location), schedule.location.orEmpty())
                 LabeledValue(stringResource(R.string.schedule_notes), schedule.notes.orEmpty())
             }
-            Button(onClick = { editorVisible = true }) { Text(stringResource(R.string.common_edit)) }
+            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
             OutlinedButton(onClick = { deleteVisible = true }) { Text(stringResource(R.string.common_delete)) }
         }
-    }
-    if (editorVisible) {
-        ScheduleDialog(
-            existing = schedule,
-            profileNames = profileNames,
-            today = today,
-            zoneId = zoneId,
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onUpsert(it)
-                editorVisible = false
-            },
-        )
     }
     if (deleteVisible) {
         ConfirmDeleteDialog(
@@ -243,202 +212,12 @@ private fun displayOccurrence(schedule: Schedule, now: Instant, zoneId: ZoneId):
     return current.takeIf { it.endsAt?.isAfter(now) == true }
 }
 
-private enum class RecurrenceKind { NONE, DAILY, WEEKLY, MONTHLY }
+enum class RecurrenceKind { NONE, DAILY, WEEKLY, MONTHLY }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun ScheduleDialog(
-    existing: Schedule?,
-    profileNames: List<String>,
-    today: LocalDate,
-    zoneId: ZoneId,
-    onDismiss: () -> Unit,
-    onSave: (Schedule) -> Unit,
-) {
-    val initial = existing.toEditorState(today, zoneId)
-    var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
-    var allDay by remember(existing?.id) { mutableStateOf(existing?.timing is ScheduleTiming.AllDay) }
-    var startDate by remember(existing?.id) { mutableStateOf(initial.startDate) }
-    var startTime by remember(existing?.id) { mutableStateOf(initial.startTime) }
-    var hasEnd by remember(existing?.id) { mutableStateOf(initial.hasEnd) }
-    var endDate by remember(existing?.id) { mutableStateOf(initial.endDate) }
-    var endTime by remember(existing?.id) { mutableStateOf(initial.endTime) }
-    var recurrenceKind by remember(existing?.id) { mutableStateOf(initial.recurrenceKind) }
-    var recurrenceExpanded by remember { mutableStateOf(false) }
-    var weeklyDays by remember(existing?.id) { mutableStateOf(initial.weeklyDays) }
-    var hasRepeatUntil by remember(existing?.id) { mutableStateOf(initial.repeatUntil != null) }
-    var repeatUntil by remember(existing?.id) { mutableStateOf(initial.repeatUntil ?: startDate.plusMonths(1)) }
-    var alertEnabled by remember(existing?.id) { mutableStateOf(existing?.alert != null) }
-    var timedAlertMinutes by remember(existing?.id) {
-        mutableStateOf((existing?.alert as? ScheduleAlert.Timed)?.minutesBefore ?: 10L)
-    }
-    var timedAlertExpanded by remember { mutableStateOf(false) }
-    var allDayAlertDays by remember(existing?.id) {
-        mutableStateOf((existing?.alert as? ScheduleAlert.AllDay)?.daysBefore ?: 0)
-    }
-    var allDayAlertTime by remember(existing?.id) {
-        mutableStateOf((existing?.alert as? ScheduleAlert.AllDay)?.timeOfDay ?: LocalTime.of(9, 0))
-    }
-    var location by remember(existing?.id) { mutableStateOf(existing?.location.orEmpty()) }
-    var notes by remember(existing?.id) { mutableStateOf(existing?.notes.orEmpty()) }
-    var people by remember(existing?.id) { mutableStateOf(existing?.people.orEmpty()) }
-    var personInput by remember { mutableStateOf("") }
-    val startLocal = LocalDateTime.of(startDate, startTime)
-    val endLocal = LocalDateTime.of(endDate, endTime)
-    val validEnd = !hasEnd || if (allDay) !endDate.isBefore(startDate) else endLocal.isAfter(startLocal)
-    val validRecurrence = recurrenceKind != RecurrenceKind.WEEKLY || weeklyDays.isNotEmpty()
-    val validRepeatUntil = !hasRepeatUntil || !repeatUntil.isBefore(startDate)
-    val timedAlertOptions = (listOf(0L, 10L, 60L, 1_440L) + timedAlertMinutes).distinct().sorted()
-
-    FormDialog(
-        title = stringResource(if (existing == null) R.string.add_schedule else R.string.edit_schedule),
-        saveEnabled = title.isNotBlank() && validEnd && validRecurrence && validRepeatUntil,
-        onDismiss = onDismiss,
-        onSave = {
-            val recurrence = when (recurrenceKind) {
-                RecurrenceKind.NONE -> ScheduleRecurrence.None
-                RecurrenceKind.DAILY -> ScheduleRecurrence.Daily(repeatUntil.takeIf { hasRepeatUntil })
-                RecurrenceKind.WEEKLY -> ScheduleRecurrence.Weekly(weeklyDays, repeatUntil.takeIf { hasRepeatUntil })
-                RecurrenceKind.MONTHLY -> ScheduleRecurrence.Monthly(startDate.dayOfMonth, repeatUntil.takeIf { hasRepeatUntil })
-            }
-            val timing = when {
-                allDay -> ScheduleTiming.AllDay(startDate, endDate.takeIf { hasEnd })
-                recurrence == ScheduleRecurrence.None -> ScheduleTiming.InstantTimed(
-                    startsAt = startLocal.atZone(zoneId).toInstant(),
-                    endsAt = endLocal.atZone(zoneId).toInstant().takeIf { hasEnd },
-                )
-                else -> ScheduleTiming.LocalTimed(
-                    startsOn = startDate,
-                    timeOfDay = startTime,
-                    durationMinutes = Duration.between(startLocal, endLocal).toMinutes().takeIf { hasEnd },
-                )
-            }
-            onSave(
-                Schedule(
-                    id = existing?.id ?: UUID.randomUUID(),
-                    title = title,
-                    timing = timing,
-                    recurrence = recurrence,
-                    alert = if (!alertEnabled) null else if (allDay) {
-                        ScheduleAlert.AllDay(allDayAlertDays, allDayAlertTime)
-                    } else {
-                        ScheduleAlert.Timed(timedAlertMinutes)
-                    },
-                    people = people,
-                    location = location,
-                    notes = notes,
-                    updatedAt = existing?.updatedAt ?: Instant.EPOCH,
-                ),
-            )
-        },
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
-            OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.schedule_entry_title)) })
-            SwitchField(stringResource(R.string.schedule_all_day), allDay, { allDay = it })
-            DateField(stringResource(R.string.schedule_start_date), startDate, { startDate = it })
-            if (!allDay) TimeField(stringResource(R.string.schedule_start_time), startTime, { startTime = it })
-            SwitchField(stringResource(R.string.schedule_has_end), hasEnd, { hasEnd = it })
-            if (hasEnd) {
-                DateField(stringResource(R.string.schedule_end_date), endDate, { endDate = it })
-                if (!allDay) TimeField(stringResource(R.string.schedule_end_time), endTime, { endTime = it })
-            }
-            ExposedDropdownMenuBox(recurrenceExpanded, { recurrenceExpanded = it }) {
-                OutlinedTextField(
-                    recurrenceKind.localized(), {}, Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.schedule_recurrence)) },
-                    trailingIcon = { DropdownTrailingIcon(recurrenceExpanded) },
-                )
-                ExposedDropdownMenu(recurrenceExpanded, { recurrenceExpanded = false }) {
-                    RecurrenceKind.entries.forEach { candidate ->
-                        DropdownMenuItem({ Text(candidate.localized()) }, {
-                            recurrenceKind = candidate
-                            recurrenceExpanded = false
-                        })
-                    }
-                }
-            }
-            if (recurrenceKind == RecurrenceKind.WEEKLY) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
-                    DayOfWeek.entries.forEach { day ->
-                        FilterChip(
-                            selected = day in weeklyDays,
-                            onClick = { weeklyDays = if (day in weeklyDays) weeklyDays - day else weeklyDays + day },
-                            label = { Text(day.localized()) },
-                        )
-                    }
-                }
-            }
-            if (recurrenceKind != RecurrenceKind.NONE) {
-                SwitchField(stringResource(R.string.schedule_repeat_until), hasRepeatUntil, { hasRepeatUntil = it })
-                if (hasRepeatUntil) DateField(stringResource(R.string.schedule_repeat_until), repeatUntil, { repeatUntil = it })
-            }
-            SwitchField(stringResource(R.string.schedule_alert), alertEnabled, { alertEnabled = it })
-            if (alertEnabled && allDay) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
-                    listOf(0, 1).forEach { days ->
-                        FilterChip(
-                            selected = allDayAlertDays == days,
-                            onClick = { allDayAlertDays = days },
-                            label = { Text(stringResource(if (days == 0) R.string.alert_on_day else R.string.alert_one_day_before)) },
-                        )
-                    }
-                }
-                TimeField(stringResource(R.string.schedule_alert_time), allDayAlertTime, { allDayAlertTime = it })
-            } else if (alertEnabled) {
-                ExposedDropdownMenuBox(timedAlertExpanded, { timedAlertExpanded = it }) {
-                    OutlinedTextField(
-                        timedAlertMinutes.localizedAlert(), {}, Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.schedule_alert)) },
-                        trailingIcon = { DropdownTrailingIcon(timedAlertExpanded) },
-                    )
-                    ExposedDropdownMenu(timedAlertExpanded, { timedAlertExpanded = false }) {
-                        timedAlertOptions.forEach { minutes ->
-                            DropdownMenuItem({ Text(minutes.localizedAlert()) }, {
-                                timedAlertMinutes = minutes
-                                timedAlertExpanded = false
-                            })
-                        }
-                    }
-                }
-            }
-            OutlinedTextField(location, { location = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.schedule_location)) })
-            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.schedule_notes)) }, minLines = 2)
-            Text(stringResource(R.string.schedule_people))
-            Row(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
-                OutlinedTextField(
-                    personInput,
-                    { personInput = it },
-                    Modifier.weight(1f),
-                    label = { Text(stringResource(R.string.schedule_person_name)) },
-                )
-                Button(onClick = {
-                    personInput.trim().takeIf(String::isNotEmpty)?.let { people = (people + it).deduplicatedNames() }
-                    personInput = ""
-                }) { Text(stringResource(R.string.common_add)) }
-            }
-            profileNames.deduplicatedNames()
-                .filterNot { suggestion -> people.any { it.equals(suggestion, ignoreCase = true) } }
-                .forEach { suggestion ->
-                FilterChip(
-                    selected = false,
-                    onClick = { people = (people + suggestion).deduplicatedNames() },
-                    label = { Text(suggestion) },
-                )
-            }
-            people.forEach { person ->
-                FilterChip(
-                    selected = true,
-                    onClick = { people = people.filterNot { it.equals(person, ignoreCase = true) } },
-                    label = { Text(person) },
-                )
-            }
-        }
-    }
-}
-
-private data class EditorState(
+data class ScheduleDraft(
+    val id: UUID,
+    val title: String,
+    val allDay: Boolean,
     val startDate: LocalDate,
     val startTime: LocalTime,
     val hasEnd: Boolean,
@@ -446,10 +225,361 @@ private data class EditorState(
     val endTime: LocalTime,
     val recurrenceKind: RecurrenceKind,
     val weeklyDays: Set<DayOfWeek>,
-    val repeatUntil: LocalDate?,
+    val hasRepeatUntil: Boolean,
+    val repeatUntil: LocalDate,
+    val alertEnabled: Boolean,
+    val timedAlertMinutes: Long,
+    val allDayAlertDays: Int,
+    val allDayAlertTime: LocalTime,
+    val location: String,
+    val notes: String,
+    val people: List<String>,
+    val personInput: String,
+    val updatedAt: Instant,
 )
 
-private fun Schedule?.toEditorState(today: LocalDate, zoneId: ZoneId): EditorState {
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun ScheduleEditorScreen(
+    existing: Schedule?,
+    profileNames: List<String>,
+    today: LocalDate,
+    zoneId: ZoneId,
+    onCancel: () -> Unit,
+    onSave: (Schedule, (Boolean) -> Unit) -> Unit,
+) {
+    val editorState = rememberEditorState { existing.toDraft(today, zoneId) }
+    val draft = editorState.value
+    var recurrenceExpanded by remember { mutableStateOf(false) }
+    var timedAlertExpanded by remember { mutableStateOf(false) }
+    val startLocal = LocalDateTime.of(draft.startDate, draft.startTime)
+    val endLocal = LocalDateTime.of(draft.endDate, draft.endTime)
+    val validEnd = !draft.hasEnd || if (draft.allDay) {
+        !draft.endDate.isBefore(draft.startDate)
+    } else {
+        endLocal.isAfter(startLocal)
+    }
+    val validRecurrence = draft.recurrenceKind != RecurrenceKind.WEEKLY || draft.weeklyDays.isNotEmpty()
+    val validRepeatUntil = !draft.hasRepeatUntil || !draft.repeatUntil.isBefore(draft.startDate)
+    val timedAlertOptions = (listOf(0L, 10L, 60L, 1_440L) + draft.timedAlertMinutes).distinct().sorted()
+
+    AppEditorScaffold(
+        title = stringResource(if (existing == null) R.string.add_schedule else R.string.edit_schedule),
+        isDirty = editorState.isDirty,
+        saveEnabled = draft.title.isNotBlank() && validEnd && validRecurrence && validRepeatUntil,
+        isSaving = editorState.isSaving,
+        onCancel = onCancel,
+        onSave = {
+            editorState.isSaving = true
+            onSave(draft.toSchedule(zoneId)) { saved ->
+                editorState.isSaving = false
+                if (saved) onCancel()
+            }
+        },
+    ) {
+        EditorSection(stringResource(R.string.schedule_details)) {
+            OutlinedTextField(
+                value = draft.title,
+                onValueChange = { editorState.value = draft.copy(title = it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.schedule_entry_title)) },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = draft.location,
+                onValueChange = { editorState.value = draft.copy(location = it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.schedule_location)) },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = draft.notes,
+                onValueChange = { editorState.value = draft.copy(notes = it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.schedule_notes)) },
+                minLines = 2,
+            )
+        }
+        EditorSection(stringResource(R.string.schedule_when)) {
+            SwitchField(
+                stringResource(R.string.schedule_all_day),
+                draft.allDay,
+                { editorState.value = draft.copy(allDay = it) },
+            )
+            if (draft.allDay) {
+                DateField(
+                    stringResource(R.string.schedule_start_date),
+                    draft.startDate,
+                    { editorState.value = draft.copy(startDate = it) },
+                )
+            } else {
+                EditorFieldPair(
+                    first = { modifier ->
+                        Column(modifier) {
+                            DateField(
+                                stringResource(R.string.schedule_start_date),
+                                draft.startDate,
+                                { editorState.value = draft.copy(startDate = it) },
+                            )
+                        }
+                    },
+                    second = { modifier ->
+                        Column(modifier) {
+                            TimeField(
+                                stringResource(R.string.schedule_start_time),
+                                draft.startTime,
+                                { editorState.value = draft.copy(startTime = it) },
+                            )
+                        }
+                    },
+                )
+            }
+            SwitchField(
+                stringResource(R.string.schedule_has_end),
+                draft.hasEnd,
+                { editorState.value = draft.copy(hasEnd = it) },
+            )
+            if (draft.hasEnd && draft.allDay) {
+                DateField(
+                    stringResource(R.string.schedule_end_date),
+                    draft.endDate,
+                    { editorState.value = draft.copy(endDate = it) },
+                )
+            } else if (draft.hasEnd) {
+                EditorFieldPair(
+                    first = { modifier ->
+                        Column(modifier) {
+                            DateField(
+                                stringResource(R.string.schedule_end_date),
+                                draft.endDate,
+                                { editorState.value = draft.copy(endDate = it) },
+                            )
+                        }
+                    },
+                    second = { modifier ->
+                        Column(modifier) {
+                            TimeField(
+                                stringResource(R.string.schedule_end_time),
+                                draft.endTime,
+                                { editorState.value = draft.copy(endTime = it) },
+                            )
+                        }
+                    },
+                )
+            }
+            if (!validEnd) {
+                Text(
+                    stringResource(
+                        if (draft.allDay) R.string.validation_invalid_date_range
+                        else R.string.validation_invalid_time,
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        EditorSection(stringResource(R.string.schedule_recurrence)) {
+            ExposedDropdownMenuBox(recurrenceExpanded, { recurrenceExpanded = it }) {
+                OutlinedTextField(
+                    value = draft.recurrenceKind.localized(),
+                    onValueChange = {},
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.schedule_recurrence)) },
+                    trailingIcon = { DropdownTrailingIcon(recurrenceExpanded) },
+                )
+                ExposedDropdownMenu(recurrenceExpanded, { recurrenceExpanded = false }) {
+                    RecurrenceKind.entries.forEach { candidate ->
+                        DropdownMenuItem(
+                            text = { Text(candidate.localized()) },
+                            onClick = {
+                                editorState.value = draft.copy(recurrenceKind = candidate)
+                                recurrenceExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+            if (draft.recurrenceKind == RecurrenceKind.WEEKLY) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                    DayOfWeek.entries.forEach { day ->
+                        FilterChip(
+                            selected = day in draft.weeklyDays,
+                            onClick = {
+                                editorState.value = draft.copy(
+                                    weeklyDays = if (day in draft.weeklyDays) {
+                                        draft.weeklyDays - day
+                                    } else {
+                                        draft.weeklyDays + day
+                                    },
+                                )
+                            },
+                            label = { Text(day.localized()) },
+                        )
+                    }
+                }
+            }
+            if (draft.recurrenceKind != RecurrenceKind.NONE) {
+                SwitchField(
+                    stringResource(R.string.schedule_repeat_until),
+                    draft.hasRepeatUntil,
+                    { editorState.value = draft.copy(hasRepeatUntil = it) },
+                )
+                if (draft.hasRepeatUntil) {
+                    DateField(
+                        stringResource(R.string.schedule_repeat_until),
+                        draft.repeatUntil,
+                        { editorState.value = draft.copy(repeatUntil = it) },
+                    )
+                }
+                if (!validRepeatUntil) {
+                    Text(
+                        stringResource(R.string.validation_invalid_date_range),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+        EditorSection(stringResource(R.string.schedule_alert)) {
+            SwitchField(
+                stringResource(R.string.schedule_alert),
+                draft.alertEnabled,
+                { editorState.value = draft.copy(alertEnabled = it) },
+            )
+            if (draft.alertEnabled && draft.allDay) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                    listOf(0, 1).forEach { days ->
+                        FilterChip(
+                            selected = draft.allDayAlertDays == days,
+                            onClick = { editorState.value = draft.copy(allDayAlertDays = days) },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        if (days == 0) R.string.alert_on_day else R.string.alert_one_day_before,
+                                    ),
+                                )
+                            },
+                        )
+                    }
+                }
+                TimeField(
+                    stringResource(R.string.schedule_alert_time),
+                    draft.allDayAlertTime,
+                    { editorState.value = draft.copy(allDayAlertTime = it) },
+                )
+            } else if (draft.alertEnabled) {
+                ExposedDropdownMenuBox(timedAlertExpanded, { timedAlertExpanded = it }) {
+                    OutlinedTextField(
+                        value = draft.timedAlertMinutes.localizedAlert(),
+                        onValueChange = {},
+                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.schedule_alert)) },
+                        trailingIcon = { DropdownTrailingIcon(timedAlertExpanded) },
+                    )
+                    ExposedDropdownMenu(timedAlertExpanded, { timedAlertExpanded = false }) {
+                        timedAlertOptions.forEach { minutes ->
+                            DropdownMenuItem(
+                                text = { Text(minutes.localizedAlert()) },
+                                onClick = {
+                                    editorState.value = draft.copy(timedAlertMinutes = minutes)
+                                    timedAlertExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        EditorSection(stringResource(R.string.schedule_people)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                OutlinedTextField(
+                    value = draft.personInput,
+                    onValueChange = { editorState.value = draft.copy(personInput = it) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(stringResource(R.string.schedule_person_name)) },
+                    singleLine = true,
+                )
+                Button(
+                    onClick = {
+                        val person = draft.personInput.trim()
+                        editorState.value = draft.copy(
+                            people = if (person.isEmpty()) draft.people
+                            else (draft.people + person).deduplicatedNames(),
+                            personInput = "",
+                        )
+                    },
+                    enabled = draft.personInput.isNotBlank(),
+                ) { Text(stringResource(R.string.common_add)) }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+                profileNames.deduplicatedNames()
+                    .filterNot { suggestion -> draft.people.any { it.equals(suggestion, ignoreCase = true) } }
+                    .forEach { suggestion ->
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                editorState.value = draft.copy(
+                                    people = (draft.people + suggestion).deduplicatedNames(),
+                                )
+                            },
+                            label = { Text(suggestion) },
+                        )
+                    }
+                draft.people.forEach { person ->
+                    FilterChip(
+                        selected = true,
+                        onClick = {
+                            editorState.value = draft.copy(
+                                people = draft.people.filterNot { it.equals(person, ignoreCase = true) },
+                            )
+                        },
+                        label = { Text(person) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun ScheduleDraft.toSchedule(zoneId: ZoneId): Schedule {
+    val startLocal = LocalDateTime.of(startDate, startTime)
+    val endLocal = LocalDateTime.of(endDate, endTime)
+    val recurrence = when (recurrenceKind) {
+        RecurrenceKind.NONE -> ScheduleRecurrence.None
+        RecurrenceKind.DAILY -> ScheduleRecurrence.Daily(repeatUntil.takeIf { hasRepeatUntil })
+        RecurrenceKind.WEEKLY -> ScheduleRecurrence.Weekly(weeklyDays, repeatUntil.takeIf { hasRepeatUntil })
+        RecurrenceKind.MONTHLY -> ScheduleRecurrence.Monthly(startDate.dayOfMonth, repeatUntil.takeIf { hasRepeatUntil })
+    }
+    val timing = when {
+        allDay -> ScheduleTiming.AllDay(startDate, endDate.takeIf { hasEnd })
+        recurrence == ScheduleRecurrence.None -> ScheduleTiming.InstantTimed(
+            startsAt = startLocal.atZone(zoneId).toInstant(),
+            endsAt = endLocal.atZone(zoneId).toInstant().takeIf { hasEnd },
+        )
+        else -> ScheduleTiming.LocalTimed(
+            startsOn = startDate,
+            timeOfDay = startTime,
+            durationMinutes = Duration.between(startLocal, endLocal).toMinutes().takeIf { hasEnd },
+        )
+    }
+    return Schedule(
+        id = id,
+        title = title,
+        timing = timing,
+        recurrence = recurrence,
+        alert = if (!alertEnabled) null else if (allDay) {
+            ScheduleAlert.AllDay(allDayAlertDays, allDayAlertTime)
+        } else {
+            ScheduleAlert.Timed(timedAlertMinutes)
+        },
+        people = people,
+        location = location,
+        notes = notes,
+        updatedAt = updatedAt,
+    )
+}
+
+private fun Schedule?.toDraft(today: LocalDate, zoneId: ZoneId): ScheduleDraft {
     val defaultTime = LocalTime.of(9, 0)
     val startDate: LocalDate
     val startTime: LocalTime
@@ -490,20 +620,34 @@ private fun Schedule?.toEditorState(today: LocalDate, zoneId: ZoneId): EditorSta
         }
     }
     val recurrence = this?.recurrence ?: ScheduleRecurrence.None
-    return EditorState(
-        startDate,
-        startTime,
-        hasEnd,
-        endDate,
-        endTime,
-        when (recurrence) {
+    val repeatUntil = recurrence.repeatUntil
+    return ScheduleDraft(
+        id = this?.id ?: UUID.randomUUID(),
+        title = this?.title.orEmpty(),
+        allDay = this?.timing is ScheduleTiming.AllDay,
+        startDate = startDate,
+        startTime = startTime,
+        hasEnd = hasEnd,
+        endDate = endDate,
+        endTime = endTime,
+        recurrenceKind = when (recurrence) {
             ScheduleRecurrence.None -> RecurrenceKind.NONE
             is ScheduleRecurrence.Daily -> RecurrenceKind.DAILY
             is ScheduleRecurrence.Weekly -> RecurrenceKind.WEEKLY
             is ScheduleRecurrence.Monthly -> RecurrenceKind.MONTHLY
         },
-        (recurrence as? ScheduleRecurrence.Weekly)?.daysOfWeek ?: setOf(startDate.dayOfWeek),
-        recurrence.repeatUntil,
+        weeklyDays = (recurrence as? ScheduleRecurrence.Weekly)?.daysOfWeek ?: setOf(startDate.dayOfWeek),
+        hasRepeatUntil = repeatUntil != null,
+        repeatUntil = repeatUntil ?: startDate.plusMonths(1),
+        alertEnabled = this?.alert != null,
+        timedAlertMinutes = (this?.alert as? ScheduleAlert.Timed)?.minutesBefore ?: 10L,
+        allDayAlertDays = (this?.alert as? ScheduleAlert.AllDay)?.daysBefore ?: 0,
+        allDayAlertTime = (this?.alert as? ScheduleAlert.AllDay)?.timeOfDay ?: LocalTime.of(9, 0),
+        location = this?.location.orEmpty(),
+        notes = this?.notes.orEmpty(),
+        people = this?.people.orEmpty(),
+        personInput = "",
+        updatedAt = this?.updatedAt ?: Instant.EPOCH,
     )
 }
 

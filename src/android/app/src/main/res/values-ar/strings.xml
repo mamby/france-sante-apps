@@ -591,4 +591,10 @@
     <string name="delete_document_category_title">حذف فئة المستندات؟</string>
     <string name="delete_document_category_message">ستُنقل المستندات التي تستخدمها إلى الفئة البديلة المحددة.</string>
     <string name="recent_health_items">العناصر الصحية الحديثة</string>
+    <string name="editor_background_unavailable">غير متاح أثناء التعديل</string>
+    <string name="editor_draft_discarded">أُغلق المحرر غير المكتمل لحماية بياناتك الخاصة.</string>
+    <string name="editor_saving">جارٍ حفظ التغييرات</string>
+    <string name="editor_section_basic">المعلومات الأساسية</string>
+    <string name="editor_section_contact_channels">قنوات الاتصال</string>
+    <string name="editor_section_location_online">الموقع والإنترنت</string>
 </resources>

@@ -2,7 +2,8 @@ package net.mamby.health.feature.medications
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,18 +41,22 @@ import net.mamby.health.core.model.MedicationSchedule
 import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
+import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.DropdownTrailingIcon
-import net.mamby.health.ui.components.FormDialog
+import net.mamby.health.ui.components.EditorFieldPair
+import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.ProfilePickerField
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
+import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedTime
@@ -61,20 +65,10 @@ import net.mamby.health.ui.theme.UiTokens
 @Composable
 fun MedicationsScreen(
     records: List<ProfileRecord>,
-    today: LocalDate,
-    onAddProfile: (String, (UUID) -> Unit) -> Unit,
-    onUpsert: (UUID, Medication) -> Unit,
+    onAdd: (UUID?) -> Unit,
     onSelected: (UUID, String) -> Unit,
-    creationRequest: Long = 0,
 ) {
     var filterProfileId by remember { mutableStateOf<UUID?>(null) }
-    var editorVisible by remember { mutableStateOf(false) }
-    var editorProfileId by remember { mutableStateOf<UUID?>(null) }
-    fun startCreation() {
-        editorProfileId = filterProfileId ?: records.singleOrNull()?.profile?.id
-        editorVisible = true
-    }
-    LaunchedEffect(creationRequest) { if (creationRequest > 0) startCreation() }
     val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
     val medications = remember(filteredRecords) {
         filteredRecords.ownedItems(ProfileRecord::medications).sortedWith(
@@ -86,7 +80,9 @@ fun MedicationsScreen(
     AppScreenScaffold(
         title = stringResource(R.string.medications_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = ::startCreation) {
+            FloatingActionButton(
+                onClick = { onAdd(filterProfileId ?: records.singleOrNull()?.profile?.id) },
+            ) {
                 Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_medication))
             }
         },
@@ -131,88 +127,123 @@ fun MedicationsScreen(
             }
         }
     }
-    if (editorVisible) {
-        val owner = records.firstOrNull { it.profile.id == editorProfileId }
-        MedicationDialog(
-            existing = null,
-            today = today,
-            ownerSelected = owner != null,
-            profilePicker = {
-                ProfilePickerField(records, editorProfileId, { editorProfileId = it }, onAddProfile)
-            },
-            onDismiss = { editorVisible = false },
-            onSave = {
-                onUpsert(requireNotNull(editorProfileId), it)
-                editorVisible = false
-            },
-        )
-    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+data class MedicationDraft(
+    val profileId: UUID?,
+    val id: UUID,
+    val name: String,
+    val dose: String,
+    val instructions: String,
+    val notes: String,
+    val active: Boolean,
+    val remindersEnabled: Boolean,
+    val recurrence: ReminderRecurrence,
+    val reminderTimes: List<LocalTime>,
+    val pendingTime: LocalTime,
+    val days: Set<DayOfWeek>,
+    val hasStart: Boolean,
+    val start: LocalDate,
+    val hasEnd: Boolean,
+    val end: LocalDate,
+    val updatedAt: Instant,
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun MedicationDialog(
+fun MedicationEditorScreen(
+    records: List<ProfileRecord>,
+    existingOwner: ProfileRecord?,
     existing: Medication?,
+    initialProfileId: UUID?,
     today: LocalDate,
-    onDismiss: () -> Unit,
-    onSave: (Medication) -> Unit,
-    ownerSelected: Boolean = true,
-    profilePicker: (@Composable () -> Unit)? = null,
+    onAddProfile: (String, (UUID) -> Unit) -> Unit,
+    onCancel: () -> Unit,
+    onSave: (UUID, Medication, (Boolean) -> Unit) -> Unit,
 ) {
-    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
-    var dose by remember { mutableStateOf(existing?.dose.orEmpty()) }
-    var instructions by remember { mutableStateOf(existing?.instructions.orEmpty()) }
-    var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
-    var active by remember { mutableStateOf(existing?.isActive ?: true) }
-    var remindersEnabled by remember { mutableStateOf(existing?.remindersEnabled ?: false) }
-    var recurrence by remember { mutableStateOf(existing?.schedule?.recurrence ?: ReminderRecurrence.NONE) }
+    val editorState = rememberEditorState {
+        existing.toDraft(existingOwner?.profile?.id ?: initialProfileId, today)
+    }
+    val draft = editorState.value
+    val selectedOwner = existingOwner?.takeIf { it.profile.id == draft.profileId }
+        ?: records.firstOrNull { it.profile.id == draft.profileId }
     var recurrenceExpanded by remember { mutableStateOf(false) }
-    var reminderTimes by remember { mutableStateOf(existing?.schedule?.reminderTimes ?: emptyList()) }
-    var pendingTime by remember { mutableStateOf(LocalTime.of(8, 0)) }
-    var days by remember { mutableStateOf(existing?.schedule?.daysOfWeek ?: emptySet()) }
-    var hasStart by remember { mutableStateOf(existing?.schedule?.startsOn != null) }
-    var start by remember { mutableStateOf(existing?.schedule?.startsOn ?: today) }
-    var hasEnd by remember { mutableStateOf(existing?.schedule?.endsOn != null) }
-    var end by remember { mutableStateOf(existing?.schedule?.endsOn ?: today.plusMonths(1)) }
-    FormDialog(
+
+    AppEditorScaffold(
         title = stringResource(if (existing == null) R.string.add_medication else R.string.edit_medication),
-        saveEnabled = ownerSelected && name.isNotBlank() && dose.isNotBlank() && instructions.isNotBlank() &&
-            (!remindersEnabled || reminderTimes.isNotEmpty()),
-        onDismiss = onDismiss,
+        isDirty = editorState.isDirty,
+        saveEnabled = selectedOwner != null && draft.name.isNotBlank() && draft.dose.isNotBlank() &&
+            draft.instructions.isNotBlank() && (!draft.remindersEnabled || draft.reminderTimes.isNotEmpty()),
+        isSaving = editorState.isSaving,
+        onCancel = onCancel,
         onSave = {
-            onSave(
-                Medication(
-                    id = existing?.id ?: UUID.randomUUID(),
-                    name = name.trim(),
-                    dose = dose.trim(),
-                    instructions = instructions.trim(),
-                    schedule = MedicationSchedule(
-                        recurrence = recurrence,
-                        reminderTimes = reminderTimes.sorted(),
-                        daysOfWeek = days,
-                        startsOn = start.takeIf { hasStart },
-                        endsOn = end.takeIf { hasEnd },
-                    ),
-                    isActive = active,
-                    remindersEnabled = remindersEnabled,
-                    notes = notes.trim().ifBlank { null },
-                    updatedAt = existing?.updatedAt ?: Instant.EPOCH,
-                ),
-            )
+            val profileId = draft.profileId ?: return@AppEditorScaffold
+            editorState.isSaving = true
+            onSave(profileId, draft.toMedication()) { saved ->
+                editorState.isSaving = false
+                if (saved) onCancel()
+            }
         },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
-            profilePicker?.invoke()
-            OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_name)) })
-            OutlinedTextField(dose, { dose = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_dose)) })
-            OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_instructions)) }, minLines = 2)
-            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.medication_notes)) }, minLines = 2)
-            SwitchField(stringResource(R.string.medication_active), active, { active = it })
-            SwitchField(stringResource(R.string.medication_reminders), remindersEnabled, { remindersEnabled = it })
-            if (remindersEnabled) {
+        if (existing == null) {
+            ProfilePickerField(
+                records = records,
+                selectedProfileId = draft.profileId,
+                onSelected = { editorState.value = draft.copy(profileId = it) },
+                onAddProfile = onAddProfile,
+            )
+        } else {
+            selectedOwner?.let { ProfileOwnerHeader(it.profile) }
+        }
+        EditorFieldPair(
+            first = { modifier ->
+                OutlinedTextField(
+                    value = draft.name,
+                    onValueChange = { editorState.value = draft.copy(name = it) },
+                    modifier = modifier,
+                    label = { Text(stringResource(R.string.medication_name)) },
+                    singleLine = true,
+                )
+            },
+            second = { modifier ->
+                OutlinedTextField(
+                    value = draft.dose,
+                    onValueChange = { editorState.value = draft.copy(dose = it) },
+                    modifier = modifier,
+                    label = { Text(stringResource(R.string.medication_dose)) },
+                    singleLine = true,
+                )
+            },
+        )
+        OutlinedTextField(
+            value = draft.instructions,
+            onValueChange = { editorState.value = draft.copy(instructions = it) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.medication_instructions)) },
+            minLines = 2,
+        )
+        OutlinedTextField(
+            value = draft.notes,
+            onValueChange = { editorState.value = draft.copy(notes = it) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.medication_notes)) },
+            minLines = 2,
+        )
+        SwitchField(
+            stringResource(R.string.medication_active),
+            draft.active,
+            { editorState.value = draft.copy(active = it) },
+        )
+        EditorSection(stringResource(R.string.medication_schedule)) {
+            SwitchField(
+                stringResource(R.string.medication_reminders),
+                draft.remindersEnabled,
+                { editorState.value = draft.copy(remindersEnabled = it) },
+            )
+            if (draft.remindersEnabled) {
                 ExposedDropdownMenuBox(recurrenceExpanded, { recurrenceExpanded = it }) {
                     OutlinedTextField(
-                        value = stringResource(recurrence.labelResource()),
+                        value = stringResource(draft.recurrence.labelResource()),
                         onValueChange = {},
                         modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         readOnly = true,
@@ -224,7 +255,7 @@ fun MedicationDialog(
                             DropdownMenuItem(
                                 text = { Text(stringResource(candidate.labelResource())) },
                                 onClick = {
-                                    recurrence = candidate
+                                    editorState.value = draft.copy(recurrence = candidate)
                                     recurrenceExpanded = false
                                 },
                             )
@@ -232,25 +263,69 @@ fun MedicationDialog(
                     }
                 }
                 Text(stringResource(R.string.medication_times))
-                reminderTimes.forEach { time ->
+                draft.reminderTimes.forEach { time ->
                     RemovableInputChip(
                         label = time.localizedTime(),
-                        onRemove = { reminderTimes = reminderTimes - time },
+                        onRemove = {
+                            editorState.value = draft.copy(reminderTimes = draft.reminderTimes - time)
+                        },
                     )
                 }
-                TimeField(stringResource(R.string.add_reminder_time), pendingTime, { pendingTime = it })
+                TimeField(
+                    stringResource(R.string.add_reminder_time),
+                    draft.pendingTime,
+                    { editorState.value = draft.copy(pendingTime = it) },
+                )
                 Button(
                     onClick = {
-                        if (pendingTime !in reminderTimes) reminderTimes = reminderTimes + pendingTime
+                        if (draft.pendingTime !in draft.reminderTimes) {
+                            editorState.value = draft.copy(reminderTimes = draft.reminderTimes + draft.pendingTime)
+                        }
                     },
                 ) { Text(stringResource(R.string.add_reminder_time)) }
-                if (recurrence == ReminderRecurrence.WEEKLY) {
-                    WeekdaySelector(days) { days = it }
+                if (draft.recurrence == ReminderRecurrence.WEEKLY) {
+                    WeekdaySelector(draft.days) { editorState.value = draft.copy(days = it) }
                 }
-                SwitchField(stringResource(R.string.medication_start_date), hasStart, { hasStart = it })
-                if (hasStart) DateField(stringResource(R.string.medication_start_date), start, { start = it })
-                SwitchField(stringResource(R.string.medication_end_date), hasEnd, { hasEnd = it })
-                if (hasEnd) DateField(stringResource(R.string.medication_end_date), end, { end = it })
+                EditorFieldPair(
+                    first = { modifier ->
+                        Column(
+                            modifier = modifier,
+                            verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                        ) {
+                            SwitchField(
+                                stringResource(R.string.medication_start_date),
+                                draft.hasStart,
+                                { editorState.value = draft.copy(hasStart = it) },
+                            )
+                            if (draft.hasStart) {
+                                DateField(
+                                    stringResource(R.string.medication_start_date),
+                                    draft.start,
+                                    { editorState.value = draft.copy(start = it) },
+                                )
+                            }
+                        }
+                    },
+                    second = { modifier ->
+                        Column(
+                            modifier = modifier,
+                            verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                        ) {
+                            SwitchField(
+                                stringResource(R.string.medication_end_date),
+                                draft.hasEnd,
+                                { editorState.value = draft.copy(hasEnd = it) },
+                            )
+                            if (draft.hasEnd) {
+                                DateField(
+                                    stringResource(R.string.medication_end_date),
+                                    draft.end,
+                                    { editorState.value = draft.copy(end = it) },
+                                )
+                            }
+                        }
+                    },
+                )
             }
         }
     }
@@ -261,7 +336,7 @@ private fun WeekdaySelector(
     selected: Set<DayOfWeek>,
     onSelectedChange: (Set<DayOfWeek>) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing)) {
         DayOfWeek.entries.forEach { day ->
             FilterChip(
                 selected = day in selected,
@@ -273,6 +348,44 @@ private fun WeekdaySelector(
         }
     }
 }
+
+private fun Medication?.toDraft(profileId: UUID?, today: LocalDate): MedicationDraft = MedicationDraft(
+    profileId = profileId,
+    id = this?.id ?: UUID.randomUUID(),
+    name = this?.name.orEmpty(),
+    dose = this?.dose.orEmpty(),
+    instructions = this?.instructions.orEmpty(),
+    notes = this?.notes.orEmpty(),
+    active = this?.isActive ?: true,
+    remindersEnabled = this?.remindersEnabled ?: false,
+    recurrence = this?.schedule?.recurrence ?: ReminderRecurrence.NONE,
+    reminderTimes = this?.schedule?.reminderTimes ?: emptyList(),
+    pendingTime = LocalTime.of(8, 0),
+    days = this?.schedule?.daysOfWeek ?: emptySet(),
+    hasStart = this?.schedule?.startsOn != null,
+    start = this?.schedule?.startsOn ?: today,
+    hasEnd = this?.schedule?.endsOn != null,
+    end = this?.schedule?.endsOn ?: today.plusMonths(1),
+    updatedAt = this?.updatedAt ?: Instant.EPOCH,
+)
+
+private fun MedicationDraft.toMedication(): Medication = Medication(
+    id = id,
+    name = name.trim(),
+    dose = dose.trim(),
+    instructions = instructions.trim(),
+    schedule = MedicationSchedule(
+        recurrence = recurrence,
+        reminderTimes = reminderTimes.sorted(),
+        daysOfWeek = days,
+        startsOn = start.takeIf { hasStart },
+        endsOn = end.takeIf { hasEnd },
+    ),
+    isActive = active,
+    remindersEnabled = remindersEnabled,
+    notes = notes.trim().ifBlank { null },
+    updatedAt = updatedAt,
+)
 
 private fun DayOfWeek.labelResource(): Int = when (this) {
     DayOfWeek.MONDAY -> R.string.day_monday

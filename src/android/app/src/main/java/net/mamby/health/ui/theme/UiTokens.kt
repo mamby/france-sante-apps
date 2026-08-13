@@ -11,6 +11,7 @@ object UiTokens {
     const val FloatingNavigationContainerAlpha = 0.92f
     const val FloatingNavigationBorderAlpha = 0.45f
     const val FloatingNavigationShadowAlpha = 0.08f
+    const val BackgroundPaneDisabledAlpha = 0.58f
 
     val ProfileAvatarSize = 40.dp
     val ProfileMarkerAvatarSize = 24.dp
@@ -30,5 +31,9 @@ object UiTokens {
     val SectionSpacing = 24.dp
     val CardMinWidth = 280.dp
     val FormMaxWidth = 640.dp
+    val EditorFieldMinWidth = 280.dp
+    val EditorMaxWidth = 1040.dp
+    val EditorTwoColumnMinWidth = (EditorFieldMinWidth * 2) + ContentSpacing
+    val EditorProgressIndicatorSize = 18.dp
     val DialogTonalElevation = 0.dp
 }

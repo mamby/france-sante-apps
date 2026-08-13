@@ -10,6 +10,10 @@ sealed interface AppRoute : NavKey
 
 sealed interface TopLevelRoute : AppRoute
 
+sealed interface EditorRoute : AppRoute {
+    val sessionId: String
+}
+
 @Serializable data object HomeRoute : TopLevelRoute
 @Serializable data object SearchRoute : TopLevelRoute
 @Serializable data object HealthRecordsRoute : TopLevelRoute
@@ -34,6 +38,92 @@ sealed interface TopLevelRoute : AppRoute
 @Serializable data class FamilyHistoryDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class CareDirectiveDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class HealthIdentifierDetailRoute(val profileId: String, val id: String) : AppRoute
+
+@Serializable
+data class ContactEditorRoute(
+    override val sessionId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class MedicationEditorRoute(
+    override val sessionId: String,
+    val profileId: String? = null,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class MeasurementEditorRoute(
+    override val sessionId: String,
+    val profileId: String? = null,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class ScheduleEditorRoute(
+    override val sessionId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class HealthNoteEditorRoute(
+    override val sessionId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class DocumentImportEditorRoute(
+    override val sessionId: String,
+    val profileId: String? = null,
+) : EditorRoute
+
+@Serializable
+data class DocumentEditorRoute(
+    override val sessionId: String,
+    val profileId: String,
+    val id: String,
+) : EditorRoute
+
+@Serializable
+data class HealthProfileEditorRoute(
+    override val sessionId: String,
+    val profileId: String? = null,
+) : EditorRoute
+
+@Serializable
+data class EmergencyContactEditorRoute(
+    override val sessionId: String,
+    val profileId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class VaccinationEditorRoute(
+    override val sessionId: String,
+    val profileId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class FamilyHistoryEditorRoute(
+    override val sessionId: String,
+    val profileId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class CareDirectiveEditorRoute(
+    override val sessionId: String,
+    val profileId: String,
+    val id: String? = null,
+) : EditorRoute
+
+@Serializable
+data class HealthIdentifierEditorRoute(
+    override val sessionId: String,
+    val profileId: String,
+    val id: String? = null,
+) : EditorRoute
 
 @Serializable data object SettingsRoute : TopLevelRoute
 @Serializable data object ManageProfilesRoute : TopLevelRoute

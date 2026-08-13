@@ -1,10 +1,14 @@
 package net.mamby.health.ui
 
+import android.app.Activity
+import android.content.Intent
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.ActivityResultRegistryOwner
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -14,6 +18,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.core.app.ActivityOptionsCompat
+import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
@@ -28,13 +34,14 @@ import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.MeasurementReading
 import net.mamby.health.feature.contacts.ContactDetailScreen
-import net.mamby.health.feature.contacts.ContactsScreen
+import net.mamby.health.feature.contacts.ContactEditorScreen
 import net.mamby.health.feature.measurements.ManageMeasurementTypesScreen
-import net.mamby.health.feature.measurements.MeasurementsScreen
-import net.mamby.health.feature.notes.NotesScreen
+import net.mamby.health.feature.measurements.MeasurementEditorScreen
+import net.mamby.health.feature.notes.HealthNoteEditorScreen
 import net.mamby.health.feature.records.HealthRecordsHubScreen
 import net.mamby.health.feature.summary.HealthIdentifierDetailScreen
 import net.mamby.health.feature.vault.ManageDocumentCategoriesScreen
+import net.mamby.health.feature.vault.DocumentImportEditorScreen
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -72,19 +79,19 @@ class HealthRecordsComposeInstrumentedTest {
     fun independentNoteFormCreatesTypedRecord() {
         var savedNote: HealthNote? = null
         composeRule.setContent {
-            var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
-                NotesScreen(
-                    notes = emptyList(),
+                HealthNoteEditorScreen(
+                    existing = null,
                     now = NOW,
                     zoneId = ZoneOffset.UTC,
-                    onUpsert = { note -> savedNote = note },
-                    onSelected = {},
-                    creationRequest = creationRequest,
+                    onCancel = {},
+                    onSave = { note, onResult ->
+                        savedNote = note
+                        onResult(true)
+                    },
                 )
             }
         }
-        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_health_note)).performClick()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.health_note_title)).performTextInput("Follow-up")
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.health_note_body)).performTextInput("Independent context")
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).performClick()
@@ -96,23 +103,26 @@ class HealthRecordsComposeInstrumentedTest {
         var savedMeasurement: HealthMeasurement? = null
         composeRule.setContent {
             val record = remember { record() }
-            var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
-                MeasurementsScreen(
+                MeasurementEditorScreen(
                     records = listOf(record),
+                    existingOwner = null,
+                    existing = null,
+                    initialProfileId = record.profile.id,
                     now = NOW,
                     zoneId = ZoneOffset.UTC,
-                    onBack = {},
-                    onManageTypes = {},
                     onAddProfile = { _, _ -> },
-                    onUpsert = { _, measurement -> savedMeasurement = measurement },
-                    onSelected = { _, _ -> },
-                    creationRequest = creationRequest,
+                    onCancel = {},
+                    onSave = { _, measurement, complete ->
+                        savedMeasurement = measurement
+                        complete(true)
+                    },
                 )
             }
         }
-        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_measurement)).performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.measurement_value)).performTextInput("72")
+        composeRule
+            .onNode(hasText(composeRule.activity.getString(R.string.measurement_value)) and hasSetTextAction())
+            .performTextInput("72")
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).performClick()
         composeRule.runOnIdle {
             assertEquals(72.0, (savedMeasurement?.reading as MeasurementReading.Scalar).value, 0.0)
@@ -140,20 +150,56 @@ class HealthRecordsComposeInstrumentedTest {
     }
 
     @Test
+    fun cancelingDocumentPickerClosesTheCleanImportEditor() {
+        var canceled = false
+        val registry = object : ActivityResultRegistry() {
+            override fun <I : Any?, O : Any?> onLaunch(
+                requestCode: Int,
+                contract: ActivityResultContract<I, O>,
+                input: I,
+                options: ActivityOptionsCompat?,
+            ) {
+                dispatchResult(requestCode, Activity.RESULT_CANCELED, Intent())
+            }
+        }
+        val owner = object : ActivityResultRegistryOwner {
+            override val activityResultRegistry: ActivityResultRegistry = registry
+        }
+        composeRule.setContent {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
+                val record = remember { record() }
+                HealthVaultTheme {
+                    DocumentImportEditorScreen(
+                        records = listOf(record),
+                        initialProfileId = record.profile.id,
+                        today = LocalDate.of(2026, 7, 30),
+                        onAddProfile = { _, _ -> },
+                        onCancel = { canceled = true },
+                        onImport = { _, _, _ -> },
+                    )
+                }
+            }
+        }
+
+        composeRule.waitUntil { canceled }
+        composeRule.runOnIdle { assertEquals(true, canceled) }
+    }
+
+    @Test
     fun contactFormCreatesVaultWideContactRecord() {
         var savedContact: VaultContact? = null
         composeRule.setContent {
-            var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
-                ContactsScreen(
-                    contacts = emptyList(),
-                    onUpsert = { savedContact = it },
-                    onSelected = {},
-                    creationRequest = creationRequest,
+                ContactEditorScreen(
+                    existing = null,
+                    onCancel = {},
+                    onSave = { contact, onResult ->
+                        savedContact = contact
+                        onResult(true)
+                    },
                 )
             }
         }
-        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_contact)).performClick()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.contact_name)).performTextInput("Dr Martin")
         fun enterFirstValue(labelResource: Int, value: String) {
             composeRule
@@ -236,7 +282,7 @@ class HealthRecordsComposeInstrumentedTest {
                 ContactDetailScreen(
                     contact = contact,
                     onBack = {},
-                    onUpsert = {},
+                    onEdit = {},
                     onDelete = {},
                     onDialPhone = { invoked += "phone:$it" },
                     onComposeEmail = { invoked += "email:$it" },

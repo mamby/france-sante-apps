@@ -45,8 +45,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.WindowInsets
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
@@ -85,7 +88,8 @@ import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.feature.dashboard.DashboardScreen
-import net.mamby.health.feature.schedule.ScheduleScreen
+import net.mamby.health.feature.contacts.ContactEditorScreen
+import net.mamby.health.feature.schedule.ScheduleEditorScreen
 import net.mamby.health.feature.search.SearchFilter
 import net.mamby.health.feature.search.SearchScreen
 import net.mamby.health.feature.settings.SettingsScreen
@@ -209,23 +213,19 @@ class ComposeScreensInstrumentedTest {
         )
         composeRule.setContent {
             HealthVaultTheme {
-                ScheduleScreen(
-                    schedules = listOf(schedule),
+                ScheduleEditorScreen(
+                    existing = schedule,
                     profileNames = listOf("Amina"),
                     today = LocalDate.of(2026, 7, 30),
-                    now = FIXED_CLOCK.instant(),
                     zoneId = ZoneOffset.UTC,
-                    notificationsBlocked = false,
-                    onUpsert = {},
-                    onSelected = {},
-                    onOpenNotificationSettings = {},
+                    onCancel = {},
+                    onSave = { _, complete -> complete(true) },
                 )
             }
         }
 
         composeRule.onNodeWithText("School meeting").assertIsDisplayed()
         composeRule.onAllNodesWithText(composeRule.activity.getString(R.string.all_profiles)).assertCountEquals(0)
-        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_schedule)).performClick()
         composeRule.onNodeWithText("Amina").assertExists()
         composeRule.onAllNodesWithText(composeRule.activity.getString(R.string.choose_profile)).assertCountEquals(0)
     }
@@ -237,11 +237,9 @@ class ComposeScreensInstrumentedTest {
             HealthVaultTheme {
                 VaultScreen(
                     records = listOf(record),
-                    today = LocalDate.of(2026, 7, 30),
                     onBack = {},
                     onManageCategories = {},
-                    onAddProfile = { _, _ -> },
-                    onImport = { _, _ -> },
+                    onImportRequested = {},
                     onDocumentSelected = { _, _ -> },
                 )
             }
@@ -606,6 +604,31 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
+    fun editorHidesCompactNavigationAndDisablesExpandedNavigation() {
+        val home = composeRule.activity.getString(R.string.nav_home)
+        var layoutType by mutableStateOf(NavigationSuiteType.ShortNavigationBarCompact)
+        composeRule.setContent {
+            HealthVaultTheme {
+                AppNavigationSuite(
+                    selectedDestination = TopLevelDestination.Contacts,
+                    layoutType = layoutType,
+                    isMoreSelected = false,
+                    onDestinationSelected = {},
+                    onMoreSelected = {},
+                    navigationVisible = false,
+                ) { Box(Modifier.fillMaxSize()) }
+            }
+        }
+        composeRule.onNodeWithContentDescription(home).assertDoesNotExist()
+
+        composeRule.runOnIdle { layoutType = NavigationSuiteType.NavigationRail }
+        composeRule
+            .onNodeWithContentDescription(home, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+    }
+
+    @Test
     fun compactNavigationFooterBlocksPagePointerInputOutsideBar() {
         var pagePointerStarts = 0
         var aboveNavigationClicks = 0
@@ -942,6 +965,52 @@ class ComposeScreensInstrumentedTest {
         )
         searchField.performTextInput("A")
         composeRule.runOnIdle { assertEquals("A", submittedQuery) }
+    }
+
+    @Test
+    fun editorMultilineFieldScrollsClearOfImeInset() {
+        var imeBottomPx = 0
+        composeRule.setContent {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                val imeBottom = with(LocalDensity.current) { 300.dp.roundToPx() }
+                imeBottomPx = imeBottom
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.WindowInsets(
+                        WindowInsetsCompat.Builder()
+                            .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, imeBottom))
+                            .setVisible(WindowInsetsCompat.Type.ime(), true)
+                            .build(),
+                    ),
+                ) {
+                    HealthVaultTheme {
+                        ContactEditorScreen(
+                            existing = null,
+                            onCancel = {},
+                            onSave = { _, _ -> },
+                        )
+                    }
+                }
+            }
+        }
+
+        val rootBounds = composeRule
+            .onAllNodes(isRoot())
+            .fetchSemanticsNodes()
+            .maxBy { it.boundsInRoot.width * it.boundsInRoot.height }
+            .boundsInRoot
+        val notesField = composeRule
+            .onNode(
+                hasText(composeRule.activity.getString(R.string.common_notes)) and hasSetTextAction(),
+            )
+        notesField
+            .performScrollTo()
+            .performClick()
+        val visibleNotesField = notesField.fetchSemanticsNode()
+
+        assertTrue(
+            "Notes field ${visibleNotesField.boundsInRoot} does not clear the IME in root $rootBounds",
+            visibleNotesField.boundsInRoot.bottom <= rootBounds.bottom - imeBottomPx,
+        )
     }
 
     @Test
