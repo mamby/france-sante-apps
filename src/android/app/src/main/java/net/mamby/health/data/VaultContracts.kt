@@ -7,7 +7,6 @@ import java.util.UUID
 import kotlinx.coroutines.flow.StateFlow
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
-import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -22,6 +21,7 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.Vaccination
+import net.mamby.health.core.model.VaultContact
 
 sealed interface VaultState {
     data object Loading : VaultState
@@ -91,7 +91,6 @@ data class MedicalDocumentDraft(
     val category: DocumentCategoryRef,
     val documentDate: LocalDate,
     val source: String,
-    val sourceEntryId: UUID? = null,
     val notes: String? = null,
     val tags: List<String> = emptyList(),
 )
@@ -154,11 +153,9 @@ interface VaultRepository {
 
     suspend fun deleteCustomMeasurementType(profileId: UUID, typeId: UUID)
 
-    suspend fun upsertCareDirectoryEntry(profileId: UUID, entry: CareDirectoryEntry)
+    suspend fun upsertContact(contact: VaultContact)
 
-    suspend fun deleteCareDirectoryEntry(profileId: UUID, entryId: UUID)
-
-    suspend fun setPrimaryDoctor(profileId: UUID, entryId: UUID?)
+    suspend fun deleteContact(contactId: UUID)
 
     suspend fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry)
 

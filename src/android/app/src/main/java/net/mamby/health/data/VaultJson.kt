@@ -24,7 +24,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
-import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -46,6 +45,7 @@ import net.mamby.health.core.model.ScheduleRecurrence
 import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.core.model.UnsupportedVaultVersionException
 import net.mamby.health.core.model.Vaccination
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.asReference
 import net.mamby.health.core.model.requireValid
 
@@ -77,6 +77,7 @@ object VaultCodec {
             2 -> json.decodeFromString<HealthVaultV2>(source).toCurrent()
             3 -> json.decodeFromString<HealthVaultV3>(source).toCurrent()
             4 -> json.decodeFromString<HealthVaultV4>(source).toCurrent()
+            5 -> json.decodeFromString<HealthVaultV5>(source).toCurrent()
             HealthVault.CURRENT_VERSION -> json.decodeFromString<HealthVault>(source)
             else -> throw UnsupportedVaultVersionException(version)
         }
@@ -144,16 +145,171 @@ private fun ReminderRecurrence.toScheduleRecurrence(
 }
 
 @Serializable
-private data class ProfileRecordV4(
-    val profile: HealthProfile,
-    val documents: List<MedicalDocument> = emptyList(),
-    val medications: List<Medication> = emptyList(),
-    val appointments: List<AppointmentV4> = emptyList(),
-    val vaccinations: List<Vaccination> = emptyList(),
-    val reminders: List<ReminderV4> = emptyList(),
+private enum class CareDirectoryKindV5 {
+    DOCTOR,
+    HOSPITAL,
+    CLINIC,
+    PHARMACY,
+    LABORATORY,
+    OTHER,
+}
+
+@Serializable
+private data class PostalAddressV5(
+    val addressLines: List<String> = emptyList(),
+    val locality: String? = null,
+    val region: String? = null,
+    val postalCode: String? = null,
+    val country: String? = null,
+) {
+    fun toMultilineAddress(): String? = buildList {
+        addAll(addressLines)
+        add(listOfNotNull(postalCode, locality).joinToString(" "))
+        add(listOfNotNull(region, country).joinToString(" · "))
+    }.filter(String::isNotBlank).joinToString("\n").takeIf(String::isNotBlank)
+}
+
+@Serializable
+private data class CareDirectoryEntryV5(
+    val id: UUID,
+    val kind: CareDirectoryKindV5,
+    val name: String,
+    val specialty: String? = null,
+    val organization: String? = null,
+    val address: PostalAddressV5 = PostalAddressV5(),
+    val phoneNumbers: List<String> = emptyList(),
+    val emailAddresses: List<String> = emptyList(),
+    val notes: String? = null,
+    val updatedAt: Instant,
+) {
+    fun toContact() = VaultContact(
+        id = id,
+        name = name,
+        phoneNumbers = phoneNumbers,
+        emailAddresses = emailAddresses,
+        websites = emptyList(),
+        addresses = address.toMultilineAddress()?.let(::listOf).orEmpty(),
+        notes = notes,
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
+private data class HealthProfileV5(
+    val id: UUID,
+    val displayName: String,
+    val bloodType: String? = null,
+    val allergies: List<String> = emptyList(),
+    val chronicConditions: List<String> = emptyList(),
+    val surgeries: List<String> = emptyList(),
+    val emergencyContacts: List<EmergencyContact> = emptyList(),
+    val primaryDoctorEntryId: UUID? = null,
+    val lastUpdatedAt: Instant,
+) {
+    fun toCurrent() = HealthProfile(
+        id = id,
+        displayName = displayName,
+        bloodType = bloodType,
+        allergies = allergies,
+        chronicConditions = chronicConditions,
+        surgeries = surgeries,
+        emergencyContacts = emergencyContacts,
+        lastUpdatedAt = lastUpdatedAt,
+    )
+}
+
+@Serializable
+private data class MedicalDocumentV5(
+    val id: UUID,
+    val title: String,
+    val category: DocumentCategoryRef,
+    val documentDate: LocalDate,
+    val source: String,
+    val sourceEntryId: UUID? = null,
+    val notes: String? = null,
+    val tags: List<String> = emptyList(),
+    val blobId: UUID,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val originalFileName: String? = null,
+    val updatedAt: Instant,
+) {
+    fun toCurrent() = MedicalDocument(
+        id = id,
+        title = title,
+        category = category,
+        documentDate = documentDate,
+        source = source,
+        notes = notes,
+        tags = tags,
+        blobId = blobId,
+        mimeType = mimeType,
+        sizeBytes = sizeBytes,
+        originalFileName = originalFileName,
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
+private data class MedicationV5(
+    val id: UUID,
+    val name: String,
+    val dose: String,
+    val instructions: String,
+    val schedule: MedicationSchedule = MedicationSchedule(),
+    val isActive: Boolean = true,
+    val remindersEnabled: Boolean = false,
+    val prescriberEntryId: UUID? = null,
+    val pharmacyEntryId: UUID? = null,
+    val notes: String? = null,
+    val updatedAt: Instant,
+) {
+    fun toCurrent() = Medication(
+        id = id,
+        name = name,
+        dose = dose,
+        instructions = instructions,
+        schedule = schedule,
+        isActive = isActive,
+        remindersEnabled = remindersEnabled,
+        notes = notes,
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
+private data class VaccinationV5(
+    val id: UUID,
+    val name: String,
+    val dateAdministered: LocalDate,
+    val provider: String? = null,
+    val providerEntryId: UUID? = null,
+    val lotNumber: String? = null,
+    val nextDueOn: LocalDate? = null,
+    val notes: String? = null,
+    val updatedAt: Instant,
+) {
+    fun toCurrent() = Vaccination(
+        id = id,
+        name = name,
+        dateAdministered = dateAdministered,
+        provider = provider,
+        lotNumber = lotNumber,
+        nextDueOn = nextDueOn,
+        notes = notes,
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
+private data class ProfileRecordV5(
+    val profile: HealthProfileV5,
+    val documents: List<MedicalDocumentV5> = emptyList(),
+    val medications: List<MedicationV5> = emptyList(),
+    val vaccinations: List<VaccinationV5> = emptyList(),
     val measurements: List<HealthMeasurement> = emptyList(),
     val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
-    val careDirectory: List<CareDirectoryEntry> = emptyList(),
+    val careDirectory: List<CareDirectoryEntryV5> = emptyList(),
     val familyHistory: List<FamilyHistoryEntry> = emptyList(),
     val directives: List<CareDirective> = emptyList(),
     val healthIdentifiers: List<HealthIdentifier> = emptyList(),
@@ -161,13 +317,65 @@ private data class ProfileRecordV4(
     val builtInDocumentCategoryPreferences: List<BuiltInDocumentCategoryPreference> = emptyList(),
 ) {
     fun toCurrent() = ProfileRecord(
-        profile = profile,
-        documents = documents,
-        medications = medications,
-        vaccinations = vaccinations,
+        profile = profile.toCurrent(),
+        documents = documents.map(MedicalDocumentV5::toCurrent),
+        medications = medications.map(MedicationV5::toCurrent),
+        vaccinations = vaccinations.map(VaccinationV5::toCurrent),
         measurements = measurements,
         customMeasurementTypes = customMeasurementTypes,
-        careDirectory = careDirectory,
+        familyHistory = familyHistory,
+        directives = directives,
+        healthIdentifiers = healthIdentifiers,
+        customDocumentCategories = customDocumentCategories,
+        builtInDocumentCategoryPreferences = builtInDocumentCategoryPreferences,
+    )
+
+    fun contacts(): List<VaultContact> = careDirectory.map(CareDirectoryEntryV5::toContact)
+}
+
+@Serializable
+private data class HealthVaultV5(
+    val version: Int = 5,
+    val revision: Long,
+    val profiles: List<ProfileRecordV5>,
+    val notes: List<HealthNote> = emptyList(),
+    val schedules: List<Schedule> = emptyList(),
+    val updatedAt: Instant,
+) {
+    fun toCurrent() = HealthVault(
+        revision = revision,
+        profiles = profiles.map(ProfileRecordV5::toCurrent),
+        notes = notes,
+        schedules = schedules,
+        contacts = profiles.flatMap(ProfileRecordV5::contacts),
+        updatedAt = updatedAt,
+    )
+}
+
+@Serializable
+private data class ProfileRecordV4(
+    val profile: HealthProfileV5,
+    val documents: List<MedicalDocumentV5> = emptyList(),
+    val medications: List<MedicationV5> = emptyList(),
+    val appointments: List<AppointmentV4> = emptyList(),
+    val vaccinations: List<VaccinationV5> = emptyList(),
+    val reminders: List<ReminderV4> = emptyList(),
+    val measurements: List<HealthMeasurement> = emptyList(),
+    val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
+    val careDirectory: List<CareDirectoryEntryV5> = emptyList(),
+    val familyHistory: List<FamilyHistoryEntry> = emptyList(),
+    val directives: List<CareDirective> = emptyList(),
+    val healthIdentifiers: List<HealthIdentifier> = emptyList(),
+    val customDocumentCategories: List<CustomDocumentCategory> = emptyList(),
+    val builtInDocumentCategoryPreferences: List<BuiltInDocumentCategoryPreference> = emptyList(),
+) {
+    fun toCurrent() = ProfileRecord(
+        profile = profile.toCurrent(),
+        documents = documents.map(MedicalDocumentV5::toCurrent),
+        medications = medications.map(MedicationV5::toCurrent),
+        vaccinations = vaccinations.map(VaccinationV5::toCurrent),
+        measurements = measurements,
+        customMeasurementTypes = customMeasurementTypes,
         familyHistory = familyHistory,
         directives = directives,
         healthIdentifiers = healthIdentifiers,
@@ -177,6 +385,8 @@ private data class ProfileRecordV4(
 
     fun schedules(): List<Schedule> =
         appointments.map { it.toSchedule(profile.displayName) } + reminders.map { it.toSchedule(profile.displayName) }
+
+    fun contacts(): List<VaultContact> = careDirectory.map(CareDirectoryEntryV5::toContact)
 }
 
 @Serializable
@@ -192,22 +402,23 @@ private data class HealthVaultV4(
         profiles = profiles.map(ProfileRecordV4::toCurrent),
         notes = notes,
         schedules = profiles.flatMap(ProfileRecordV4::schedules),
+        contacts = profiles.flatMap(ProfileRecordV4::contacts),
         updatedAt = updatedAt,
     )
 }
 
 @Serializable
 private data class ProfileRecordV3(
-    val profile: HealthProfile,
-    val documents: List<MedicalDocument> = emptyList(),
-    val medications: List<Medication> = emptyList(),
+    val profile: HealthProfileV5,
+    val documents: List<MedicalDocumentV5> = emptyList(),
+    val medications: List<MedicationV5> = emptyList(),
     val appointments: List<AppointmentV4> = emptyList(),
-    val vaccinations: List<Vaccination> = emptyList(),
+    val vaccinations: List<VaccinationV5> = emptyList(),
     val reminders: List<ReminderV4> = emptyList(),
     val notes: List<HealthNote> = emptyList(),
     val measurements: List<HealthMeasurement> = emptyList(),
     val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
-    val careDirectory: List<CareDirectoryEntry> = emptyList(),
+    val careDirectory: List<CareDirectoryEntryV5> = emptyList(),
     val familyHistory: List<FamilyHistoryEntry> = emptyList(),
     val directives: List<CareDirective> = emptyList(),
     val healthIdentifiers: List<HealthIdentifier> = emptyList(),
@@ -215,13 +426,12 @@ private data class ProfileRecordV3(
     val builtInDocumentCategoryPreferences: List<BuiltInDocumentCategoryPreference> = emptyList(),
 ) {
     fun toCurrent() = ProfileRecord(
-        profile = profile,
-        documents = documents,
-        medications = medications,
-        vaccinations = vaccinations,
+        profile = profile.toCurrent(),
+        documents = documents.map(MedicalDocumentV5::toCurrent),
+        medications = medications.map(MedicationV5::toCurrent),
+        vaccinations = vaccinations.map(VaccinationV5::toCurrent),
         measurements = measurements,
         customMeasurementTypes = customMeasurementTypes,
-        careDirectory = careDirectory,
         familyHistory = familyHistory,
         directives = directives,
         healthIdentifiers = healthIdentifiers,
@@ -231,6 +441,8 @@ private data class ProfileRecordV3(
 
     fun schedules(): List<Schedule> =
         appointments.map { it.toSchedule(profile.displayName) } + reminders.map { it.toSchedule(profile.displayName) }
+
+    fun contacts(): List<VaultContact> = careDirectory.map(CareDirectoryEntryV5::toContact)
 }
 
 @Serializable
@@ -245,6 +457,7 @@ private data class HealthVaultV3(
         profiles = profiles.map(ProfileRecordV3::toCurrent),
         notes = profiles.flatMap(ProfileRecordV3::notes),
         schedules = profiles.flatMap(ProfileRecordV3::schedules),
+        contacts = profiles.flatMap(ProfileRecordV3::contacts),
         updatedAt = updatedAt,
     )
 }

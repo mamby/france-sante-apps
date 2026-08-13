@@ -39,7 +39,6 @@ import net.mamby.health.core.model.asReference
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
-import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.LabeledValue
@@ -203,7 +202,6 @@ private fun DocumentEditDialog(
     }
     var title by remember { mutableStateOf(document.title) }
     var source by remember { mutableStateOf(document.source) }
-    var sourceEntryId by remember { mutableStateOf(document.sourceEntryId) }
     var notes by remember { mutableStateOf(document.notes.orEmpty()) }
     var tags by remember { mutableStateOf(document.tags) }
     var date by remember { mutableStateOf(document.documentDate) }
@@ -220,7 +218,6 @@ private fun DocumentEditDialog(
                     category = category,
                     documentDate = date,
                     source = source.trim(),
-                    sourceEntryId = sourceEntryId,
                     notes = notes.trim().ifBlank { null },
                     tags = tags,
                 ),
@@ -252,12 +249,6 @@ private fun DocumentEditDialog(
             }
             DateField(stringResource(R.string.document_date), date, { date = it })
             OutlinedTextField(source, { source = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_source)) })
-            CareDirectoryPicker(
-                entries = record.careDirectory,
-                selectedId = sourceEntryId,
-                onSelected = { sourceEntryId = it },
-                label = stringResource(R.string.document_source_directory),
-            )
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.document_notes)) }, minLines = 2)
             StringListEditor(stringResource(R.string.document_tags), tags, { tags = it })
         }

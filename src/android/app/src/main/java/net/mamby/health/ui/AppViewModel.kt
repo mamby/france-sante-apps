@@ -28,7 +28,6 @@ import net.mamby.health.backup.RestorePreparationResult
 import net.mamby.health.backup.RestorePreview
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
-import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -41,6 +40,7 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.Vaccination
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.data.DocumentImportException
 import net.mamby.health.data.DocumentImportFailure
 import net.mamby.health.data.DocumentImporter
@@ -109,6 +109,10 @@ class AppViewModel @Inject constructor(
         mutableNotice.value = UiNotice(R.string.record_unavailable)
     }
 
+    fun showContactActionUnavailable() {
+        mutableNotice.value = UiNotice(R.string.contact_action_unavailable)
+    }
+
     fun createVault(displayName: String) = launchOperation {
         vaultRepository.createVault(displayName)
         reconcileReminders()
@@ -149,7 +153,6 @@ class AppViewModel @Inject constructor(
                 category = draft.category,
                 documentDate = draft.documentDate,
                 source = draft.source,
-                sourceEntryId = draft.sourceEntryId,
                 notes = draft.notes,
                 tags = draft.tags,
             ),
@@ -251,16 +254,12 @@ class AppViewModel @Inject constructor(
         vaultRepository.deleteCustomMeasurementType(profileId, id)
     }
 
-    fun upsertCareDirectoryEntry(profileId: UUID, entry: CareDirectoryEntry) = launchOperation {
-        vaultRepository.upsertCareDirectoryEntry(profileId, entry)
+    fun upsertContact(contact: VaultContact) = launchOperation {
+        vaultRepository.upsertContact(contact)
     }
 
-    fun deleteCareDirectoryEntry(profileId: UUID, id: UUID) = launchOperation {
-        vaultRepository.deleteCareDirectoryEntry(profileId, id)
-    }
-
-    fun setPrimaryDoctor(profileId: UUID, id: UUID?) = launchOperation {
-        vaultRepository.setPrimaryDoctor(profileId, id)
+    fun deleteContact(id: UUID) = launchOperation {
+        vaultRepository.deleteContact(id)
     }
 
     fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry) = launchOperation {

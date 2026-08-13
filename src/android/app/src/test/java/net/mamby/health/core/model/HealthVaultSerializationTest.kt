@@ -18,8 +18,8 @@ class HealthVaultSerializationTest {
     private val blobId = UUID.fromString("27d14e33-91aa-47d5-bf19-fd7beb082d96")
 
     @Test
-    fun schemaV5RoundTripsMultipleProfilesNotesAndSchedulesWithoutDerivedViews() {
-        val doctorId = UUID.fromString("34a502d7-23c0-4be5-a8fd-34b56dca82d0")
+    fun schemaV6RoundTripsMultipleProfilesNotesSchedulesAndContactsWithoutDerivedViews() {
+        val contactId = UUID.fromString("34a502d7-23c0-4be5-a8fd-34b56dca82d0")
         val noteId = UUID.fromString("096c83e2-7703-49b4-8d24-e5bf5f9c63e4")
         val measurementId = UUID.fromString("8c918e28-6344-484b-a969-a2d23c109bf3")
         val directiveId = UUID.fromString("6114ffae-bcbc-43a2-845e-cd3798596a1c")
@@ -45,10 +45,9 @@ class HealthVaultSerializationTest {
                         firstId,
                         "Amina",
                         bloodType = "O+",
-                        primaryDoctorEntryId = doctorId,
                         lastUpdatedAt = now,
                     ),
-                    documents = listOf(document.copy(category = DocumentCategoryRef.Custom(categoryId), sourceEntryId = doctorId)),
+                    documents = listOf(document.copy(category = DocumentCategoryRef.Custom(categoryId))),
                     measurements = listOf(
                         HealthMeasurement(
                             measurementId,
@@ -61,9 +60,6 @@ class HealthVaultSerializationTest {
                             "Morning",
                             now,
                         ),
-                    ),
-                    careDirectory = listOf(
-                        CareDirectoryEntry(doctorId, CareDirectoryKind.DOCTOR, "Dr Martin", updatedAt = now),
                     ),
                     familyHistory = listOf(FamilyHistoryEntry(familyId, "Parent", "Diabetes", 48, updatedAt = now)),
                     directives = listOf(
@@ -109,20 +105,33 @@ class HealthVaultSerializationTest {
                     updatedAt = now,
                 ),
             ),
+            contacts = listOf(
+                VaultContact(
+                    id = contactId,
+                    name = "Dr Martin",
+                    phoneNumbers = listOf("+33 1 23 45 67 89", "+33 6 00 00 00 00"),
+                    emailAddresses = listOf("doctor@example.com"),
+                    websites = listOf("https://example.com"),
+                    addresses = listOf("12 Rue de la Santé\n75014 Paris\nFrance"),
+                    notes = "Family doctor",
+                    updatedAt = now,
+                ),
+            ),
             updatedAt = now,
         ).requireValid()
 
         val encoded = VaultCodec.encode(vault)
         val decoded = VaultCodec.decode(encoded)
 
-        assertEquals(5, decoded.sourceVersion)
+        assertEquals(6, decoded.sourceVersion)
         assertEquals(vault, decoded.vault)
         assertEquals(noteId, decoded.vault.notes.single().id)
         assertEquals("O+", decoded.vault.profiles.first().summary().bloodType)
         assertEquals(
-            listOf(documentId, measurementId, doctorId, familyId, directiveId, identifierId),
+            listOf(documentId, measurementId, familyId, directiveId, identifierId),
             decoded.vault.profiles.first().index().map(VaultItem::id),
         )
+        assertEquals(listOf(contactId), decoded.vault.contactIndex().map(VaultItem::id))
         val text = encoded.decodeToString()
         assertFalse(text.contains("\"summary\""))
         assertFalse(text.contains("\"vaultItems\""))
@@ -132,6 +141,7 @@ class HealthVaultSerializationTest {
     fun exactV3PayloadMigratesProfileNotesToVaultScopeInStableOrder() {
         val firstNote = UUID.fromString("1fd70aaf-9404-45a3-8586-4ba5ecfa2cc2")
         val secondNote = UUID.fromString("e6a40b07-999c-4e73-bbd8-8249b5c18bdc")
+        val contactId = UUID.fromString("7569477f-fc10-4763-a802-b9146233c7db")
         val appointmentId = UUID.fromString("ad62eb6e-383d-4fdd-b4dd-aab7f44b4641")
         val reminderId = UUID.fromString("ba22181c-b6a0-4b6b-86a8-cb55fe80bef6")
         val payload = """
@@ -144,6 +154,11 @@ class HealthVaultSerializationTest {
                   "notes": [{
                     "id":"$firstNote","title":"First","body":"One",
                     "notedAt":"$now","updatedAt":"$now"
+                  }],
+                  "careDirectory":[{
+                    "id":"$contactId","kind":"CLINIC","name":"Legacy clinic",
+                    "phoneNumbers":["+33 1 11 22 33 44"],
+                    "emailAddresses":["legacy@example.test"],"updatedAt":"$now"
                   }],
                   "appointments": [{
                     "id":"$appointmentId","title":"Visit","clinician":"Discarded clinician",
@@ -171,9 +186,12 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(3, decoded.sourceVersion)
-        assertEquals(5, decoded.vault.version)
+        assertEquals(6, decoded.vault.version)
         assertEquals(12L, decoded.vault.revision)
         assertEquals(listOf(firstNote, secondNote), decoded.vault.notes.map(HealthNote::id))
+        assertEquals(listOf(contactId), decoded.vault.contacts.map(VaultContact::id))
+        assertEquals(listOf("+33 1 11 22 33 44"), decoded.vault.contacts.single().phoneNumbers)
+        assertEquals(listOf("legacy@example.test"), decoded.vault.contacts.single().emailAddresses)
         assertEquals(listOf(firstId, secondId), decoded.vault.profiles.map { it.profile.id })
         val appointment = decoded.vault.schedules.first { it.id == appointmentId }
         assertEquals(ScheduleAlert.Timed(37), appointment.alert)
@@ -188,6 +206,7 @@ class HealthVaultSerializationTest {
     @Test
     fun exactV4PayloadMigratesVaultNotesAndCopiesOnlyOwnerNamesIntoSchedules() {
         val appointmentId = UUID.fromString("b9d1a9cd-408f-47d9-aa5f-50d3f28632fe")
+        val contactId = UUID.fromString("f900d92a-96b6-4134-aa48-b0fafbb40096")
         val payload = """
             {
               "version":4,"revision":14,
@@ -198,6 +217,9 @@ class HealthVaultSerializationTest {
                   "location":"Discard me","startsAt":"2026-09-01T08:00:00Z",
                   "relatedDocumentIds":[],"notes":"Discard me","reminderLeadMinutes":1440,
                   "updatedAt":"$now"
+                }],
+                "careDirectory":[{
+                  "id":"$contactId","kind":"OTHER","name":"Legacy contact","updatedAt":"$now"
                 }]
               }],
               "notes":[],"updatedAt":"$now"
@@ -208,8 +230,9 @@ class HealthVaultSerializationTest {
         val schedule = decoded.vault.schedules.single()
 
         assertEquals(4, decoded.sourceVersion)
-        assertEquals(5, decoded.vault.version)
+        assertEquals(6, decoded.vault.version)
         assertEquals(appointmentId, schedule.id)
+        assertEquals(contactId, decoded.vault.contacts.single().id)
         assertEquals(listOf("Amina"), schedule.people)
         assertEquals(ScheduleAlert.Timed(1_440), schedule.alert)
         assertEquals(null, schedule.location)
@@ -217,7 +240,95 @@ class HealthVaultSerializationTest {
     }
 
     @Test
-    fun exactV2PayloadMigratesToV4PreservingProfilesCategoriesAndBlobs() {
+    fun exactV5PayloadFlattensContactsAndDiscardsDirectoryTypesAndRecordLinks() {
+        val firstContactId = UUID.fromString("a51b44bc-2ed4-44d1-849e-12d839c16917")
+        val firstProfileSecondContactId = UUID.fromString("78e4d0ec-e48a-4e8d-b73a-e7595c6f8888")
+        val secondContactId = UUID.fromString("818de9e4-fc67-4db1-b514-e0765a4b8bf1")
+        val medicationId = UUID.fromString("76e31a97-452f-4ff6-a89f-8d30bb53a75e")
+        val vaccinationId = UUID.fromString("b0b9dd16-fadd-4e52-87eb-dc4879615dc4")
+        val payload = """
+            {
+              "version":5,"revision":18,
+              "profiles":[
+                {
+                  "profile":{
+                    "id":"$firstId","displayName":"Amina",
+                    "primaryDoctorEntryId":"$firstContactId","lastUpdatedAt":"$now"
+                  },
+                  "documents":[{
+                    "id":"$documentId","title":"Report",
+                    "category":{"type":"builtIn","category":"REPORTS"},
+                    "documentDate":"2026-07-29","source":"Dr Martin",
+                    "sourceEntryId":"$firstContactId","blobId":"$blobId",
+                    "mimeType":"application/pdf","sizeBytes":10,"updatedAt":"$now"
+                  }],
+                  "medications":[{
+                    "id":"$medicationId","name":"Treatment","dose":"5 mg","instructions":"Daily",
+                    "prescriberEntryId":"$firstContactId","pharmacyEntryId":"$firstContactId",
+                    "updatedAt":"$now"
+                  }],
+                  "vaccinations":[{
+                    "id":"$vaccinationId","name":"Vaccine","dateAdministered":"2026-07-01",
+                    "provider":"Clinic","providerEntryId":"$firstContactId","updatedAt":"$now"
+                  }],
+                  "careDirectory":[{
+                    "id":"$firstContactId","kind":"DOCTOR","name":"Shared name",
+                    "specialty":"Discarded","organization":"Discarded",
+                    "address":{
+                      "addressLines":["12 Main St","Unit 4"],"locality":"Paris",
+                      "region":"Île-de-France","postalCode":"75014","country":"France"
+                    },
+                    "phoneNumbers":["+33 1 23 45 67 89"],
+                    "emailAddresses":["doctor@example.com"],"notes":"Keep this","updatedAt":"$now"
+                  },{
+                    "id":"$firstProfileSecondContactId","kind":"OTHER","name":"Second in first profile",
+                    "phoneNumbers":[],"emailAddresses":[],"updatedAt":"$now"
+                  }]
+                },
+                {
+                  "profile":{"id":"$secondId","displayName":"Sam","lastUpdatedAt":"$now"},
+                  "careDirectory":[{
+                    "id":"$secondContactId","kind":"PHARMACY","name":"Shared name",
+                    "address":{},"phoneNumbers":[],"emailAddresses":[],"updatedAt":"$now"
+                  }]
+                }
+              ],
+              "notes":[],"schedules":[],"updatedAt":"$now"
+            }
+        """.trimIndent().encodeToByteArray()
+
+        val decoded = VaultCodec.decode(payload)
+
+        assertEquals(5, decoded.sourceVersion)
+        assertEquals(6, decoded.vault.version)
+        assertEquals(
+            listOf(firstContactId, firstProfileSecondContactId, secondContactId),
+            decoded.vault.contacts.map(VaultContact::id),
+        )
+        assertEquals(
+            listOf("Shared name", "Second in first profile", "Shared name"),
+            decoded.vault.contacts.map(VaultContact::name),
+        )
+        assertEquals(
+            listOf("12 Main St\nUnit 4\n75014 Paris\nÎle-de-France · France"),
+            decoded.vault.contacts.first().addresses,
+        )
+        assertEquals(emptyList<String>(), decoded.vault.contacts.first().websites)
+        assertEquals("Keep this", decoded.vault.contacts.first().notes)
+        assertEquals(now, decoded.vault.contacts.first().updatedAt)
+        assertEquals("Dr Martin", decoded.vault.profiles.first().documents.single().source)
+        assertEquals("Clinic", decoded.vault.profiles.first().vaccinations.single().provider)
+        val migratedJson = VaultCodec.encode(decoded.vault).decodeToString()
+        assertFalse(migratedJson.contains("primaryDoctorEntryId"))
+        assertFalse(migratedJson.contains("sourceEntryId"))
+        assertFalse(migratedJson.contains("prescriberEntryId"))
+        assertFalse(migratedJson.contains("pharmacyEntryId"))
+        assertFalse(migratedJson.contains("providerEntryId"))
+        assertFalse(migratedJson.contains("careDirectory"))
+    }
+
+    @Test
+    fun exactV2PayloadMigratesToV6PreservingProfilesCategoriesAndBlobs() {
         val secondDocumentId = UUID.fromString("a5f1105a-586b-4b91-bcb5-15a174f55c13")
         val secondBlobId = UUID.fromString("4f139214-9a53-4ef8-8cef-5b221b03759e")
         val payload = """
@@ -250,7 +361,7 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(2, decoded.sourceVersion)
-        assertEquals(5, decoded.vault.version)
+        assertEquals(6, decoded.vault.version)
         assertEquals(11L, decoded.vault.revision)
         assertEquals(listOf(firstId, secondId), decoded.vault.profiles.map { it.profile.id })
         val firstDocument = decoded.vault.profiles.first().documents.single()
@@ -292,7 +403,7 @@ class HealthVaultSerializationTest {
         val decoded = VaultCodec.decode(payload)
 
         assertEquals(1, decoded.sourceVersion)
-        assertEquals(5, decoded.vault.version)
+        assertEquals(6, decoded.vault.version)
         assertEquals(3L, decoded.vault.revision)
         assertEquals(firstId, decoded.vault.profiles.single().profile.id)
         assertEquals(documentId, decoded.vault.profiles.single().documents.single().id)
@@ -343,8 +454,7 @@ class HealthVaultSerializationTest {
     }
 
     @Test
-    fun validationRejectsInvalidMeasurementsAndCrossProfileDirectoryReferences() {
-        val doctorId = UUID.randomUUID()
+    fun validationRejectsInvalidMeasurementsAndContactWebsites() {
         val wrongUnit = HealthMeasurement(
             id = UUID.randomUUID(),
             type = MeasurementTypeRef.BuiltIn(BuiltInMeasurementType.WEIGHT),
@@ -356,14 +466,11 @@ class HealthVaultSerializationTest {
             updatedAt = now,
         )
         val first = ProfileRecord(
-            profile = HealthProfile(firstId, "Amina", primaryDoctorEntryId = doctorId, lastUpdatedAt = now),
+            profile = HealthProfile(firstId, "Amina", lastUpdatedAt = now),
             measurements = listOf(wrongUnit),
         )
         val second = ProfileRecord(
             profile = HealthProfile(secondId, "Sam", lastUpdatedAt = now),
-            careDirectory = listOf(
-                CareDirectoryEntry(doctorId, CareDirectoryKind.DOCTOR, "Dr Sam", updatedAt = now),
-            ),
         )
         val invalid = HealthVault(revision = 4, profiles = listOf(first, second), updatedAt = now)
 
@@ -372,7 +479,6 @@ class HealthVaultSerializationTest {
         val finiteButWrongUnit = invalid.copy(
             profiles = listOf(
                 first.copy(
-                    profile = first.profile.copy(primaryDoctorEntryId = null),
                     measurements = listOf(
                         wrongUnit.copy(
                             reading = MeasurementReading.Scalar(
@@ -403,6 +509,14 @@ class HealthVaultSerializationTest {
             ),
         )
         assertThrows(VaultValidationException::class.java) { nonFinite.requireValid() }
+
+        val invalidWebsite = HealthVault(
+            revision = 4,
+            profiles = listOf(first.copy(measurements = emptyList()), second),
+            contacts = listOf(VaultContact(UUID.randomUUID(), "Clinic", websites = listOf("ftp://example.com"), updatedAt = now)),
+            updatedAt = now,
+        )
+        assertThrows(VaultValidationException::class.java) { invalidWebsite.requireValid() }
     }
 
     @Test

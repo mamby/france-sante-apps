@@ -33,6 +33,7 @@ import net.mamby.health.core.model.HealthSearchTarget
 import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Schedule
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.ProfileFilterChip
@@ -42,13 +43,14 @@ import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 import net.mamby.health.ui.format.localizedLabel
 
-enum class SearchFilter { ALL, HEALTH_RECORDS, NOTES, MEDICATIONS, SCHEDULE }
+enum class SearchFilter { ALL, HEALTH_RECORDS, NOTES, CONTACTS, MEDICATIONS, SCHEDULE }
 
 @Composable
 fun SearchScreen(
     records: List<ProfileRecord>,
     notes: List<HealthNote>,
     schedules: List<Schedule>,
+    contacts: List<VaultContact>,
     onResultSelected: (HealthSearchResult) -> Unit,
     query: String,
     filter: SearchFilter,
@@ -58,12 +60,13 @@ fun SearchScreen(
     var filterProfileId by remember { mutableStateOf<UUID?>(null) }
     val filteredRecords = filterProfileId?.let { id -> records.filter { it.profile.id == id } } ?: records
     val recordsById = remember(records) { records.associateBy { it.profile.id } }
-    val results = remember(filteredRecords, notes, schedules, query, filter) {
-        HealthSearch.search(filteredRecords, notes, schedules, query).filter { result ->
+    val results = remember(filteredRecords, notes, schedules, contacts, query, filter) {
+        HealthSearch.search(filteredRecords, notes, schedules, contacts, query).filter { result ->
             when (filter) {
                 SearchFilter.ALL -> true
                 SearchFilter.HEALTH_RECORDS -> result.group == HealthSearchGroup.HEALTH_RECORDS
                 SearchFilter.NOTES -> result.group == HealthSearchGroup.NOTES
+                SearchFilter.CONTACTS -> result.group == HealthSearchGroup.CONTACTS
                 SearchFilter.MEDICATIONS -> result.group == HealthSearchGroup.MEDICATIONS
                 SearchFilter.SCHEDULE -> result.group == HealthSearchGroup.SCHEDULE
             }
@@ -182,6 +185,7 @@ private fun SearchFilter.labelResource(): Int = when (this) {
     SearchFilter.ALL -> R.string.search_filter_all
     SearchFilter.HEALTH_RECORDS -> R.string.nav_health_records
     SearchFilter.NOTES -> R.string.nav_notes
+    SearchFilter.CONTACTS -> R.string.contacts_title
     SearchFilter.MEDICATIONS -> R.string.nav_medications
     SearchFilter.SCHEDULE -> R.string.schedule_title
 }

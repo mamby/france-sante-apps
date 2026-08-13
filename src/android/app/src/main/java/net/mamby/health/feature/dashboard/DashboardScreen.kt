@@ -33,6 +33,7 @@ import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.ScheduleCalculator
 import net.mamby.health.core.model.VaultItem
 import net.mamby.health.core.model.VaultItemKind
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.index
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
@@ -52,6 +53,7 @@ fun DashboardScreen(
     records: List<ProfileRecord>,
     notes: List<HealthNote>,
     schedules: List<Schedule>,
+    contacts: List<VaultContact>,
     clock: Clock,
     zoneId: ZoneId,
     onMedications: () -> Unit,
@@ -62,6 +64,7 @@ fun DashboardScreen(
     },
     onNoteSelected: (UUID) -> Unit,
     onScheduleSelected: (UUID) -> Unit,
+    onContactSelected: (UUID) -> Unit,
     onAddHealthInfo: () -> Unit,
     onImportDocument: () -> Unit,
     onAddMedication: () -> Unit,
@@ -92,7 +95,8 @@ fun DashboardScreen(
     val recentItems = (
         records.ownedItems(ProfileRecord::index).map(RecentDashboardItem::ProfileItem) +
             notes.map(RecentDashboardItem::NoteItem) +
-            schedules.map(RecentDashboardItem::ScheduleItem)
+            schedules.map(RecentDashboardItem::ScheduleItem) +
+            contacts.map(RecentDashboardItem::ContactItem)
         )
         .sortedWith(
             compareByDescending<RecentDashboardItem> { it.item.updatedAt }
@@ -100,7 +104,8 @@ fun DashboardScreen(
                 .thenBy { it.item.id },
         )
         .take(4)
-    val isEmpty = notes.isEmpty() && schedules.isEmpty() && records.all(ProfileRecord::isHealthDataEmpty)
+    val isEmpty = notes.isEmpty() && schedules.isEmpty() && contacts.isEmpty() &&
+        records.all(ProfileRecord::isHealthDataEmpty)
 
     AppScreenScaffold(
         title = stringResource(R.string.dashboard_title),
@@ -208,6 +213,7 @@ fun DashboardScreen(
                     val title = when (recent) {
                         is RecentDashboardItem.NoteItem -> recent.note.title
                         is RecentDashboardItem.ScheduleItem -> recent.schedule.title
+                        is RecentDashboardItem.ContactItem -> recent.contact.name
                         is RecentDashboardItem.ProfileItem -> if (item.kind == VaultItemKind.MEASUREMENT) {
                             recent.owned.record.measurements
                                 .firstOrNull { it.id == item.id }
@@ -225,6 +231,7 @@ fun DashboardScreen(
                             when (recent) {
                                 is RecentDashboardItem.NoteItem -> onNoteSelected(recent.note.id)
                                 is RecentDashboardItem.ScheduleItem -> onScheduleSelected(recent.schedule.id)
+                                is RecentDashboardItem.ContactItem -> onContactSelected(recent.contact.id)
                                 is RecentDashboardItem.ProfileItem -> onRecentItem(recent.owned.profileId, item)
                             }
                         }) {
@@ -244,7 +251,7 @@ fun DashboardScreen(
 private fun ProfileRecord.isHealthDataEmpty(): Boolean =
     documents.isEmpty() && medications.isEmpty() &&
         vaccinations.isEmpty() && measurements.isEmpty() &&
-        careDirectory.isEmpty() && familyHistory.isEmpty() && directives.isEmpty() &&
+        familyHistory.isEmpty() && directives.isEmpty() &&
         healthIdentifiers.isEmpty() && profile.emergencyContacts.isEmpty() && profile.bloodType == null &&
         profile.allergies.isEmpty() &&
         profile.chronicConditions.isEmpty() && profile.surgeries.isEmpty()
@@ -293,5 +300,10 @@ private sealed interface RecentDashboardItem {
     data class ScheduleItem(val schedule: Schedule) : RecentDashboardItem {
         override val item = VaultItem(schedule.id, VaultItemKind.SCHEDULE, schedule.title, schedule.updatedAt)
         override val scopeKey: String = "vault"
+    }
+
+    data class ContactItem(val contact: VaultContact) : RecentDashboardItem {
+        override val item = VaultItem(contact.id, VaultItemKind.CONTACT, contact.name, contact.updatedAt)
+        override val scopeKey: String = "vault-contact"
     }
 }

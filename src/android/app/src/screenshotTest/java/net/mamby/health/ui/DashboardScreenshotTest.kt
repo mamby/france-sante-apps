@@ -25,6 +25,7 @@ import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.ScheduleAlert
 import net.mamby.health.core.model.ScheduleTiming
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.ui.components.AppNavigationSuite
@@ -112,6 +113,7 @@ private fun DashboardPreviewContent(darkTheme: Boolean = false) {
                 records = vault.profiles,
                 notes = vault.notes,
                 schedules = vault.schedules,
+                contacts = vault.contacts,
                 clock = FIXED_CLOCK,
                 zoneId = ZoneOffset.UTC,
                 onMedications = {},
@@ -119,6 +121,7 @@ private fun DashboardPreviewContent(darkTheme: Boolean = false) {
                 onDocumentSelected = { _, _ -> },
                 onNoteSelected = {},
                 onScheduleSelected = {},
+                onContactSelected = {},
                 onAddHealthInfo = {},
                 onImportDocument = {},
                 onAddMedication = {},
@@ -195,6 +198,14 @@ private fun screenshotVault(): HealthVault = HealthVault(
             people = listOf("Alex"),
             location = "Community clinic",
             updatedAt = FIXED_INSTANT,
+        ),
+    ),
+    contacts = listOf(
+        VaultContact(
+            id = id("99999999-9999-4999-8999-999999999999"),
+            name = "Community clinic",
+            phoneNumbers = listOf("+33 1 23 45 67 89"),
+            updatedAt = FIXED_INSTANT.plusSeconds(1),
         ),
     ),
     updatedAt = FIXED_INSTANT,

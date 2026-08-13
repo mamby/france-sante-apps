@@ -1,5 +1,6 @@
 package net.mamby.health.core.model
 
+import java.net.URI
 import java.time.DateTimeException
 import java.time.Instant
 import java.time.LocalDate
@@ -30,7 +31,6 @@ fun ProfileRecord.index(): List<VaultItem> = buildList {
             measurement.updatedAt,
         )
     }
-    careDirectory.mapTo(this) { VaultItem(it.id, VaultItemKind.DIRECTORY_ENTRY, it.name, it.updatedAt) }
     familyHistory.mapTo(this) { VaultItem(it.id, VaultItemKind.FAMILY_HISTORY, it.condition, it.updatedAt) }
     directives.mapTo(this) { VaultItem(it.id, VaultItemKind.DIRECTIVE, it.title, it.updatedAt) }
     healthIdentifiers.mapTo(this) { VaultItem(it.id, VaultItemKind.IDENTIFIER, it.label, it.updatedAt) }
@@ -64,6 +64,10 @@ fun HealthVault.scheduleIndex(): List<VaultItem> = schedules
     .map { VaultItem(it.id, VaultItemKind.SCHEDULE, it.title, it.updatedAt) }
     .sortedByDescending(VaultItem::updatedAt)
 
+fun HealthVault.contactIndex(): List<VaultItem> = contacts
+    .map { VaultItem(it.id, VaultItemKind.CONTACT, it.name, it.updatedAt) }
+    .sortedByDescending(VaultItem::updatedAt)
+
 fun HealthVault.requireValid(): HealthVault = apply {
     if (version != HealthVault.CURRENT_VERSION) {
         throw UnsupportedVaultVersionException(version)
@@ -78,14 +82,11 @@ fun HealthVault.requireValid(): HealthVault = apply {
     requireDistinct("vaccination", profiles.flatMap(ProfileRecord::vaccinations).map(Vaccination::id))
     requireDistinct("note", notes.map(HealthNote::id))
     requireDistinct("schedule", schedules.map(Schedule::id))
+    requireDistinct("contact", contacts.map(VaultContact::id))
     requireDistinct("measurement", profiles.flatMap(ProfileRecord::measurements).map(HealthMeasurement::id))
     requireDistinct(
         "custom measurement type",
         profiles.flatMap(ProfileRecord::customMeasurementTypes).map(CustomMeasurementType::id),
-    )
-    requireDistinct(
-        "directory entry",
-        profiles.flatMap(ProfileRecord::careDirectory).map(CareDirectoryEntry::id),
     )
     requireDistinct(
         "family history entry",
@@ -112,7 +113,6 @@ fun HealthVault.requireValid(): HealthVault = apply {
                 addAll(record.vaccinations.map(Vaccination::id))
                 addAll(record.measurements.map(HealthMeasurement::id))
                 addAll(record.customMeasurementTypes.map(CustomMeasurementType::id))
-                addAll(record.careDirectory.map(CareDirectoryEntry::id))
                 addAll(record.familyHistory.map(FamilyHistoryEntry::id))
                 addAll(record.directives.map(CareDirective::id))
                 addAll(record.healthIdentifiers.map(HealthIdentifier::id))
@@ -120,6 +120,7 @@ fun HealthVault.requireValid(): HealthVault = apply {
             }
             addAll(notes.map(HealthNote::id))
             addAll(schedules.map(Schedule::id))
+            addAll(contacts.map(VaultContact::id))
         },
     )
 
@@ -130,9 +131,27 @@ fun HealthVault.requireValid(): HealthVault = apply {
 
     schedules.forEach(::requireSchedule)
 
+    contacts.forEach { contact ->
+        requireVault(contact.name.isNotBlank()) { "Contact name is required." }
+        requireVault(contact.phoneNumbers.none(String::isBlank)) {
+            "Contact phone numbers cannot be blank."
+        }
+        requireVault(contact.emailAddresses.none(String::isBlank)) {
+            "Contact email addresses cannot be blank."
+        }
+        requireVault(contact.websites.none(String::isBlank)) {
+            "Contact websites cannot be blank."
+        }
+        requireVault(contact.websites.all(::isAbsoluteHttpUrl)) {
+            "Contact websites must be absolute HTTP or HTTPS URLs."
+        }
+        requireVault(contact.addresses.none(String::isBlank)) {
+            "Contact addresses cannot be blank."
+        }
+    }
+
     profiles.forEach { record ->
         requireVault(record.profile.displayName.isNotBlank()) { "Profile name is required." }
-        val directoryById = record.careDirectory.associateBy(CareDirectoryEntry::id)
         val documentIds = record.documents.mapTo(mutableSetOf(), MedicalDocument::id)
         requireDistinct(
             "built-in document category preference",
@@ -150,30 +169,12 @@ fun HealthVault.requireValid(): HealthVault = apply {
             requireVault(type.name.isNotBlank()) { "Custom measurement type name is required." }
             requireVault(type.suggestedUnit.isNotBlank()) { "Custom measurement unit is required." }
         }
-        record.careDirectory.forEach { entry ->
-            requireVault(entry.name.isNotBlank()) { "Directory entry name is required." }
-            requireVault(entry.address.addressLines.none(String::isBlank)) {
-                "Directory address lines cannot be blank."
-            }
-            requireVault(entry.phoneNumbers.none(String::isBlank)) {
-                "Directory phone numbers cannot be blank."
-            }
-            requireVault(entry.emailAddresses.none(String::isBlank)) {
-                "Directory email addresses cannot be blank."
-            }
-        }
-        record.profile.primaryDoctorEntryId?.let { primaryDoctorId ->
-            requireVault(directoryById[primaryDoctorId]?.kind == CareDirectoryKind.DOCTOR) {
-                "The primary doctor must reference a doctor in the same profile."
-            }
-        }
         record.documents.forEach { document ->
             requireVault(document.title.isNotBlank()) { "Document title is required." }
             requireVault(document.source.isNotBlank()) { "Document source is required." }
             requireDocumentCategory(record, document.category)
             requireVault(document.sizeBytes >= 0) { "Document size cannot be negative." }
             requireVault(document.mimeType.isNotBlank()) { "Document MIME type is required." }
-            requireDirectoryReference(directoryById, document.sourceEntryId, "document source")
         }
         record.medications.forEach { medication ->
             val schedule = medication.schedule
@@ -181,11 +182,6 @@ fun HealthVault.requireValid(): HealthVault = apply {
                 "Medication reminder times must be unique."
             }
             requireDateRange(schedule.startsOn, schedule.endsOn, "medication")
-            requireDirectoryReference(directoryById, medication.prescriberEntryId, "medication prescriber")
-            requireDirectoryReference(directoryById, medication.pharmacyEntryId, "medication pharmacy")
-        }
-        record.vaccinations.forEach { vaccination ->
-            requireDirectoryReference(directoryById, vaccination.providerEntryId, "vaccination provider")
         }
         record.measurements.forEach { measurement -> requireMeasurement(record, measurement) }
         record.familyHistory.forEach { entry ->
@@ -535,13 +531,11 @@ private fun requireDocumentCategory(record: ProfileRecord, reference: DocumentCa
     }
 }
 
-private fun requireDirectoryReference(
-    entries: Map<java.util.UUID, CareDirectoryEntry>,
-    id: java.util.UUID?,
-    label: String,
-) {
-    requireVault(id == null || id in entries) { "The $label must belong to the same profile." }
-}
+private fun isAbsoluteHttpUrl(value: String): Boolean = runCatching {
+    val uri = URI(value)
+    uri.isAbsolute && uri.host != null &&
+        (uri.scheme.equals("http", ignoreCase = true) || uri.scheme.equals("https", ignoreCase = true))
+}.getOrDefault(false)
 
 private fun requireMeasurement(record: ProfileRecord, measurement: HealthMeasurement) {
     when (val type = measurement.type) {

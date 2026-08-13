@@ -3,18 +3,7 @@ package net.mamby.health.ui.format
 import androidx.annotation.StringRes
 import net.mamby.health.R
 import net.mamby.health.core.model.CareDirectiveKind
-import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.core.model.HealthIdentifierKind
-
-@StringRes
-fun CareDirectoryKind.labelResource(): Int = when (this) {
-    CareDirectoryKind.DOCTOR -> R.string.directory_kind_doctor
-    CareDirectoryKind.HOSPITAL -> R.string.directory_kind_hospital
-    CareDirectoryKind.CLINIC -> R.string.directory_kind_clinic
-    CareDirectoryKind.PHARMACY -> R.string.directory_kind_pharmacy
-    CareDirectoryKind.LABORATORY -> R.string.directory_kind_laboratory
-    CareDirectoryKind.OTHER -> R.string.directory_kind_other
-}
 
 @StringRes
 fun CareDirectiveKind.labelResource(): Int = when (this) {

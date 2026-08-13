@@ -16,7 +16,7 @@ sealed interface TopLevelRoute : AppRoute
 @Serializable data object NotesRoute : TopLevelRoute
 @Serializable data object MedicationsRoute : TopLevelRoute
 @Serializable data object ScheduleRoute : TopLevelRoute
-@Serializable data object DirectoryRoute : TopLevelRoute
+@Serializable data object ContactsRoute : TopLevelRoute
 
 @Serializable data class DocumentDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class MedicationDetailRoute(val profileId: String, val id: String) : AppRoute
@@ -30,7 +30,7 @@ sealed interface TopLevelRoute : AppRoute
 @Serializable data class VaccinationDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class NoteDetailRoute(val id: String) : AppRoute
 @Serializable data class MeasurementDetailRoute(val profileId: String, val id: String) : AppRoute
-@Serializable data class DirectoryEntryDetailRoute(val profileId: String, val id: String) : AppRoute
+@Serializable data class ContactDetailRoute(val id: String) : AppRoute
 @Serializable data class FamilyHistoryDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class CareDirectiveDetailRoute(val profileId: String, val id: String) : AppRoute
 @Serializable data class HealthIdentifierDetailRoute(val profileId: String, val id: String) : AppRoute
@@ -65,9 +65,9 @@ enum class TopLevelDestination(
         R.string.schedule_title,
         R.drawable.ic_lucide_calendar_days,
     ),
-    Directory(
-        DirectoryRoute,
-        R.string.care_directory_title,
+    Contacts(
+        ContactsRoute,
+        R.string.contacts_title,
         R.drawable.ic_lucide_list,
     ),
     Settings(
@@ -80,6 +80,6 @@ enum class TopLevelDestination(
 
     companion object {
         val compactPrimary = listOf(Home, Search, HealthRecords, Notes)
-        val compactOverflow = listOf(Medications, Schedule, Directory, Settings, Profiles)
+        val compactOverflow = listOf(Medications, Schedule, Contacts, Settings, Profiles)
     }
 }

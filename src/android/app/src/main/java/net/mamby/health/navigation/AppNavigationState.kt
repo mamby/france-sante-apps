@@ -71,10 +71,10 @@ class AppNavigationState internal constructor(
 
 @Composable
 fun rememberAppNavigationState(): AppNavigationState {
-    val selected = rememberSaveable("navigation_state_v4") {
+    val selected = rememberSaveable("navigation_state_v5") {
         androidx.compose.runtime.mutableStateOf(TopLevelDestination.Home)
     }
-    val backStacks = key("navigation_state_v4") {
+    val backStacks = key("navigation_state_v5") {
         listOf(
             rememberNavBackStack(HomeRoute),
             rememberNavBackStack(SearchRoute),
@@ -82,7 +82,7 @@ fun rememberAppNavigationState(): AppNavigationState {
             rememberNavBackStack(NotesRoute),
             rememberNavBackStack(MedicationsRoute),
             rememberNavBackStack(ScheduleRoute),
-            rememberNavBackStack(DirectoryRoute),
+            rememberNavBackStack(ContactsRoute),
             rememberNavBackStack(SettingsRoute),
             rememberNavBackStack(ManageProfilesRoute),
         )
@@ -93,10 +93,10 @@ fun rememberAppNavigationState(): AppNavigationState {
     val notes = backStacks[3]
     val medications = backStacks[4]
     val schedule = backStacks[5]
-    val directory = backStacks[6]
+    val contacts = backStacks[6]
     val settings = backStacks[7]
     val profiles = backStacks[8]
-    return remember(home, search, records, notes, medications, schedule, directory, settings, profiles) {
+    return remember(home, search, records, notes, medications, schedule, contacts, settings, profiles) {
         AppNavigationState(
             selected,
             mapOf(
@@ -106,7 +106,7 @@ fun rememberAppNavigationState(): AppNavigationState {
                 TopLevelDestination.Notes to notes,
                 TopLevelDestination.Medications to medications,
                 TopLevelDestination.Schedule to schedule,
-                TopLevelDestination.Directory to directory,
+                TopLevelDestination.Contacts to contacts,
                 TopLevelDestination.Settings to settings,
                 TopLevelDestination.Profiles to profiles,
             ),

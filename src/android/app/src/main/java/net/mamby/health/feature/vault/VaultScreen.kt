@@ -44,7 +44,6 @@ import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
-import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.FormDialog
@@ -64,7 +63,6 @@ data class DocumentImportDraft(
     val category: DocumentCategoryRef,
     val documentDate: LocalDate,
     val source: String,
-    val sourceEntryId: java.util.UUID? = null,
     val notes: String?,
     val tags: List<String>,
 )
@@ -231,7 +229,6 @@ private fun DocumentImportDialog(
 ) {
     var title by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("") }
-    var sourceEntryId by remember { mutableStateOf<java.util.UUID?>(null) }
     var notes by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf(emptyList<String>()) }
     var date by remember { mutableStateOf(today) }
@@ -251,7 +248,6 @@ private fun DocumentImportDialog(
     var categoryExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(record.profile.id) {
         category = availableCategories.firstOrNull() ?: BuiltInDocumentCategory.OTHER.asReference()
-        sourceEntryId = null
     }
 
     FormDialog(
@@ -266,7 +262,6 @@ private fun DocumentImportDialog(
                     category = category,
                     documentDate = date,
                     source = source.trim(),
-                    sourceEntryId = sourceEntryId,
                     notes = notes.trim().ifBlank { null },
                     tags = tags,
                 ),
@@ -316,12 +311,6 @@ private fun DocumentImportDialog(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.document_source)) },
                 singleLine = true,
-            )
-            CareDirectoryPicker(
-                entries = record.careDirectory,
-                selectedId = sourceEntryId,
-                onSelected = { sourceEntryId = it },
-                label = stringResource(R.string.document_source_directory),
             )
             OutlinedTextField(
                 value = notes,

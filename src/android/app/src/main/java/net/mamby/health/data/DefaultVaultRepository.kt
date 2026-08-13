@@ -1,9 +1,11 @@
 package net.mamby.health.data
 
 import java.io.OutputStream
+import java.net.URI
 import java.security.GeneralSecurityException
 import java.time.Clock
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +17,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
-import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -32,6 +33,7 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.UnsupportedVaultVersionException
 import net.mamby.health.core.model.Vaccination
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.allDocuments
 import net.mamby.health.core.model.isDocumentCategoryAvailable
 import net.mamby.health.core.model.profileRecord
@@ -179,7 +181,6 @@ class DefaultVaultRepository @Inject constructor(
             category = draft.category,
             documentDate = draft.documentDate,
             source = draft.source.trim(),
-            sourceEntryId = draft.sourceEntryId,
             notes = draft.notes?.trim()?.takeIf(String::isNotEmpty),
             tags = draft.tags.map(String::trim).filter(String::isNotEmpty).distinct(),
             blobId = blobId,
@@ -330,63 +331,24 @@ class DefaultVaultRepository @Inject constructor(
             )
         }
 
-    override suspend fun upsertCareDirectoryEntry(profileId: UUID, entry: CareDirectoryEntry) =
-        mutateProfile(profileId) { record, now ->
-            val normalized = entry.copy(
-                name = entry.name.trim(),
-                specialty = entry.specialty?.trim()?.takeIf(String::isNotEmpty),
-                organization = entry.organization?.trim()?.takeIf(String::isNotEmpty),
-                address = entry.address.copy(
-                    addressLines = entry.address.addressLines.map(String::trim).filter(String::isNotEmpty),
-                    locality = entry.address.locality?.trim()?.takeIf(String::isNotEmpty),
-                    region = entry.address.region?.trim()?.takeIf(String::isNotEmpty),
-                    postalCode = entry.address.postalCode?.trim()?.takeIf(String::isNotEmpty),
-                    country = entry.address.country?.trim()?.takeIf(String::isNotEmpty),
-                ),
-                phoneNumbers = entry.phoneNumbers.map(String::trim).filter(String::isNotEmpty).distinct(),
-                emailAddresses = entry.emailAddresses.map(String::trim).filter(String::isNotEmpty).distinct(),
-                notes = entry.notes?.trim()?.takeIf(String::isNotEmpty),
-                updatedAt = now,
-            )
-            record.copy(careDirectory = record.careDirectory.upsert(normalized, CareDirectoryEntry::id))
-        }
+    override suspend fun upsertContact(contact: VaultContact) = mutateVault { vault, now ->
+        val normalized = contact.copy(
+            name = contact.name.trim(),
+            phoneNumbers = contact.phoneNumbers.normalizedContactValues(),
+            emailAddresses = contact.emailAddresses.normalizedContactValues(),
+            websites = contact.websites
+                .mapNotNull { value -> value.trim().takeIf(String::isNotEmpty)?.normalizeWebsite() }
+                .distinctByCaseInsensitiveValue(),
+            addresses = contact.addresses.normalizedContactValues(),
+            notes = contact.notes?.trim()?.takeIf(String::isNotEmpty),
+            updatedAt = now,
+        )
+        vault.copy(contacts = vault.contacts.upsert(normalized, VaultContact::id))
+    }
 
-    override suspend fun deleteCareDirectoryEntry(profileId: UUID, entryId: UUID) =
-        mutateProfile(profileId) { record, now ->
-            record.copy(
-                profile = record.profile.copy(
-                    primaryDoctorEntryId = record.profile.primaryDoctorEntryId.takeUnless(entryId::equals),
-                    lastUpdatedAt = now,
-                ),
-                careDirectory = record.careDirectory.filterNot { it.id == entryId },
-                documents = record.documents.map { document ->
-                    if (document.sourceEntryId == entryId) {
-                        document.copy(sourceEntryId = null, updatedAt = now)
-                    } else document
-                },
-                medications = record.medications.map { medication ->
-                    if (medication.prescriberEntryId == entryId || medication.pharmacyEntryId == entryId) {
-                        medication.copy(
-                            prescriberEntryId = medication.prescriberEntryId.takeUnless(entryId::equals),
-                            pharmacyEntryId = medication.pharmacyEntryId.takeUnless(entryId::equals),
-                            updatedAt = now,
-                        )
-                    } else medication
-                },
-                vaccinations = record.vaccinations.map { vaccination ->
-                    if (vaccination.providerEntryId == entryId) {
-                        vaccination.copy(providerEntryId = null, updatedAt = now)
-                    } else vaccination
-                },
-            )
-        }
-
-    override suspend fun setPrimaryDoctor(profileId: UUID, entryId: UUID?) =
-        mutateProfile(profileId) { record, now ->
-            record.copy(
-                profile = record.profile.copy(primaryDoctorEntryId = entryId, lastUpdatedAt = now),
-            )
-        }
+    override suspend fun deleteContact(contactId: UUID) = mutateVault { vault, _ ->
+        vault.copy(contacts = vault.contacts.filterNot { it.id == contactId })
+    }
 
     override suspend fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry) =
         mutateProfile(profileId) { record, now ->
@@ -579,9 +541,6 @@ class DefaultVaultRepository @Inject constructor(
         require(record.isDocumentCategoryAvailable(draft.category)) {
             "A visible document category must be selected."
         }
-        require(draft.sourceEntryId == null || record.careDirectory.any { it.id == draft.sourceEntryId }) {
-            "Document source must belong to the same profile."
-        }
         require(imported.mimeType in SUPPORTED_DOCUMENT_MIME_TYPES) { "Unsupported document MIME type." }
         require(imported.sizeBytes == imported.content.size.toLong()) { "Document size is inconsistent." }
         require(imported.sizeBytes in 0..DocumentImportPolicy.MAX_DOCUMENT_BYTES) {
@@ -603,6 +562,26 @@ class DefaultVaultRepository @Inject constructor(
         val index = indexOfFirst { key(it) == targetKey }
         if (index < 0) return this + value
         return toMutableList().apply { this[index] = value }
+    }
+
+    private fun List<String>.normalizedContactValues(): List<String> =
+        mapNotNull { value -> value.trim().takeIf(String::isNotEmpty) }
+            .distinctByCaseInsensitiveValue()
+
+    private fun List<String>.distinctByCaseInsensitiveValue(): List<String> {
+        val seen = mutableSetOf<String>()
+        return filter { seen.add(it.lowercase(Locale.ROOT)) }
+    }
+
+    private fun String.normalizeWebsite(): String {
+        val normalized = if (EXPLICIT_URI_SCHEME.containsMatchIn(this)) this else "https://$this"
+        val uri = runCatching { URI(normalized) }
+            .getOrElse { throw IllegalArgumentException("Contact website is not a valid URL.", it) }
+        require(
+            uri.isAbsolute && uri.host != null &&
+                (uri.scheme.equals("http", ignoreCase = true) || uri.scheme.equals("https", ignoreCase = true)),
+        ) { "Contact website must be an absolute HTTP or HTTPS URL." }
+        return normalized
     }
 
     private fun List<MedicalDocument>.reclassify(
@@ -632,5 +611,6 @@ class DefaultVaultRepository @Inject constructor(
             "image/png",
             "image/webp",
         )
+        val EXPLICIT_URI_SCHEME = Regex("^[A-Za-z][A-Za-z0-9+.-]*://")
     }
 }

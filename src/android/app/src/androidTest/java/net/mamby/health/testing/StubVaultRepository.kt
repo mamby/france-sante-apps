@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import net.mamby.health.core.model.BuiltInDocumentCategoryPreference
 import net.mamby.health.core.model.CareDirective
-import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -21,6 +20,7 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.Vaccination
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.data.ImportedDocumentData
 import net.mamby.health.data.MedicalDocumentDraft
 import net.mamby.health.data.RestoreDocumentBlob
@@ -55,9 +55,8 @@ open class StubVaultRepository : VaultRepository {
     override suspend fun deleteMeasurement(profileId: UUID, measurementId: UUID): Unit = unused()
     override suspend fun upsertCustomMeasurementType(profileId: UUID, type: CustomMeasurementType): Unit = unused()
     override suspend fun deleteCustomMeasurementType(profileId: UUID, typeId: UUID): Unit = unused()
-    override suspend fun upsertCareDirectoryEntry(profileId: UUID, entry: CareDirectoryEntry): Unit = unused()
-    override suspend fun deleteCareDirectoryEntry(profileId: UUID, entryId: UUID): Unit = unused()
-    override suspend fun setPrimaryDoctor(profileId: UUID, entryId: UUID?): Unit = unused()
+    override suspend fun upsertContact(contact: VaultContact): Unit = unused()
+    override suspend fun deleteContact(contactId: UUID): Unit = unused()
     override suspend fun upsertFamilyHistoryEntry(profileId: UUID, entry: FamilyHistoryEntry): Unit = unused()
     override suspend fun deleteFamilyHistoryEntry(profileId: UUID, entryId: UUID): Unit = unused()
     override suspend fun upsertCareDirective(profileId: UUID, directive: CareDirective): Unit = unused()

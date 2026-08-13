@@ -35,8 +35,6 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectiveKind
-import net.mamby.health.core.model.CareDirectoryEntry
-import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.core.model.EmergencyContact
 import net.mamby.health.core.model.FamilyHistoryEntry
 import net.mamby.health.core.model.HealthIdentifier
@@ -47,7 +45,6 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.CareDirectoryPicker
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.DropdownTrailingIcon
@@ -70,7 +67,6 @@ fun SummaryScreen(
     onUpdateProfile: (HealthProfile) -> Unit,
     onUpsertVaccination: (Vaccination) -> Unit,
     onDeleteVaccination: (UUID) -> Unit,
-    onSetPrimaryDoctor: (UUID?) -> Unit,
     onUpsertFamilyHistory: (FamilyHistoryEntry) -> Unit,
     onDeleteFamilyHistory: (UUID) -> Unit,
     onUpsertDirective: (CareDirective) -> Unit,
@@ -91,7 +87,6 @@ fun SummaryScreen(
     var addingContact by remember(profile.id) { mutableStateOf(false) }
     var vaccinationEditor by remember(profile.id) { mutableStateOf<Vaccination?>(null) }
     var addingVaccination by remember(profile.id) { mutableStateOf(false) }
-    var doctorSelectorVisible by remember(profile.id) { mutableStateOf(false) }
     var familyEditor by remember(profile.id) { mutableStateOf<FamilyHistoryEntry?>(null) }
     var addingFamily by remember(profile.id) { mutableStateOf(false) }
     var directiveEditor by remember(profile.id) { mutableStateOf<CareDirective?>(null) }
@@ -133,17 +128,6 @@ fun SummaryScreen(
                     LabeledValue(stringResource(R.string.surgeries), profile.surgeries.joinToString())
                     Button(onClick = { profileEditorVisible = true }) {
                         Text(stringResource(R.string.edit_profile))
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val primaryDoctor = record.careDirectory
-                    .firstOrNull { it.id == profile.primaryDoctorEntryId }
-                SectionCard(stringResource(R.string.primary_doctor)) {
-                    Text(primaryDoctor?.name ?: stringResource(R.string.common_not_set))
-                    primaryDoctor?.specialty?.let { Text(it) }
-                    Button(onClick = { doctorSelectorVisible = true }) {
-                        Text(stringResource(R.string.choose_primary_doctor))
                     }
                 }
             }
@@ -303,7 +287,6 @@ fun SummaryScreen(
     if (addingVaccination || vaccinationEditor != null) {
         VaccinationDialog(
             existing = vaccinationEditor,
-            record = record,
             today = today,
             onDismiss = {
                 addingVaccination = false
@@ -319,17 +302,6 @@ fun SummaryScreen(
                     onDeleteVaccination(vaccination.id)
                     vaccinationEditor = null
                 }
-            },
-        )
-    }
-    if (doctorSelectorVisible) {
-        PrimaryDoctorDialog(
-            doctors = record.careDirectory.filter { it.kind == CareDirectoryKind.DOCTOR },
-            selectedId = profile.primaryDoctorEntryId,
-            onDismiss = { doctorSelectorVisible = false },
-            onSelect = {
-                onSetPrimaryDoctor(it)
-                doctorSelectorVisible = false
             },
         )
     }
@@ -394,36 +366,6 @@ fun SummaryScreen(
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun PrimaryDoctorDialog(
-    doctors: List<CareDirectoryEntry>,
-    selectedId: UUID?,
-    onDismiss: () -> Unit,
-    onSelect: (UUID?) -> Unit,
-) {
-    var selected by remember(selectedId) { mutableStateOf(selectedId) }
-    FormDialog(
-        title = stringResource(R.string.choose_primary_doctor),
-        saveEnabled = selected != selectedId,
-        onDismiss = onDismiss,
-        onSave = { onSelect(selected) },
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing)) {
-            if (doctors.isEmpty()) Text(stringResource(R.string.no_doctors_in_directory))
-            doctors.forEach { doctor ->
-                FilterChip(
-                    selected = selected == doctor.id,
-                    onClick = { selected = doctor.id },
-                    label = { Text(doctor.name) },
-                )
-            }
-            OutlinedButton(onClick = { selected = null }, enabled = selected != null) {
-                Text(stringResource(R.string.clear_primary_doctor))
-            }
-        }
     }
 }
 
@@ -758,7 +700,6 @@ private fun ContactDialog(
 @Composable
 private fun VaccinationDialog(
     existing: Vaccination?,
-    record: ProfileRecord,
     today: LocalDate,
     onDismiss: () -> Unit,
     onSave: (Vaccination) -> Unit,
@@ -767,7 +708,6 @@ private fun VaccinationDialog(
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var date by remember { mutableStateOf(existing?.dateAdministered ?: today) }
     var provider by remember { mutableStateOf(existing?.provider.orEmpty()) }
-    var providerEntryId by remember { mutableStateOf(existing?.providerEntryId) }
     var lot by remember { mutableStateOf(existing?.lotNumber.orEmpty()) }
     var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
     var hasNextDue by remember { mutableStateOf(existing?.nextDueOn != null) }
@@ -784,7 +724,6 @@ private fun VaccinationDialog(
                     name = name.trim(),
                     dateAdministered = date,
                     provider = provider.trim().ifBlank { null },
-                    providerEntryId = providerEntryId,
                     lotNumber = lot.trim().ifBlank { null },
                     nextDueOn = nextDue.takeIf { hasNextDue },
                     notes = notes.trim().ifBlank { null },
@@ -797,12 +736,6 @@ private fun VaccinationDialog(
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.vaccination_name)) })
             DateField(stringResource(R.string.vaccination_date), date, { date = it })
             OutlinedTextField(provider, { provider = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.vaccination_provider)) })
-            CareDirectoryPicker(
-                entries = record.careDirectory.filter { it.kind != CareDirectoryKind.PHARMACY },
-                selectedId = providerEntryId,
-                onSelected = { providerEntryId = it },
-                label = stringResource(R.string.vaccination_provider_directory),
-            )
             OutlinedTextField(lot, { lot = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.vaccination_lot_number)) })
             OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.common_notes)) }, minLines = 2)
             SwitchField(stringResource(R.string.vaccination_next_due), hasNextDue, { hasNextDue = it })

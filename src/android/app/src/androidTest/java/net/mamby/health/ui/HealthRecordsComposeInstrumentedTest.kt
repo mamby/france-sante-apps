@@ -6,36 +6,34 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
-import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.R
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
-import net.mamby.health.core.model.CareDirectoryEntry
 import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.HealthIdentifierKind
 import net.mamby.health.core.model.HealthMeasurement
 import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.HealthVault
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.MeasurementReading
-import net.mamby.health.feature.directory.DirectoryScreen
+import net.mamby.health.feature.contacts.ContactDetailScreen
+import net.mamby.health.feature.contacts.ContactsScreen
 import net.mamby.health.feature.measurements.ManageMeasurementTypesScreen
 import net.mamby.health.feature.measurements.MeasurementsScreen
 import net.mamby.health.feature.notes.NotesScreen
 import net.mamby.health.feature.records.HealthRecordsHubScreen
 import net.mamby.health.feature.summary.HealthIdentifierDetailScreen
-import net.mamby.health.feature.summary.SummaryScreen
 import net.mamby.health.feature.vault.ManageDocumentCategoriesScreen
 import net.mamby.health.ui.theme.HealthVaultTheme
 import org.junit.Assert.assertEquals
@@ -142,25 +140,38 @@ class HealthRecordsComposeInstrumentedTest {
     }
 
     @Test
-    fun directoryFormCreatesInternationalContactRecord() {
-        var savedEntry: CareDirectoryEntry? = null
+    fun contactFormCreatesVaultWideContactRecord() {
+        var savedContact: VaultContact? = null
         composeRule.setContent {
-            val record = remember { record() }
             var creationRequest by remember { mutableLongStateOf(0) }
             HealthVaultTheme {
-                DirectoryScreen(
-                    records = listOf(record),
-                    onAddProfile = { _, _ -> },
-                    onUpsert = { _, entry -> savedEntry = entry },
-                    onSelected = { _, _ -> },
+                ContactsScreen(
+                    contacts = emptyList(),
+                    onUpsert = { savedContact = it },
+                    onSelected = {},
                     creationRequest = creationRequest,
                 )
             }
         }
-        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_directory_entry)).performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.directory_name)).performTextInput("Dr Martin")
+        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.add_contact)).performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.contact_name)).performTextInput("Dr Martin")
+        fun enterFirstValue(labelResource: Int, value: String) {
+            composeRule
+                .onNode(hasText(composeRule.activity.getString(labelResource)) and hasSetTextAction())
+                .performTextInput(value)
+        }
+        enterFirstValue(R.string.contact_phone_numbers, "+33 1 23 45")
+        enterFirstValue(R.string.contact_email_addresses, "dr@example.test")
+        enterFirstValue(R.string.contact_websites, "example.test:8443/path")
+        enterFirstValue(R.string.contact_addresses, "1 rue Centrale\nParis")
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).performClick()
-        composeRule.runOnIdle { assertEquals("Dr Martin", savedEntry?.name) }
+        composeRule.runOnIdle {
+            assertEquals("Dr Martin", savedContact?.name)
+            assertEquals(listOf("+33 1 23 45"), savedContact?.phoneNumbers)
+            assertEquals(listOf("dr@example.test"), savedContact?.emailAddresses)
+            assertEquals(listOf("https://example.test:8443/path"), savedContact?.websites)
+            assertEquals(listOf("1 rue Centrale\nParis"), savedContact?.addresses)
+        }
     }
 
     @Test
@@ -209,50 +220,45 @@ class HealthRecordsComposeInstrumentedTest {
     }
 
     @Test
-    fun healthInformationSelectsPrimaryDoctorFromTheCurrentProfile() {
-        val doctorId = UUID.fromString("54f530e2-1975-43b0-9e8b-11b5ef0e3f2a")
-        var selectedDoctorId: UUID? = null
-        val record = record().copy(
-            careDirectory = listOf(
-                CareDirectoryEntry(
-                    id = doctorId,
-                    kind = CareDirectoryKind.DOCTOR,
-                    name = "Dr Martin",
-                    specialty = "General medicine",
-                    updatedAt = NOW,
-                ),
-            ),
+    fun contactDetailValuesAreIndependentAccessibleActions() {
+        val invoked = mutableListOf<String>()
+        val contact = VaultContact(
+            id = UUID.randomUUID(),
+            name = "Dr Martin",
+            phoneNumbers = listOf("+33 1 23 45"),
+            emailAddresses = listOf("dr@example.test"),
+            websites = listOf("https://example.test"),
+            addresses = listOf("1 rue Centrale, Paris"),
+            updatedAt = NOW,
         )
         composeRule.setContent {
             HealthVaultTheme {
-                SummaryScreen(
-                    record = record,
-                    today = LocalDate.of(2026, 7, 30),
+                ContactDetailScreen(
+                    contact = contact,
                     onBack = {},
-                    onUpdateProfile = {},
-                    onUpsertVaccination = {},
-                    onDeleteVaccination = {},
-                    onSetPrimaryDoctor = { selectedDoctorId = it },
-                    onUpsertFamilyHistory = {},
-                    onDeleteFamilyHistory = {},
-                    onUpsertDirective = {},
-                    onDeleteDirective = {},
-                    onUpsertIdentifier = {},
-                    onDeleteIdentifier = {},
-                    onEmergencyContactSelected = {},
-                    onVaccinationSelected = {},
-                    onFamilyHistorySelected = {},
-                    onDirectiveSelected = {},
-                    onIdentifierSelected = {},
+                    onUpsert = {},
+                    onDelete = {},
+                    onDialPhone = { invoked += "phone:$it" },
+                    onComposeEmail = { invoked += "email:$it" },
+                    onOpenWebsite = { invoked += "website:$it" },
+                    onSearchAddress = { invoked += "address:$it" },
                 )
             }
         }
 
-        composeRule.onNode(hasScrollAction()).performScrollToIndex(1)
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.choose_primary_doctor)).performClick()
-        composeRule.onNodeWithText("Dr Martin").performClick()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.common_save)).performClick()
-        composeRule.runOnIdle { assertEquals(doctorId, selectedDoctorId) }
+        contact.phoneNumbers.plus(contact.emailAddresses).plus(contact.websites).plus(contact.addresses)
+            .forEach { value -> composeRule.onNodeWithText(value).performClick() }
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    "phone:+33 1 23 45",
+                    "email:dr@example.test",
+                    "website:https://example.test",
+                    "address:1 rue Centrale, Paris",
+                ),
+                invoked,
+            )
+        }
     }
 
     private fun record() = HealthVault.empty(NOW, PROFILE_ID, "Owner").profiles.single()

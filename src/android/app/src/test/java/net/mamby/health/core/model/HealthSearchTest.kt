@@ -105,4 +105,36 @@ class HealthSearchTest {
         assertEquals(HealthSearchGroup.NOTES, result.group)
         assertEquals(HealthSearchTarget.Note(note.id), result.target)
     }
+
+    @Test
+    fun searchIndexesEveryContactFieldAtVaultScopeAlongsideFilteredProfiles() {
+        val contact = VaultContact(
+            id = UUID.randomUUID(),
+            name = "Clinique Étoile",
+            phoneNumbers = listOf("+33 1 23 45 67 89"),
+            emailAddresses = listOf("accueil@etoile.example"),
+            websites = listOf("https://etoile.example/path"),
+            addresses = listOf("12 rue des Fleurs\n75001 Paris"),
+            notes = "Entrée accessible",
+            updatedAt = now,
+        )
+        val selectedRecord = ProfileRecord(
+            profile = HealthProfile(UUID.randomUUID(), "Selected", lastUpdatedAt = now),
+        )
+
+        listOf("clinique etoile", "+33 1 23", "accueil", "etoile.example/path", "fleurs paris", "accessible")
+            .forEach { query ->
+                val result = HealthSearch.search(
+                    records = listOf(selectedRecord),
+                    notes = emptyList(),
+                    schedules = emptyList(),
+                    contacts = listOf(contact),
+                    query = query,
+                ).single()
+
+                assertEquals(HealthSearchScope.Vault, result.scope)
+                assertEquals(HealthSearchGroup.CONTACTS, result.group)
+                assertEquals(HealthSearchTarget.Contact(contact.id), result.target)
+            }
+    }
 }

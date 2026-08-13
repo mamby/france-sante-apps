@@ -7,6 +7,7 @@ import java.util.UUID
 enum class HealthSearchGroup {
     HEALTH_RECORDS,
     NOTES,
+    CONTACTS,
     MEDICATIONS,
     SCHEDULE,
 }
@@ -34,7 +35,7 @@ sealed interface HealthSearchTarget {
 
     data class Measurement(val id: UUID) : HealthSearchTarget
 
-    data class DirectoryEntry(val id: UUID) : HealthSearchTarget
+    data class Contact(val id: UUID) : HealthSearchTarget
 
     data class FamilyHistory(val id: UUID) : HealthSearchTarget
 
@@ -56,12 +57,21 @@ object HealthSearch {
         records: Iterable<ProfileRecord>,
         notes: Iterable<HealthNote>,
         schedules: Iterable<Schedule>,
+        contacts: Iterable<VaultContact>,
         query: String,
     ): List<HealthSearchResult> = buildList {
         records.flatMapTo(this) { record -> search(record, query) }
         addAll(searchNotes(notes, query))
         addAll(searchSchedules(schedules, query))
+        addAll(searchContacts(contacts, query))
     }
+
+    fun search(
+        records: Iterable<ProfileRecord>,
+        notes: Iterable<HealthNote>,
+        schedules: Iterable<Schedule>,
+        query: String,
+    ): List<HealthSearchResult> = search(records, notes, schedules, emptyList(), query)
 
     fun search(
         records: Iterable<ProfileRecord>,
@@ -180,36 +190,6 @@ object HealthSearch {
                         ),
                     )
                 }
-            record.careDirectory
-                .filter { entry ->
-                    listOf(
-                        entry.name,
-                        entry.specialty.orEmpty(),
-                        entry.organization.orEmpty(),
-                        entry.address.addressLines.joinToString(" "),
-                        entry.address.locality.orEmpty(),
-                        entry.address.region.orEmpty(),
-                        entry.address.postalCode.orEmpty(),
-                        entry.address.country.orEmpty(),
-                        entry.phoneNumbers.joinToString(" "),
-                        entry.emailAddresses.joinToString(" "),
-                        entry.notes.orEmpty(),
-                    ).matches(terms)
-                }
-                .sortedBy(CareDirectoryEntry::name)
-                .forEach { entry ->
-                    add(
-                        HealthSearchResult(
-                            scope,
-                            HealthSearchGroup.HEALTH_RECORDS,
-                            entry.name,
-                            listOf(entry.specialty.orEmpty(), entry.organization.orEmpty())
-                                .filter(String::isNotBlank)
-                                .joinToString(SEPARATOR),
-                            HealthSearchTarget.DirectoryEntry(entry.id),
-                        ),
-                    )
-                }
             record.familyHistory
                 .filter {
                     listOf(it.relationship, it.condition, it.notes.orEmpty()).matches(terms)
@@ -299,6 +279,37 @@ object HealthSearch {
                         .joinToString(SEPARATOR)
                         .takeIf(String::isNotBlank),
                     target = HealthSearchTarget.Schedule(schedule.id),
+                )
+            }
+    }
+
+    private fun searchContacts(contacts: Iterable<VaultContact>, query: String): List<HealthSearchResult> {
+        val terms = query.searchTerms()
+        if (terms.isEmpty()) return emptyList()
+        return contacts
+            .filter { contact ->
+                buildList {
+                    add(contact.name)
+                    addAll(contact.phoneNumbers)
+                    addAll(contact.emailAddresses)
+                    addAll(contact.websites)
+                    addAll(contact.addresses)
+                    add(contact.notes.orEmpty())
+                }.matches(terms)
+            }
+            .sortedBy(VaultContact::name)
+            .map { contact ->
+                HealthSearchResult(
+                    scope = HealthSearchScope.Vault,
+                    group = HealthSearchGroup.CONTACTS,
+                    primaryText = contact.name,
+                    secondaryText = sequenceOf(
+                        contact.phoneNumbers.firstOrNull(),
+                        contact.emailAddresses.firstOrNull(),
+                        contact.websites.firstOrNull(),
+                        contact.addresses.firstOrNull(),
+                    ).filterNotNull().firstOrNull(),
+                    target = HealthSearchTarget.Contact(contact.id),
                 )
             }
     }

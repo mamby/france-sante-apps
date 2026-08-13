@@ -36,7 +36,7 @@
 - Store vault metadata and imported document bodies only as authenticated ciphertext under app-private, non-backed-up storage.
 - Keep the local vault key non-exportable in Android Keystore.
 - Treat app lock as an access gate separate from vault encryption.
-- `Missing`, locked, ready schema-v4 multi-profile, and unreadable vaults are distinct states. Production sample data is prohibited, and unreadable data is never treated as missing.
+- `Missing`, locked, ready schema-v6 multi-profile, and unreadable vaults are distinct states. Production sample data is prohibited, and unreadable data is never treated as missing.
 - Profile filters are transient, screen-local UI state, default to `All profiles`, and must not be persisted, change the vault revision, or trigger backup.
 - Backups contain every profile. Filtered multi-profile search stays in unlocked memory and must never create plaintext indexes or persisted queries.
 - Backup providers may receive only the portable encrypted backup container. Never retain the user's backup passphrase.

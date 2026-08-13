@@ -91,8 +91,8 @@ import net.mamby.health.feature.search.SearchScreen
 import net.mamby.health.feature.settings.SettingsScreen
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppNavigationState
-import net.mamby.health.navigation.DirectoryEntryDetailRoute
-import net.mamby.health.navigation.DirectoryRoute
+import net.mamby.health.navigation.ContactDetailRoute
+import net.mamby.health.navigation.ContactsRoute
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.HealthRecordsRoute
 import net.mamby.health.navigation.HomeRoute
@@ -133,6 +133,7 @@ class ComposeScreensInstrumentedTest {
                     records = emptyVault("Amina").profiles,
                     notes = emptyList(),
                     schedules = emptyList(),
+                    contacts = emptyList(),
                     clock = FIXED_CLOCK,
                     zoneId = ZoneOffset.UTC,
                     onMedications = {},
@@ -140,6 +141,7 @@ class ComposeScreensInstrumentedTest {
                     onDocumentSelected = { _, _ -> },
                     onNoteSelected = {},
                     onScheduleSelected = {},
+                    onContactSelected = {},
                     onAddHealthInfo = {},
                     onImportDocument = {},
                     onAddMedication = {},
@@ -171,6 +173,7 @@ class ComposeScreensInstrumentedTest {
                     records = emptyVault("Amina").profiles,
                     notes = emptyList(),
                     schedules = emptyList(),
+                    contacts = emptyList(),
                     clock = FIXED_CLOCK,
                     zoneId = ZoneOffset.UTC,
                     onMedications = { medicationsOpened = true },
@@ -178,6 +181,7 @@ class ComposeScreensInstrumentedTest {
                     onDocumentSelected = { _, _ -> },
                     onNoteSelected = {},
                     onScheduleSelected = {},
+                    onContactSelected = {},
                     onAddHealthInfo = {},
                     onImportDocument = {},
                     onAddMedication = {},
@@ -433,6 +437,7 @@ class ComposeScreensInstrumentedTest {
                         records = emptyVault("Expanded").profiles,
                         notes = emptyList(),
                         schedules = emptyList(),
+                        contacts = emptyList(),
                         clock = FIXED_CLOCK,
                         zoneId = ZoneOffset.UTC,
                         onMedications = {},
@@ -440,6 +445,7 @@ class ComposeScreensInstrumentedTest {
                         onDocumentSelected = { _, _ -> },
                         onNoteSelected = {},
                         onScheduleSelected = {},
+                        onContactSelected = {},
                         onAddHealthInfo = {},
                         onImportDocument = {},
                         onAddMedication = {},
@@ -463,7 +469,7 @@ class ComposeScreensInstrumentedTest {
                 "Notes",
                 "Medications",
                 "Schedule",
-                "Directory",
+                "Contacts",
                 "Settings",
                 "Profiles",
             ),
@@ -484,8 +490,8 @@ class ComposeScreensInstrumentedTest {
             )
             navigation.navigate(TopLevelDestination.Notes, NoteDetailRoute("note-id"))
             navigation.navigate(
-                TopLevelDestination.Directory,
-                DirectoryEntryDetailRoute(profileId, "directory-id"),
+                TopLevelDestination.Contacts,
+                ContactDetailRoute("contact-id"),
             )
             navigation.select(TopLevelDestination.HealthRecords)
             assertEquals(DocumentDetailRoute(profileId, "document-id"), navigation.currentBackStack.last())
@@ -496,13 +502,13 @@ class ComposeScreensInstrumentedTest {
             assertEquals(NoteDetailRoute("note-id"), navigation.currentBackStack.last())
             navigation.goBack()
             assertEquals(NotesRoute, navigation.currentBackStack.last())
-            navigation.select(TopLevelDestination.Directory)
+            navigation.select(TopLevelDestination.Contacts)
             assertEquals(
-                DirectoryEntryDetailRoute(profileId, "directory-id"),
+                ContactDetailRoute("contact-id"),
                 navigation.currentBackStack.last(),
             )
             navigation.goBack()
-            assertEquals(DirectoryRoute, navigation.currentBackStack.last())
+            assertEquals(ContactsRoute, navigation.currentBackStack.last())
             navigation.select(TopLevelDestination.Profiles)
             assertEquals(ManageProfilesRoute, navigation.currentBackStack.last())
             assertTrue(navigation.isAtSecondaryRoot)
@@ -518,7 +524,7 @@ class ComposeScreensInstrumentedTest {
             listOf(
                 TopLevelDestination.Medications,
                 TopLevelDestination.Schedule,
-                TopLevelDestination.Directory,
+                TopLevelDestination.Contacts,
                 TopLevelDestination.Settings,
                 TopLevelDestination.Profiles,
             ),
@@ -903,6 +909,7 @@ class ComposeScreensInstrumentedTest {
                             records = emptyVault("Amina").profiles,
                             notes = emptyList(),
                             schedules = emptyList(),
+                            contacts = emptyList(),
                             onResultSelected = {},
                             query = query,
                             filter = SearchFilter.ALL,
@@ -1124,8 +1131,10 @@ class ComposeScreensInstrumentedTest {
         val arabicContext = base.createConfigurationContext(arabic)
 
         assertEquals("Accueil", frenchContext.getString(R.string.nav_home))
+        assertEquals("Contacts", frenchContext.getString(R.string.contacts_title))
         assertEquals("Paramètres", frenchContext.getString(R.string.settings_title))
         assertEquals("الرئيسية", arabicContext.getString(R.string.nav_home))
+        assertEquals("جهات الاتصال", arabicContext.getString(R.string.contacts_title))
         assertEquals(LayoutDirection.Rtl.ordinal, arabicContext.resources.configuration.layoutDirection)
     }
 

@@ -18,6 +18,7 @@ import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.ProfileRecord
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.asReference
 import net.mamby.health.data.VaultCodec
 import org.junit.Assert.assertArrayEquals
@@ -89,14 +90,15 @@ class PortableBackupContainerTest {
     }
 
     @Test
-    fun formatV1ContainerRoundTripsSchemaV4InvoiceAndDirectiveAttachment(): Unit = runBlocking {
-        val target = temporaryFolder.newFile("schema-v4.phvbackup")
+    fun formatV1ContainerRoundTripsSchemaV6ContactsInvoiceAndDirectiveAttachment(): Unit = runBlocking {
+        val target = temporaryFolder.newFile("schema-v6.phvbackup")
         val key = ByteArray(BackupKeyDeriver.KEY_SIZE_BYTES) { (it + 5).toByte() }
         val documentBytes = "encrypted invoice".encodeToByteArray()
         val now = Instant.parse("2026-07-30T12:00:00Z")
         val profileId = UUID.fromString("9a8cf916-3fbe-4d35-bffe-e7dd4530eb67")
         val documentId = UUID.fromString("7946b206-8607-4c68-adc5-f71af3148438")
         val blobId = UUID.fromString("4eb7fcad-dda6-47b8-8dda-7d485d43ca1e")
+        val contactId = UUID.fromString("10740464-a7a1-4498-a377-03b94c3ed075")
         val document = MedicalDocument(
             documentId,
             "Hospital invoice",
@@ -125,6 +127,16 @@ class PortableBackupContainerTest {
                             now,
                         ),
                     ),
+                ),
+            ),
+            contacts = listOf(
+                VaultContact(
+                    id = contactId,
+                    name = "Hospital",
+                    phoneNumbers = listOf("+33 1 23 45 67 89"),
+                    websites = listOf("https://example.com"),
+                    addresses = listOf("12 Main St\nParis"),
+                    updatedAt = now,
                 ),
             ),
             updatedAt = now,

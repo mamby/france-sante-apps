@@ -71,7 +71,7 @@ enum class VaultItemKind {
     VACCINATION,
     NOTE,
     MEASUREMENT,
-    DIRECTORY_ENTRY,
+    CONTACT,
     FAMILY_HISTORY,
     DIRECTIVE,
     IDENTIFIER,
@@ -176,34 +176,13 @@ data class HealthNote(
 )
 
 @Serializable
-enum class CareDirectoryKind {
-    DOCTOR,
-    HOSPITAL,
-    CLINIC,
-    PHARMACY,
-    LABORATORY,
-    OTHER,
-}
-
-@Serializable
-data class PostalAddress(
-    val addressLines: List<String> = emptyList(),
-    val locality: String? = null,
-    val region: String? = null,
-    val postalCode: String? = null,
-    val country: String? = null,
-)
-
-@Serializable
-data class CareDirectoryEntry(
+data class VaultContact(
     val id: UUID,
-    val kind: CareDirectoryKind,
     val name: String,
-    val specialty: String? = null,
-    val organization: String? = null,
-    val address: PostalAddress = PostalAddress(),
     val phoneNumbers: List<String> = emptyList(),
     val emailAddresses: List<String> = emptyList(),
+    val websites: List<String> = emptyList(),
+    val addresses: List<String> = emptyList(),
     val notes: String? = null,
     val updatedAt: Instant,
 )
@@ -276,7 +255,6 @@ data class HealthProfile(
     val chronicConditions: List<String> = emptyList(),
     val surgeries: List<String> = emptyList(),
     val emergencyContacts: List<EmergencyContact> = emptyList(),
-    val primaryDoctorEntryId: UUID? = null,
     val lastUpdatedAt: Instant,
 )
 
@@ -287,7 +265,6 @@ data class MedicalDocument(
     val category: DocumentCategoryRef,
     val documentDate: LocalDate,
     val source: String,
-    val sourceEntryId: UUID? = null,
     val notes: String? = null,
     val tags: List<String> = emptyList(),
     val blobId: UUID,
@@ -315,8 +292,6 @@ data class Medication(
     val schedule: MedicationSchedule = MedicationSchedule(),
     val isActive: Boolean = true,
     val remindersEnabled: Boolean = false,
-    val prescriberEntryId: UUID? = null,
-    val pharmacyEntryId: UUID? = null,
     val notes: String? = null,
     val updatedAt: Instant,
 )
@@ -408,7 +383,6 @@ data class Vaccination(
     val name: String,
     val dateAdministered: LocalDate,
     val provider: String? = null,
-    val providerEntryId: UUID? = null,
     val lotNumber: String? = null,
     val nextDueOn: LocalDate? = null,
     val notes: String? = null,
@@ -439,7 +413,6 @@ data class ProfileRecord(
     val vaccinations: List<Vaccination> = emptyList(),
     val measurements: List<HealthMeasurement> = emptyList(),
     val customMeasurementTypes: List<CustomMeasurementType> = emptyList(),
-    val careDirectory: List<CareDirectoryEntry> = emptyList(),
     val familyHistory: List<FamilyHistoryEntry> = emptyList(),
     val directives: List<CareDirective> = emptyList(),
     val healthIdentifiers: List<HealthIdentifier> = emptyList(),
@@ -454,10 +427,11 @@ data class HealthVault(
     val profiles: List<ProfileRecord>,
     val notes: List<HealthNote> = emptyList(),
     val schedules: List<Schedule> = emptyList(),
+    val contacts: List<VaultContact> = emptyList(),
     val updatedAt: Instant,
 ) {
     companion object {
-        const val CURRENT_VERSION: Int = 5
+        const val CURRENT_VERSION: Int = 6
 
         fun empty(
             now: Instant,

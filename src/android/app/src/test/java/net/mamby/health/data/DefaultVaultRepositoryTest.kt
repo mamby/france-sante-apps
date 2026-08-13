@@ -10,8 +10,6 @@ import kotlinx.coroutines.test.runTest
 import net.mamby.health.core.model.BuiltInDocumentCategory
 import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.CareDirectiveKind
-import net.mamby.health.core.model.CareDirectoryEntry
-import net.mamby.health.core.model.CareDirectoryKind
 import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.CustomMeasurementType
 import net.mamby.health.core.model.DocumentCategoryRef
@@ -25,6 +23,7 @@ import net.mamby.health.core.model.HealthVault
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.ScheduleTiming
+import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.profileRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -164,17 +163,67 @@ class DefaultVaultRepositoryTest {
     }
 
     @Test
-    fun directoryAndDocumentDeletionCleanReferencesAtomicallyWithOneRevisionEach() = runTest {
+    fun contactsAreVaultWideNormalizedAndAdvanceOneRevisionPerMutation() = runTest {
+        val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
+        repository.initialize()
+        repository.createVault("Owner")
+        val secondProfileId = repository.addProfile("Second")
+        val contactId = UUID.randomUUID()
+        val beforeUpsert = repository.exportSnapshot().revision
+
+        repository.upsertContact(
+            VaultContact(
+                id = contactId,
+                name = "  Dr Martin  ",
+                phoneNumbers = listOf(" +33 1 23 45 67 89 ", "+33 1 23 45 67 89", "  "),
+                emailAddresses = listOf(" Doctor@example.com ", "doctor@example.com"),
+                websites = listOf(" example.com:8443/path ", "HTTPS://EXAMPLE.COM:8443/PATH", ""),
+                addresses = listOf(" 12 Main St\nParis ", "12 main st\nparis"),
+                notes = " Family doctor ",
+                updatedAt = Instant.EPOCH,
+            ),
+        )
+
+        val stored = repository.exportSnapshot()
+        assertEquals(beforeUpsert + 1, stored.revision)
+        assertEquals(
+            VaultContact(
+                id = contactId,
+                name = "Dr Martin",
+                phoneNumbers = listOf("+33 1 23 45 67 89"),
+                emailAddresses = listOf("Doctor@example.com"),
+                websites = listOf("https://example.com:8443/path"),
+                addresses = listOf("12 Main St\nParis"),
+                notes = "Family doctor",
+                updatedAt = now,
+            ),
+            stored.contacts.single(),
+        )
+
+        repository.deleteProfile(secondProfileId)
+        assertEquals(contactId, repository.exportSnapshot().contacts.single().id)
+        val beforeInvalid = repository.exportSnapshot().revision
+        val invalidFailure = runCatching {
+            repository.upsertContact(
+                VaultContact(UUID.randomUUID(), "Invalid", websites = listOf("ftp://example.com"), updatedAt = now),
+            )
+        }.exceptionOrNull()
+        assertTrue(invalidFailure is IllegalArgumentException)
+        assertEquals(beforeInvalid, repository.exportSnapshot().revision)
+
+        val beforeDelete = repository.exportSnapshot().revision
+        repository.deleteContact(contactId)
+        val afterDelete = repository.exportSnapshot()
+        assertEquals(beforeDelete + 1, afterDelete.revision)
+        assertTrue(afterDelete.contacts.isEmpty())
+    }
+
+    @Test
+    fun documentDeletionCleansDirectiveReferencesAtomicallyWithOneRevision() = runTest {
         val repository = repository(FakeVaultStore(), FakeDocumentBlobStore())
         repository.initialize()
         repository.createVault("Owner")
         val profileId = (repository.state.value as VaultState.Ready).vault.profiles.single().profile.id
-        val doctorId = UUID.randomUUID()
-        repository.upsertCareDirectoryEntry(
-            profileId,
-            CareDirectoryEntry(doctorId, CareDirectoryKind.DOCTOR, "Dr Martin", updatedAt = Instant.EPOCH),
-        )
-        repository.setPrimaryDoctor(profileId, doctorId)
         val document = repository.importDocument(
             profileId,
             MedicalDocumentDraft(
@@ -182,7 +231,6 @@ class DefaultVaultRepositoryTest {
                 BuiltInDocumentCategory.DIRECTIVES.asReference(),
                 LocalDate.of(2026, 7, 30),
                 "Dr Martin",
-                sourceEntryId = doctorId,
             ),
             importedPdf(),
         )
@@ -199,16 +247,7 @@ class DefaultVaultRepositoryTest {
             ),
         )
 
-        val beforeDirectoryDelete = repository.exportSnapshot().revision
-        repository.deleteCareDirectoryEntry(profileId, doctorId)
-        val afterDirectoryDelete = repository.exportSnapshot()
-        val afterDirectoryRecord = afterDirectoryDelete.profileRecord(profileId)
-        assertEquals(beforeDirectoryDelete + 1, afterDirectoryDelete.revision)
-        assertEquals(null, afterDirectoryRecord.profile.primaryDoctorEntryId)
-        assertEquals(null, afterDirectoryRecord.documents.single().sourceEntryId)
-        assertEquals("Dr Martin", afterDirectoryRecord.documents.single().source)
-
-        val beforeDocumentDelete = afterDirectoryDelete.revision
+        val beforeDocumentDelete = repository.exportSnapshot().revision
         repository.deleteDocument(profileId, document.id)
         val afterDocumentDelete = repository.exportSnapshot()
         val afterDocumentRecord = afterDocumentDelete.profileRecord(profileId)

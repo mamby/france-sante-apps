@@ -1,10 +1,12 @@
 package net.mamby.health.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -105,8 +107,8 @@ import net.mamby.health.feature.measurements.MeasurementDetailScreen
 import net.mamby.health.feature.measurements.MeasurementsScreen
 import net.mamby.health.feature.notes.NoteDetailScreen
 import net.mamby.health.feature.notes.NotesScreen
-import net.mamby.health.feature.directory.DirectoryEntryDetailScreen
-import net.mamby.health.feature.directory.DirectoryScreen
+import net.mamby.health.feature.contacts.ContactDetailScreen
+import net.mamby.health.feature.contacts.ContactsScreen
 import net.mamby.health.feature.records.HealthRecordsHubScreen
 import net.mamby.health.feature.profiles.ProfileManagementScreen
 import net.mamby.health.feature.profiles.ProfileNameDialog
@@ -130,7 +132,7 @@ import net.mamby.health.navigation.AppRoute
 import net.mamby.health.navigation.DeepLinkTarget
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.CareDirectiveDetailRoute
-import net.mamby.health.navigation.DirectoryEntryDetailRoute
+import net.mamby.health.navigation.ContactDetailRoute
 import net.mamby.health.navigation.EmergencyContactDetailRoute
 import net.mamby.health.navigation.FamilyHistoryDetailRoute
 import net.mamby.health.navigation.HealthIdentifierDetailRoute
@@ -146,7 +148,7 @@ import net.mamby.health.navigation.MeasurementDetailRoute
 import net.mamby.health.navigation.MeasurementsRoute
 import net.mamby.health.navigation.NoteDetailRoute
 import net.mamby.health.navigation.NotesRoute
-import net.mamby.health.navigation.DirectoryRoute
+import net.mamby.health.navigation.ContactsRoute
 import net.mamby.health.navigation.DocumentsRoute
 import net.mamby.health.navigation.ScheduleRoute
 import net.mamby.health.navigation.ScheduleDetailRoute
@@ -428,7 +430,6 @@ private fun VaultNavigation(
     var documentCreation by remember { mutableLongStateOf(0) }
     var noteCreation by remember { mutableLongStateOf(0) }
     var measurementCreation by remember { mutableLongStateOf(0) }
-    var directoryCreation by remember { mutableLongStateOf(0) }
     var medicationCreation by remember { mutableLongStateOf(0) }
     var scheduleCreation by remember { mutableLongStateOf(0) }
     var pendingOwnerAction by remember { mutableStateOf<ProfileOwnerAction?>(null) }
@@ -557,6 +558,7 @@ private fun VaultNavigation(
                             records = vault.profiles,
                             notes = vault.notes,
                             schedules = vault.schedules,
+                            contacts = vault.contacts,
                             clock = viewModel.clock,
                             zoneId = zoneId,
                             onMedications = { navigation.selectRoot(TopLevelDestination.Medications) },
@@ -601,9 +603,9 @@ private fun VaultNavigation(
                                         MeasurementsRoute,
                                         MeasurementDetailRoute(profileId.toString(), item.id.toString()),
                                     )
-                                    VaultItemKind.DIRECTORY_ENTRY -> navigation.navigate(
-                                        TopLevelDestination.Directory,
-                                        DirectoryEntryDetailRoute(profileId.toString(), item.id.toString()),
+                                    VaultItemKind.CONTACT -> navigation.navigate(
+                                        TopLevelDestination.Contacts,
+                                        ContactDetailRoute(item.id.toString()),
                                     )
                                     VaultItemKind.FAMILY_HISTORY -> navigation.navigate(
                                         TopLevelDestination.HealthRecords,
@@ -632,6 +634,12 @@ private fun VaultNavigation(
                                 navigation.navigate(
                                     TopLevelDestination.Schedule,
                                     ScheduleDetailRoute(scheduleId.toString()),
+                                )
+                            },
+                            onContactSelected = { contactId ->
+                                navigation.navigate(
+                                    TopLevelDestination.Contacts,
+                                    ContactDetailRoute(contactId.toString()),
                                 )
                             },
                             onAddHealthInfo = {
@@ -669,7 +677,6 @@ private fun VaultNavigation(
                             onUpdateProfile = { viewModel.updateProfile(record.profile.id, it) },
                             onUpsertVaccination = { viewModel.upsertVaccination(record.profile.id, it) },
                             onDeleteVaccination = { viewModel.deleteVaccination(record.profile.id, it) },
-                            onSetPrimaryDoctor = { viewModel.setPrimaryDoctor(record.profile.id, it) },
                             onUpsertFamilyHistory = { viewModel.upsertFamilyHistoryEntry(record.profile.id, it) },
                             onDeleteFamilyHistory = { viewModel.deleteFamilyHistoryEntry(record.profile.id, it) },
                             onUpsertDirective = { viewModel.upsertCareDirective(record.profile.id, it) },
@@ -753,21 +760,15 @@ private fun VaultNavigation(
                             creationRequest = measurementCreation,
                         )
                     }
-                    entry<DirectoryRoute>(
+                    entry<ContactsRoute>(
                         metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { DetailPlaceholder(R.string.no_directory_entries_body) },
+                            detailPlaceholder = { DetailPlaceholder(R.string.no_contacts_body) },
                         ),
                     ) {
-                        DirectoryScreen(
-                            records = vault.profiles,
-                            onAddProfile = viewModel::addProfile,
-                            onUpsert = viewModel::upsertCareDirectoryEntry,
-                            onSelected = { profileId, id ->
-                                navigation.navigate(
-                                    DirectoryEntryDetailRoute(profileId.toString(), id.toString()),
-                                )
-                            },
-                            creationRequest = directoryCreation,
+                        ContactsScreen(
+                            contacts = vault.contacts,
+                            onUpsert = viewModel::upsertContact,
+                            onSelected = { id -> navigation.navigate(ContactDetailRoute(id.toString())) },
                         )
                     }
                     entry<SearchRoute>(
@@ -779,6 +780,7 @@ private fun VaultNavigation(
                             records = vault.profiles,
                             notes = vault.notes,
                             schedules = vault.schedules,
+                            contacts = vault.contacts,
                             onResultSelected = { result ->
                                 navigation.navigate(result.toRoute())
                                 viewModel.resetPreview()
@@ -880,20 +882,33 @@ private fun VaultNavigation(
                             },
                         )
                     }
-                    entry<DirectoryEntryDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
+                    entry<ContactDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
                         val detailBack = listDetailAwareBack(navigation::goBack)
-                        val record = vault.profileRecordOrNull(route.profileId)
-                        val directoryEntry = record?.careDirectory?.firstOrNull { it.id.toString() == route.id }
-                        if (record == null || directoryEntry == null) MissingRecordScreen(detailBack) else DirectoryEntryDetailScreen(
-                            record = record,
-                            entry = directoryEntry,
+                        val contact = vault.contacts.firstOrNull { it.id.toString() == route.id }
+                        if (contact == null) MissingRecordScreen(detailBack) else ContactDetailScreen(
+                            contact = contact,
                             onBack = detailBack,
-                            onUpsert = { viewModel.upsertCareDirectoryEntry(record.profile.id, it) },
-                            onSetPrimaryDoctor = { viewModel.setPrimaryDoctor(record.profile.id, it) },
+                            onUpsert = viewModel::upsertContact,
                             onDelete = {
-                                viewModel.deleteCareDirectoryEntry(record.profile.id, directoryEntry.id)
+                                viewModel.deleteContact(contact.id)
                                 navigation.goBack()
                             },
+                            onDialPhone = { context.launchContactAction(
+                                Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", it, null)),
+                                viewModel::showContactActionUnavailable,
+                            ) },
+                            onComposeEmail = { context.launchContactAction(
+                                Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", it, null)),
+                                viewModel::showContactActionUnavailable,
+                            ) },
+                            onOpenWebsite = { context.launchContactAction(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(it)),
+                                viewModel::showContactActionUnavailable,
+                            ) },
+                            onSearchAddress = { context.launchContactAction(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(it)}")),
+                                viewModel::showContactActionUnavailable,
+                            ) },
                         )
                     }
                     entry<EmergencyContactDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
@@ -965,7 +980,6 @@ private fun VaultNavigation(
                         val medication = record?.medications?.firstOrNull { it.id.toString() == route.id }
                         if (record == null || medication == null) MissingRecordScreen(detailBack) else MedicationDetailScreen(
                             medication = medication,
-                            directory = record.careDirectory,
                             profile = record.profile,
                             today = today,
                             onBack = detailBack,
@@ -1132,7 +1146,7 @@ private fun HealthSearchResult.toRoute(): AppRoute {
         is HealthSearchTarget.HealthInfo -> HealthInfoRoute(requireProfileId())
         is HealthSearchTarget.Note -> NoteDetailRoute(selected.id.toString())
         is HealthSearchTarget.Measurement -> MeasurementDetailRoute(requireProfileId(), selected.id.toString())
-        is HealthSearchTarget.DirectoryEntry -> DirectoryEntryDetailRoute(requireProfileId(), selected.id.toString())
+        is HealthSearchTarget.Contact -> ContactDetailRoute(selected.id.toString())
         is HealthSearchTarget.FamilyHistory -> FamilyHistoryDetailRoute(requireProfileId(), selected.id.toString())
         is HealthSearchTarget.Directive -> CareDirectiveDetailRoute(requireProfileId(), selected.id.toString())
         is HealthSearchTarget.Identifier -> HealthIdentifierDetailRoute(requireProfileId(), selected.id.toString())
@@ -1245,6 +1259,14 @@ private fun Context.openNotificationSettings() {
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
     )
+}
+
+private fun Context.launchContactAction(intent: Intent, onUnavailable: () -> Unit) {
+    try {
+        startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        onUnavailable()
+    }
 }
 
 private data class LocaleTransitionRequest(val id: Long, val localeTag: String)
