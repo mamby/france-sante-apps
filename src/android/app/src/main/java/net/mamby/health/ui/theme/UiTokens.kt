@@ -7,6 +7,7 @@ object UiTokens {
     const val EdgeProtectionMiddleAlpha = 0.44f
     const val EdgeProtectionEdgeAlpha = 0.80f
     const val FloatingBackButtonContainerAlpha = 0.90f
+    const val FloatingBackButtonShadowScale = 0.50f
     const val FloatingNavigationContainerAlpha = 0.92f
     const val FloatingNavigationBorderAlpha = 0.45f
     const val FloatingNavigationShadowAlpha = 0.08f

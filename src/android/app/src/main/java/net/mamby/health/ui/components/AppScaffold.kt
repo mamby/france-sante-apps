@@ -175,14 +175,18 @@ fun FloatingBackButton(
                 .dropShadow(
                     shape = CircleShape,
                     shadow = Shadow(
-                        radius = UiTokens.FloatingNavigationShadowRadius,
-                        spread = UiTokens.FloatingNavigationShadowSpread,
+                        radius = UiTokens.FloatingNavigationShadowRadius *
+                            UiTokens.FloatingBackButtonShadowScale,
+                        spread = UiTokens.FloatingNavigationShadowSpread *
+                            UiTokens.FloatingBackButtonShadowScale,
                         color = MaterialTheme.colorScheme.scrim.copy(
                             alpha = UiTokens.FloatingNavigationShadowAlpha,
                         ),
                         offset = DpOffset(
-                            x = UiTokens.FloatingNavigationShadowOffsetX,
-                            y = UiTokens.FloatingNavigationShadowOffsetY,
+                            x = UiTokens.FloatingNavigationShadowOffsetX *
+                                UiTokens.FloatingBackButtonShadowScale,
+                            y = UiTokens.FloatingNavigationShadowOffsetY *
+                                UiTokens.FloatingBackButtonShadowScale,
                         ),
                     ),
                 ),
