@@ -17,7 +17,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -45,6 +44,7 @@ import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
@@ -79,11 +79,10 @@ fun MedicationsScreen(
     AppScreenScaffold(
         title = stringResource(R.string.medications_title),
         floatingActionButton = {
-            FloatingActionButton(
+            FloatingAddButton(
+                label = stringResource(R.string.add_medication),
                 onClick = { onAdd(filterProfileId ?: records.singleOrNull()?.profile?.id) },
-            ) {
-                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_medication))
-            }
+            )
         },
     ) { innerPadding ->
         LazyVerticalGrid(

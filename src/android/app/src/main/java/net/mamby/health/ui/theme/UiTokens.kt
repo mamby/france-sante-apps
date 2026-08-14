@@ -6,8 +6,9 @@ object UiTokens {
     const val TopEdgeProtectionHeightMultiplier = 2f
     const val EdgeProtectionMiddleAlpha = 0.44f
     const val EdgeProtectionEdgeAlpha = 0.80f
-    const val FloatingBackButtonContainerAlpha = 0.90f
-    const val FloatingBackButtonShadowScale = 0.50f
+    const val FloatingIconButtonContainerAlpha = 0.90f
+    const val FloatingIconButtonShadowScale = 0.50f
+    const val FloatingAddButtonShadowAlpha = 0.16f
     const val FloatingNavigationContainerAlpha = 0.92f
     const val FloatingNavigationBorderAlpha = 0.45f
     const val FloatingNavigationShadowAlpha = 0.08f
@@ -17,6 +18,9 @@ object UiTokens {
     val ProfileMarkerAvatarSize = 24.dp
     val FloatingBackButtonTouchTargetSize = 48.dp
     val FloatingBackButtonVisualSize = 44.dp
+    val FloatingAddButtonSize = 56.dp
+    val FloatingAddButtonShadowSpread = 2.dp
+    val FloatingAddButtonShadowOffsetY = 3.dp
     val FloatingNavigationBorderWidth = 1.dp
     val FloatingNavigationShadowRadius = 10.dp
     val FloatingNavigationShadowSpread = 0.dp

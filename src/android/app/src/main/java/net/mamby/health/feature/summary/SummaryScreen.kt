@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -24,6 +23,7 @@ import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
@@ -58,12 +58,10 @@ fun SummaryScreen(
         title = stringResource(R.string.health_info_title),
         onBack = onBack,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddVaccination) {
-                Icon(
-                    painterResource(R.drawable.ic_lucide_plus),
-                    stringResource(R.string.add_vaccination),
-                )
-            }
+            FloatingAddButton(
+                label = stringResource(R.string.add_vaccination),
+                onClick = onAddVaccination,
+            )
         },
     ) { innerPadding ->
         LazyVerticalGrid(

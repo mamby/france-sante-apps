@@ -122,6 +122,7 @@ private val LightColors = lightColorScheme(
     secondaryContainer = TealContainer,
     onSecondaryContainer = OnTealContainer,
     tertiary = Info,
+    onTertiary = White,
     error = Danger,
     background = White,
     onBackground = NeutralText,

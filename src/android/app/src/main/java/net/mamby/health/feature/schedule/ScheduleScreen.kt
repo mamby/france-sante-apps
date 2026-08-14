@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -56,6 +55,7 @@ import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
@@ -90,9 +90,10 @@ fun ScheduleScreen(
     AppScreenScaffold(
         title = stringResource(R.string.schedule_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_schedule))
-            }
+            FloatingAddButton(
+                label = stringResource(R.string.add_schedule),
+                onClick = onAdd,
+            )
         },
     ) { innerPadding ->
         LazyVerticalGrid(

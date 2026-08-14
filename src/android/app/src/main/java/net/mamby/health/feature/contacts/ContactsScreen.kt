@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +48,7 @@ import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.rememberEditorState
@@ -71,12 +71,10 @@ fun ContactsScreen(
     AppScreenScaffold(
         title = stringResource(R.string.contacts_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_lucide_plus),
-                    contentDescription = stringResource(R.string.add_contact),
-                )
-            }
+            FloatingAddButton(
+                label = stringResource(R.string.add_contact),
+                onClick = onAdd,
+            )
         },
     ) { padding ->
         LazyVerticalGrid(

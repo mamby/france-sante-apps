@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -32,6 +31,7 @@ import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
@@ -88,13 +88,12 @@ fun VaultScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
+            FloatingAddButton(
+                label = stringResource(R.string.import_document),
                 onClick = {
                     onImportRequested(filterProfileId ?: records.singleOrNull()?.profile?.id)
                 },
-            ) {
-                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.import_document))
-            }
+            )
         },
     ) { innerPadding ->
         LazyVerticalGrid(

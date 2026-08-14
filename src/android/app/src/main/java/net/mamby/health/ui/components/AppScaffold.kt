@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -48,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import net.mamby.health.R
 import net.mamby.health.ui.theme.UiTokens
@@ -158,7 +160,59 @@ fun FloatingBackButton(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val label = stringResource(R.string.action_back)
+    FloatingIconButton(
+        label = stringResource(R.string.action_back),
+        icon = R.drawable.ic_lucide_arrow_left,
+        size = UiTokens.FloatingBackButtonVisualSize,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowAlpha = UiTokens.FloatingNavigationShadowAlpha,
+        shadowSpread = UiTokens.FloatingNavigationShadowSpread *
+            UiTokens.FloatingIconButtonShadowScale,
+        shadowOffsetY = UiTokens.FloatingNavigationShadowOffsetY *
+            UiTokens.FloatingIconButtonShadowScale,
+        onClick = onBack,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FloatingAddButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FloatingIconButton(
+        label = label,
+        icon = R.drawable.ic_lucide_plus,
+        size = UiTokens.FloatingAddButtonSize,
+        containerColor = MaterialTheme.colorScheme.tertiary,
+        contentColor = MaterialTheme.colorScheme.onTertiary,
+        shadowAlpha = UiTokens.FloatingAddButtonShadowAlpha,
+        shadowSpread = UiTokens.FloatingAddButtonShadowSpread,
+        shadowOffsetY = UiTokens.FloatingAddButtonShadowOffsetY,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FloatingIconButton(
+    label: String,
+    icon: Int,
+    size: Dp,
+    containerColor: Color,
+    contentColor: Color,
+    shadowAlpha: Float,
+    shadowSpread: Dp,
+    shadowOffsetY: Dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shadowScale = UiTokens.FloatingIconButtonShadowScale *
+        (size.value / UiTokens.FloatingBackButtonVisualSize.value)
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Below,
@@ -168,37 +222,35 @@ fun FloatingBackButton(
         modifier = modifier,
     ) {
         FilledTonalIconButton(
-            onClick = onBack,
+            onClick = onClick,
             modifier = Modifier
                 .minimumInteractiveComponentSize()
-                .size(UiTokens.FloatingBackButtonVisualSize)
+                .size(size)
                 .dropShadow(
                     shape = CircleShape,
                     shadow = Shadow(
                         radius = UiTokens.FloatingNavigationShadowRadius *
-                            UiTokens.FloatingBackButtonShadowScale,
-                        spread = UiTokens.FloatingNavigationShadowSpread *
-                            UiTokens.FloatingBackButtonShadowScale,
+                            shadowScale,
+                        spread = shadowSpread,
                         color = MaterialTheme.colorScheme.scrim.copy(
-                            alpha = UiTokens.FloatingNavigationShadowAlpha,
+                            alpha = shadowAlpha,
                         ),
                         offset = DpOffset(
                             x = UiTokens.FloatingNavigationShadowOffsetX *
-                                UiTokens.FloatingBackButtonShadowScale,
-                            y = UiTokens.FloatingNavigationShadowOffsetY *
-                                UiTokens.FloatingBackButtonShadowScale,
+                                shadowScale,
+                            y = shadowOffsetY,
                         ),
                     ),
                 ),
             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(
-                    alpha = UiTokens.FloatingBackButtonContainerAlpha,
+                containerColor = containerColor.copy(
+                    alpha = UiTokens.FloatingIconButtonContainerAlpha,
                 ),
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = contentColor,
             ),
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_lucide_arrow_left),
+                painter = painterResource(icon),
                 contentDescription = label,
             )
         }

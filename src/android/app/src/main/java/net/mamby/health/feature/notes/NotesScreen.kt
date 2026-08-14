@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +35,7 @@ import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
@@ -55,9 +55,10 @@ fun NotesScreen(
     AppScreenScaffold(
         title = stringResource(R.string.health_notes_title),
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(painterResource(R.drawable.ic_lucide_plus), stringResource(R.string.add_health_note))
-            }
+            FloatingAddButton(
+                label = stringResource(R.string.add_health_note),
+                onClick = onAdd,
+            )
         },
     ) { padding ->
         LazyVerticalGrid(

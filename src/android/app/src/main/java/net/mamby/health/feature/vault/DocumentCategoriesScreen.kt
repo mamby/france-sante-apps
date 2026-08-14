@@ -13,7 +13,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +35,7 @@ import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.asReference
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.DropdownTrailingIcon
@@ -61,12 +61,10 @@ fun ManageDocumentCategoriesScreen(
         title = stringResource(R.string.manage_document_categories),
         onBack = onBack,
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }) {
-                Icon(
-                    painterResource(R.drawable.ic_lucide_plus),
-                    stringResource(R.string.add_document_category),
-                )
-            }
+            FloatingAddButton(
+                label = stringResource(R.string.add_document_category),
+                onClick = { adding = true },
+            )
         },
     ) { padding ->
         LazyVerticalGrid(
