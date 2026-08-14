@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +32,7 @@ import net.mamby.health.core.model.HealthNote
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -105,6 +105,12 @@ fun NoteDetailScreen(
     AppScreenScaffold(
         title = note.title,
         onBack = onBack,
+        actions = {
+            DetailTitleBarActions(
+                onEdit = onEdit,
+                onDelete = { deleting = true },
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -120,8 +126,6 @@ fun NoteDetailScreen(
                 Text(note.notedAt.localizedDateTime(zoneId))
                 Text(note.body)
             }
-            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
-            OutlinedButton(onClick = { deleting = true }) { Text(stringResource(R.string.common_delete)) }
         }
     }
     if (deleting) {
@@ -156,7 +160,7 @@ fun HealthNoteEditorScreen(
     }
     val draft = state.value
     AppEditorScaffold(
-        title = stringResource(if (existing == null) R.string.add_health_note else R.string.edit_health_note),
+        title = stringResource(if (existing == null) R.string.new_health_note else R.string.edit_health_note),
         isDirty = state.isDirty,
         saveEnabled = draft.title.isNotBlank() && draft.body.isNotBlank(),
         isSaving = state.isSaving,

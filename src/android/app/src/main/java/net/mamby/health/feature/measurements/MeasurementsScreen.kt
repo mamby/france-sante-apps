@@ -54,6 +54,7 @@ import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -165,6 +166,12 @@ fun MeasurementDetailScreen(
     AppScreenScaffold(
         title = measurement.type.localizedLabel(record),
         onBack = onBack,
+        actions = {
+            DetailTitleBarActions(
+                onEdit = onEdit,
+                onDelete = { deleting = true },
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -182,8 +189,6 @@ fun MeasurementDetailScreen(
                 Text(measurement.measuredAt.localizedDateTime(zoneId))
                 measurement.notes?.let { Text(it) }
             }
-            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
-            OutlinedButton(onClick = { deleting = true }) { Text(stringResource(R.string.common_delete)) }
         }
     }
     if (deleting) {
@@ -275,7 +280,7 @@ private fun CustomMeasurementTypeDialog(
     var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
     var unit by remember(existing?.id) { mutableStateOf(existing?.suggestedUnit.orEmpty()) }
     FormDialog(
-        title = stringResource(if (existing == null) R.string.add_measurement_type else R.string.edit_measurement_type),
+        title = stringResource(if (existing == null) R.string.new_measurement_type else R.string.edit_measurement_type),
         saveEnabled = name.isNotBlank() && unit.isNotBlank(),
         onDismiss = onDismiss,
         onSave = {
@@ -367,7 +372,7 @@ fun MeasurementEditorScreen(
     }
 
     AppEditorScaffold(
-        title = stringResource(if (existing == null) R.string.add_measurement else R.string.edit_measurement),
+        title = stringResource(if (existing == null) R.string.new_measurement else R.string.edit_measurement),
         isDirty = editorState.isDirty,
         saveEnabled = selectedOwner != null && reading != null,
         isSaving = editorState.isSaving,

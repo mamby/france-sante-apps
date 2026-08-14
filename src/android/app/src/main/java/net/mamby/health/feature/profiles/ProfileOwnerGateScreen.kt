@@ -50,7 +50,7 @@ fun ProfileOwnerGateScreen(
     BackHandler(enabled = state.saving) { /* Persistence must finish before leaving this flow. */ }
 
     AppScreenScaffold(
-        title = stringResource(if (profiles.isEmpty()) R.string.add_profile else R.string.profile_owner_gate_title),
+        title = stringResource(if (profiles.isEmpty()) R.string.profile_owner_gate_new_title else R.string.profile_owner_gate_title),
         onBack = if (state.saving) null else onBack,
     ) { innerPadding ->
         LazyColumn(

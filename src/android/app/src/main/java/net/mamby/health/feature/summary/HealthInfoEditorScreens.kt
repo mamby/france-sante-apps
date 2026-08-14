@@ -208,7 +208,7 @@ fun EmergencyContactEditorScreen(
     val draft = editorState.value
     AppEditorScaffold(
         title = stringResource(
-            if (existing == null) R.string.add_emergency_contact
+            if (existing == null) R.string.new_emergency_contact
             else R.string.edit_emergency_contact,
         ),
         isDirty = editorState.isDirty,
@@ -308,7 +308,7 @@ fun VaccinationEditorScreen(
     val draft = editorState.value
     AppEditorScaffold(
         title = stringResource(
-            if (existing == null) R.string.add_vaccination else R.string.edit_vaccination,
+            if (existing == null) R.string.new_vaccination else R.string.edit_vaccination,
         ),
         isDirty = editorState.isDirty,
         saveEnabled = draft.name.isNotBlank(),
@@ -423,7 +423,7 @@ fun FamilyHistoryEditorScreen(
         draft.ageAtOnsetYears.toIntOrNull()?.let { it >= 0 } == true
     AppEditorScaffold(
         title = stringResource(
-            if (existing == null) R.string.add_family_history else R.string.edit_family_history,
+            if (existing == null) R.string.new_family_history else R.string.edit_family_history,
         ),
         isDirty = editorState.isDirty,
         saveEnabled = draft.relationship.isNotBlank() && draft.condition.isNotBlank() && ageIsValid,
@@ -523,7 +523,7 @@ fun CareDirectiveEditorScreen(
     var kindExpanded by remember { mutableStateOf(false) }
     AppEditorScaffold(
         title = stringResource(
-            if (existing == null) R.string.add_directive else R.string.edit_directive,
+            if (existing == null) R.string.new_directive else R.string.edit_directive,
         ),
         isDirty = editorState.isDirty,
         saveEnabled = draft.title.isNotBlank() && draft.text.isNotBlank(),
@@ -663,7 +663,7 @@ fun HealthIdentifierEditorScreen(
     var kindExpanded by remember { mutableStateOf(false) }
     AppEditorScaffold(
         title = stringResource(
-            if (existing == null) R.string.add_health_identifier
+            if (existing == null) R.string.new_health_identifier
             else R.string.edit_health_identifier,
         ),
         isDirty = editorState.isDirty,

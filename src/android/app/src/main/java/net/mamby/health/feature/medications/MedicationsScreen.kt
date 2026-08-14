@@ -167,7 +167,7 @@ fun MedicationEditorScreen(
     var recurrenceExpanded by remember { mutableStateOf(false) }
 
     AppEditorScaffold(
-        title = stringResource(if (existing == null) R.string.add_medication else R.string.edit_medication),
+        title = stringResource(if (existing == null) R.string.new_medication else R.string.edit_medication),
         isDirty = editorState.isDirty,
         saveEnabled = selectedOwner != null && draft.name.isNotBlank() && draft.dose.isNotBlank() &&
             draft.instructions.isNotBlank() && (!draft.remindersEnabled || draft.reminderTimes.isNotEmpty()),

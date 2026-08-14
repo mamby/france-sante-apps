@@ -19,7 +19,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,6 +45,7 @@ import net.mamby.health.core.model.VaultContact
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
@@ -126,6 +127,12 @@ fun ContactDetailScreen(
     AppScreenScaffold(
         title = contact.name,
         onBack = onBack,
+        actions = {
+            DetailTitleBarActions(
+                onEdit = onEdit,
+                onDelete = { deleteVisible = true },
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -166,12 +173,6 @@ fun ContactDetailScreen(
                     label = stringResource(R.string.common_notes),
                     value = contact.notes.orEmpty(),
                 )
-            }
-            Button(onClick = onEdit) {
-                Text(stringResource(R.string.common_edit))
-            }
-            OutlinedButton(onClick = { deleteVisible = true }) {
-                Text(stringResource(R.string.common_delete))
             }
         }
     }
@@ -251,7 +252,7 @@ fun ContactEditorScreen(
     val websitesValid = draft.websites.all { it.isBlank() || normalizeWebsite(it) != null }
 
     AppEditorScaffold(
-        title = stringResource(if (existing == null) R.string.add_contact else R.string.edit_contact),
+        title = stringResource(if (existing == null) R.string.new_contact else R.string.edit_contact),
         isDirty = state.isDirty,
         saveEnabled = draft.name.isNotBlank() && websitesValid,
         isSaving = state.isSaving,
@@ -363,6 +364,7 @@ private fun ContactValueEditor(
             val valid = isValid(value)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
                     value = value,

@@ -191,7 +191,7 @@ private fun CustomCategoryDialog(
     val reference = existing?.let { DocumentCategoryRef.Custom(it.id) }
     val isUsed = reference != null && record.documents.any { it.category == reference }
     FormDialog(
-        title = stringResource(if (existing == null) R.string.add_document_category else R.string.edit_document_category),
+        title = stringResource(if (existing == null) R.string.new_document_category else R.string.edit_document_category),
         saveEnabled = name.isNotBlank(),
         onDismiss = onDismiss,
         onSave = {

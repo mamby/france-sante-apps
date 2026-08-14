@@ -179,6 +179,7 @@
     <string name="surgeries">Surgeries</string>
     <string name="emergency_contacts">Emergency contacts</string>
     <string name="add_emergency_contact">Add emergency contact</string>
+    <string name="new_emergency_contact">New emergency contact</string>
     <string name="edit_emergency_contact">Edit emergency contact</string>
     <string name="contact_name">Name</string>
     <string name="contact_relationship">Relationship</string>
@@ -188,6 +189,7 @@
     <string name="delete_contact_message">This emergency contact will be removed from your summary.</string>
     <string name="vaccinations">Vaccinations</string>
     <string name="add_vaccination">Add vaccination</string>
+    <string name="new_vaccination">New vaccination</string>
     <string name="edit_vaccination">Edit vaccination</string>
     <string name="vaccination_name">Vaccination name</string>
     <string name="vaccination_date">Date administered</string>
@@ -202,6 +204,7 @@
     <string name="no_medications_title">No medications yet</string>
     <string name="no_medications_body">Add a medication when you are ready.</string>
     <string name="add_medication">Add medication</string>
+    <string name="new_medication">New medication</string>
     <string name="edit_medication">Edit medication</string>
     <string name="delete_medication_title">Delete medication?</string>
     <string name="delete_medication_message">The medication and its scheduled notification work will be removed.</string>
@@ -236,6 +239,7 @@
     <string name="appointments_title">Appointments</string>
     <string name="schedule_intro">Plan anything you need in one private schedule.</string>
     <string name="add_schedule">Add schedule</string>
+    <string name="new_schedule">New schedule</string>
     <string name="schedules_metric">Upcoming schedules</string>
     <string name="next_schedule">Next schedule</string>
     <string name="no_upcoming_schedule">No upcoming schedule.</string>
@@ -493,6 +497,7 @@
     <string name="documents_hub_body">%1$d encrypted documents, including invoices and receipts</string>
     <string name="common_notes">Notes</string>
     <string name="add_health_note">Add health note</string>
+    <string name="new_health_note">New health note</string>
     <string name="edit_health_note">Edit health note</string>
     <string name="health_note">Health note</string>
     <string name="health_note_title">Title</string>
@@ -504,6 +509,7 @@
     <string name="delete_health_note_title">Delete health note?</string>
     <string name="delete_health_note_message">This note will be deleted.</string>
     <string name="add_measurement">Add measurement</string>
+    <string name="new_measurement">New measurement</string>
     <string name="edit_measurement">Edit measurement</string>
     <string name="no_measurements_title">No measurements</string>
     <string name="no_measurements_body">Record a measurement with its unit and date.</string>
@@ -527,12 +533,14 @@
     <string name="delete_measurement_message">This recorded measurement will be deleted.</string>
     <string name="manage_measurement_types">Manage measurement types</string>
     <string name="add_measurement_type">Add measurement type</string>
+    <string name="new_measurement_type">New measurement type</string>
     <string name="edit_measurement_type">Edit measurement type</string>
     <string name="measurement_type_name">Type name</string>
     <string name="measurement_type_unit">Suggested unit</string>
     <string name="measurement_type_usage">Used by %1$d measurements</string>
     <string name="built_in_measurement_types_body">Built-in measurement types are stable and localized. Custom scalar types can be edited here.</string>
     <string name="add_contact">Add contact</string>
+    <string name="new_contact">New contact</string>
     <string name="edit_contact">Edit contact</string>
     <string name="no_contacts_title">No contacts</string>
     <string name="no_contacts_body">Add people, organizations, and services you may want to contact.</string>
@@ -553,6 +561,7 @@
     <string name="invalid_contact_website">Enter a valid website address.</string>
     <string name="family_history_title">Family history</string>
     <string name="add_family_history">Add family history</string>
+    <string name="new_family_history">New family history</string>
     <string name="edit_family_history">Edit family history</string>
     <string name="family_relationship">Relationship</string>
     <string name="family_condition">Condition</string>
@@ -563,6 +572,7 @@
     <string name="directives_title">Directives and preferences</string>
     <string name="directives_disclaimer">Personal copies and preferences only; no signature or claim of legal or clinical validity.</string>
     <string name="add_directive">Add directive</string>
+    <string name="new_directive">New directive</string>
     <string name="edit_directive">Edit directive</string>
     <string name="directive_kind">Recorded type</string>
     <string name="directive_kind_advance">Advance directive</string>
@@ -577,6 +587,7 @@
     <string name="delete_directive_message">This recorded directive will be deleted.</string>
     <string name="health_identifiers_title">Health identifiers</string>
     <string name="add_health_identifier">Add health identifier</string>
+    <string name="new_health_identifier">New health identifier</string>
     <string name="edit_health_identifier">Edit health identifier</string>
     <string name="identifier_kind">Identifier type</string>
     <string name="identifier_kind_national_health">National health number</string>
@@ -594,6 +605,7 @@
     <string name="delete_health_identifier_message">This identifier will be deleted.</string>
     <string name="manage_document_categories">Manage document categories</string>
     <string name="add_document_category">Add document category</string>
+    <string name="new_document_category">New document category</string>
     <string name="edit_document_category">Edit document category</string>
     <string name="category_custom_label">Custom label (optional)</string>
     <string name="category_name">Category name</string>

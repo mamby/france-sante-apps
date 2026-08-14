@@ -23,7 +23,6 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +52,7 @@ import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -146,7 +146,16 @@ fun ScheduleDetailScreen(
     onDelete: () -> Unit,
 ) {
     var deleteVisible by remember(schedule.id) { mutableStateOf(false) }
-    AppScreenScaffold(schedule.title, onBack = onBack) { innerPadding ->
+    AppScreenScaffold(
+        title = schedule.title,
+        onBack = onBack,
+        actions = {
+            DetailTitleBarActions(
+                onEdit = onEdit,
+                onDelete = { deleteVisible = true },
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -165,8 +174,6 @@ fun ScheduleDetailScreen(
                 LabeledValue(stringResource(R.string.schedule_location), schedule.location.orEmpty())
                 LabeledValue(stringResource(R.string.schedule_notes), schedule.notes.orEmpty())
             }
-            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
-            OutlinedButton(onClick = { deleteVisible = true }) { Text(stringResource(R.string.common_delete)) }
         }
     }
     if (deleteVisible) {
@@ -265,7 +272,7 @@ fun ScheduleEditorScreen(
     val timedAlertOptions = (listOf(0L, 10L, 60L, 1_440L) + draft.timedAlertMinutes).distinct().sorted()
 
     AppEditorScaffold(
-        title = stringResource(if (existing == null) R.string.add_schedule else R.string.edit_schedule),
+        title = stringResource(if (existing == null) R.string.new_schedule else R.string.edit_schedule),
         isDirty = editorState.isDirty,
         saveEnabled = draft.title.isNotBlank() && validEnd && validRecurrence && validRepeatUntil,
         isSaving = editorState.isSaving,

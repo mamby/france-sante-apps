@@ -9,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +24,7 @@ import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.withPagePadding
@@ -126,11 +126,7 @@ private fun HealthInfoDetailScaffold(
         title = title,
         onBack = onBack,
         actions = {
-            onEdit?.let { edit ->
-                TextButton(onClick = edit) {
-                    Text(stringResource(R.string.common_edit))
-                }
-            }
+            DetailTitleBarActions(onEdit = onEdit)
         },
     ) { padding ->
         Column(

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
@@ -195,6 +196,56 @@ fun FloatingAddButton(
         onClick = onClick,
         modifier = modifier,
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetailTitleBarActions(
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+) {
+    onEdit?.let { edit ->
+        TitleBarIconButton(
+            label = stringResource(R.string.common_edit),
+            icon = R.drawable.ic_lucide_pencil,
+            onClick = edit,
+        )
+    }
+    onDelete?.let { delete ->
+        TitleBarIconButton(
+            label = stringResource(R.string.common_delete),
+            icon = R.drawable.ic_lucide_trash_2,
+            contentColor = MaterialTheme.colorScheme.error,
+            onClick = delete,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TitleBarIconButton(
+    label: String,
+    icon: Int,
+    onClick: () -> Unit,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            TooltipAnchorPosition.Below,
+        ),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            colors = IconButtonDefaults.iconButtonColors(contentColor = contentColor),
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = label,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

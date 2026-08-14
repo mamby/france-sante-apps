@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +19,7 @@ import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
@@ -40,8 +38,14 @@ fun MedicationDetailScreen(
 ) {
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
     AppScreenScaffold(
-        medication.name,
+        title = medication.name,
         onBack = onBack,
+        actions = {
+            DetailTitleBarActions(
+                onEdit = onEdit,
+                onDelete = { deleteVisible = true },
+            )
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -65,8 +69,6 @@ fun MedicationDetailScreen(
                 LabeledValue(stringResource(R.string.medication_times), medication.schedule.reminderTimes.localizedTimes())
                 LabeledValue(stringResource(R.string.medication_notes), medication.notes.orEmpty())
             }
-            Button(onClick = onEdit) { Text(stringResource(R.string.common_edit)) }
-            OutlinedButton(onClick = { deleteVisible = true }) { Text(stringResource(R.string.common_delete)) }
         }
     }
     if (deleteVisible) {

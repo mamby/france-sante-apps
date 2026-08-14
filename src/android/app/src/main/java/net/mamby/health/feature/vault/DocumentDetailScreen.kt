@@ -30,6 +30,7 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
+import net.mamby.health.ui.components.DetailTitleBarActions
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.SectionCard
@@ -78,6 +79,12 @@ fun DocumentDetailScreen(
     AppScreenScaffold(
         title = document.title,
         onBack = onBack,
+        actions = {
+            DetailTitleBarActions(
+                onEdit = onEdit,
+                onDelete = { deleteVisible = true },
+            )
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -136,12 +143,6 @@ fun DocumentDetailScreen(
                         }
                     }
                 }
-            }
-            Button(onClick = onEdit) {
-                Text(stringResource(R.string.edit_document))
-            }
-            OutlinedButton(onClick = { deleteVisible = true }) {
-                Text(stringResource(R.string.common_delete))
             }
         }
     }

@@ -179,6 +179,7 @@
     <string name="surgeries">العمليات الجراحية</string>
     <string name="emergency_contacts">جهات اتصال الطوارئ</string>
     <string name="add_emergency_contact">إضافة جهة اتصال للطوارئ</string>
+    <string name="new_emergency_contact">جهة اتصال جديدة للطوارئ</string>
     <string name="edit_emergency_contact">تعديل جهة اتصال الطوارئ</string>
     <string name="contact_name">الاسم</string>
     <string name="contact_relationship">صلة القرابة</string>
@@ -188,6 +189,7 @@
     <string name="delete_contact_message">ستُزال جهة اتصال الطوارئ هذه من ملخصك.</string>
     <string name="vaccinations">التطعيمات</string>
     <string name="add_vaccination">إضافة تطعيم</string>
+    <string name="new_vaccination">تطعيم جديد</string>
     <string name="edit_vaccination">تعديل التطعيم</string>
     <string name="vaccination_name">اسم التطعيم</string>
     <string name="vaccination_date">تاريخ الإعطاء</string>
@@ -202,6 +204,7 @@
     <string name="no_medications_title">لا توجد أدوية بعد</string>
     <string name="no_medications_body">أضف دواءً عندما تكون مستعدًا.</string>
     <string name="add_medication">إضافة دواء</string>
+    <string name="new_medication">دواء جديد</string>
     <string name="edit_medication">تعديل الدواء</string>
     <string name="delete_medication_title">حذف الدواء؟</string>
     <string name="delete_medication_message">سيُحذف الدواء وأعمال الإشعارات المجدولة المرتبطة به.</string>
@@ -236,6 +239,7 @@
     <string name="appointments_title">المواعيد</string>
     <string name="schedule_intro">خطّط لأي شيء تحتاج إليه في جدول خاص واحد.</string>
     <string name="add_schedule">إضافة إلى الجدول</string>
+    <string name="new_schedule">عنصر جديد في الجدول</string>
     <string name="schedules_metric">الجداول القادمة</string>
     <string name="next_schedule">الجدول التالي</string>
     <string name="no_upcoming_schedule">لا يوجد جدول قادم.</string>
@@ -501,6 +505,7 @@
     <string name="documents_hub_body">%1$d مستندات مشفرة، بما فيها الفواتير والإيصالات</string>
     <string name="common_notes">ملاحظات</string>
     <string name="add_health_note">إضافة ملاحظة صحية</string>
+    <string name="new_health_note">ملاحظة صحية جديدة</string>
     <string name="edit_health_note">تعديل الملاحظة الصحية</string>
     <string name="health_note">ملاحظة صحية</string>
     <string name="health_note_title">العنوان</string>
@@ -512,6 +517,7 @@
     <string name="delete_health_note_title">حذف الملاحظة الصحية؟</string>
     <string name="delete_health_note_message">ستُحذف هذه الملاحظة.</string>
     <string name="add_measurement">إضافة قياس</string>
+    <string name="new_measurement">قياس جديد</string>
     <string name="edit_measurement">تعديل القياس</string>
     <string name="no_measurements_title">لا توجد قياسات</string>
     <string name="no_measurements_body">سجّل قياسًا مع وحدته وتاريخه.</string>
@@ -535,12 +541,14 @@
     <string name="delete_measurement_message">سيُحذف هذا القياس المسجل.</string>
     <string name="manage_measurement_types">إدارة أنواع القياس</string>
     <string name="add_measurement_type">إضافة نوع قياس</string>
+    <string name="new_measurement_type">نوع قياس جديد</string>
     <string name="edit_measurement_type">تعديل نوع القياس</string>
     <string name="measurement_type_name">اسم النوع</string>
     <string name="measurement_type_unit">الوحدة المقترحة</string>
     <string name="measurement_type_usage">مستخدم في %1$d قياسات</string>
     <string name="built_in_measurement_types_body">أنواع القياس المدمجة ثابتة ومترجمة. يمكن تعديل الأنواع القياسية المخصصة هنا.</string>
     <string name="add_contact">إضافة جهة اتصال</string>
+    <string name="new_contact">جهة اتصال جديدة</string>
     <string name="edit_contact">تعديل جهة الاتصال</string>
     <string name="no_contacts_title">لا توجد جهات اتصال</string>
     <string name="no_contacts_body">أضف الأشخاص والمؤسسات والخدمات التي قد ترغب في الاتصال بها.</string>
@@ -561,6 +569,7 @@
     <string name="invalid_contact_website">أدخل عنوان موقع ويب صالحًا.</string>
     <string name="family_history_title">التاريخ العائلي</string>
     <string name="add_family_history">إضافة تاريخ عائلي</string>
+    <string name="new_family_history">تاريخ عائلي جديد</string>
     <string name="edit_family_history">تعديل التاريخ العائلي</string>
     <string name="family_relationship">صلة القرابة</string>
     <string name="family_condition">المرض</string>
@@ -571,6 +580,7 @@
     <string name="directives_title">التوجيهات والتفضيلات</string>
     <string name="directives_disclaimer">نسخ وتفضيلات شخصية فقط، دون توقيع أو ادعاء صلاحية قانونية أو سريرية.</string>
     <string name="add_directive">إضافة توجيه</string>
+    <string name="new_directive">توجيه جديد</string>
     <string name="edit_directive">تعديل التوجيه</string>
     <string name="directive_kind">النوع المسجل</string>
     <string name="directive_kind_advance">توجيه مسبق</string>
@@ -585,6 +595,7 @@
     <string name="delete_directive_message">سيُحذف هذا التوجيه المسجل.</string>
     <string name="health_identifiers_title">المعرّفات الصحية</string>
     <string name="add_health_identifier">إضافة معرّف صحي</string>
+    <string name="new_health_identifier">معرّف صحي جديد</string>
     <string name="edit_health_identifier">تعديل المعرّف الصحي</string>
     <string name="identifier_kind">نوع المعرّف</string>
     <string name="identifier_kind_national_health">رقم صحي وطني</string>
@@ -602,6 +613,7 @@
     <string name="delete_health_identifier_message">سيُحذف هذا المعرّف.</string>
     <string name="manage_document_categories">إدارة فئات المستندات</string>
     <string name="add_document_category">إضافة فئة مستندات</string>
+    <string name="new_document_category">فئة مستندات جديدة</string>
     <string name="edit_document_category">تعديل فئة المستندات</string>
     <string name="category_custom_label">تسمية مخصصة (اختيارية)</string>
     <string name="category_name">اسم الفئة</string>

@@ -79,7 +79,7 @@ fun ProfileManagementScreen(
 
     if (adding) {
         ProfileNameDialog(
-            title = stringResource(R.string.add_profile),
+            title = stringResource(R.string.profile_owner_gate_new_title),
             initialName = "",
             onDismiss = { adding = false },
             onSave = {

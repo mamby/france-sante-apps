@@ -179,6 +179,7 @@
     <string name="surgeries">Interventions chirurgicales</string>
     <string name="emergency_contacts">Contacts d’urgence</string>
     <string name="add_emergency_contact">Ajouter un contact d’urgence</string>
+    <string name="new_emergency_contact">Nouveau contact d’urgence</string>
     <string name="edit_emergency_contact">Modifier le contact d’urgence</string>
     <string name="contact_name">Nom</string>
     <string name="contact_relationship">Lien</string>
@@ -188,6 +189,7 @@
     <string name="delete_contact_message">Ce contact d’urgence sera retiré de votre résumé.</string>
     <string name="vaccinations">Vaccinations</string>
     <string name="add_vaccination">Ajouter une vaccination</string>
+    <string name="new_vaccination">Nouvelle vaccination</string>
     <string name="edit_vaccination">Modifier la vaccination</string>
     <string name="vaccination_name">Nom du vaccin</string>
     <string name="vaccination_date">Date d’administration</string>
@@ -202,6 +204,7 @@
     <string name="no_medications_title">Aucun médicament</string>
     <string name="no_medications_body">Ajoutez un médicament lorsque vous le souhaitez.</string>
     <string name="add_medication">Ajouter un médicament</string>
+    <string name="new_medication">Nouveau médicament</string>
     <string name="edit_medication">Modifier le médicament</string>
     <string name="delete_medication_title">Supprimer le médicament ?</string>
     <string name="delete_medication_message">Le médicament et les notifications programmées associées seront supprimés.</string>
@@ -236,6 +239,7 @@
     <string name="appointments_title">Rendez-vous</string>
     <string name="schedule_intro">Planifiez tout ce dont vous avez besoin dans un agenda privé unique.</string>
     <string name="add_schedule">Ajouter à l’agenda</string>
+    <string name="new_schedule">Nouvel élément</string>
     <string name="schedules_metric">Éléments à venir</string>
     <string name="next_schedule">Prochain élément</string>
     <string name="no_upcoming_schedule">Aucun élément à venir.</string>
@@ -495,6 +499,7 @@
     <string name="documents_hub_body">%1$d documents chiffrés, dont factures et reçus</string>
     <string name="common_notes">Notes</string>
     <string name="add_health_note">Ajouter une note de santé</string>
+    <string name="new_health_note">Nouvelle note de santé</string>
     <string name="edit_health_note">Modifier la note de santé</string>
     <string name="health_note">Note de santé</string>
     <string name="health_note_title">Titre</string>
@@ -506,6 +511,7 @@
     <string name="delete_health_note_title">Supprimer la note de santé ?</string>
     <string name="delete_health_note_message">Cette note sera supprimée.</string>
     <string name="add_measurement">Ajouter une mesure</string>
+    <string name="new_measurement">Nouvelle mesure</string>
     <string name="edit_measurement">Modifier la mesure</string>
     <string name="no_measurements_title">Aucune mesure</string>
     <string name="no_measurements_body">Consignez une mesure avec son unité et sa date.</string>
@@ -529,12 +535,14 @@
     <string name="delete_measurement_message">Cette mesure consignée sera supprimée.</string>
     <string name="manage_measurement_types">Gérer les types de mesure</string>
     <string name="add_measurement_type">Ajouter un type de mesure</string>
+    <string name="new_measurement_type">Nouveau type de mesure</string>
     <string name="edit_measurement_type">Modifier le type de mesure</string>
     <string name="measurement_type_name">Nom du type</string>
     <string name="measurement_type_unit">Unité proposée</string>
     <string name="measurement_type_usage">Utilisé par %1$d mesures</string>
     <string name="built_in_measurement_types_body">Les types intégrés sont stables et localisés. Les types scalaires personnalisés sont modifiables ici.</string>
     <string name="add_contact">Ajouter un contact</string>
+    <string name="new_contact">Nouveau contact</string>
     <string name="edit_contact">Modifier le contact</string>
     <string name="no_contacts_title">Aucun contact</string>
     <string name="no_contacts_body">Ajoutez les personnes, organismes et services que vous pourriez vouloir contacter.</string>
@@ -555,6 +563,7 @@
     <string name="invalid_contact_website">Saisissez une adresse de site web valide.</string>
     <string name="family_history_title">Antécédents familiaux</string>
     <string name="add_family_history">Ajouter un antécédent familial</string>
+    <string name="new_family_history">Nouvel antécédent familial</string>
     <string name="edit_family_history">Modifier l’antécédent familial</string>
     <string name="family_relationship">Lien familial</string>
     <string name="family_condition">Maladie</string>
@@ -565,6 +574,7 @@
     <string name="directives_title">Directives et préférences</string>
     <string name="directives_disclaimer">Copies et préférences personnelles uniquement, sans signature ni prétention de validité juridique ou clinique.</string>
     <string name="add_directive">Ajouter une directive</string>
+    <string name="new_directive">Nouvelle directive</string>
     <string name="edit_directive">Modifier la directive</string>
     <string name="directive_kind">Type consigné</string>
     <string name="directive_kind_advance">Directive anticipée</string>
@@ -579,6 +589,7 @@
     <string name="delete_directive_message">Cette directive consignée sera supprimée.</string>
     <string name="health_identifiers_title">Identifiants de santé</string>
     <string name="add_health_identifier">Ajouter un identifiant de santé</string>
+    <string name="new_health_identifier">Nouvel identifiant de santé</string>
     <string name="edit_health_identifier">Modifier l’identifiant de santé</string>
     <string name="identifier_kind">Type d’identifiant</string>
     <string name="identifier_kind_national_health">Numéro national de santé</string>
@@ -596,6 +607,7 @@
     <string name="delete_health_identifier_message">Cet identifiant sera supprimé.</string>
     <string name="manage_document_categories">Gérer les catégories de documents</string>
     <string name="add_document_category">Ajouter une catégorie</string>
+    <string name="new_document_category">Nouvelle catégorie</string>
     <string name="edit_document_category">Modifier la catégorie</string>
     <string name="category_custom_label">Libellé personnalisé (facultatif)</string>
     <string name="category_name">Nom de la catégorie</string>
