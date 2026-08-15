@@ -36,9 +36,9 @@ import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.VaultContact
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 import net.mamby.health.ui.format.localizedLabel
@@ -168,14 +168,14 @@ fun SearchScreen(
                             ?: result.primaryText
                         else -> result.primaryText
                     }
-                    SectionCard(primaryText) {
+                    ListCard(
+                        title = primaryText,
+                        onClick = { onResultSelected(result) },
+                    ) {
                         if (owner != null && effectiveProfileId == null && records.size > 1) {
                             ProfileMarker(owner.profile)
                         }
                         result.secondaryText?.takeIf(String::isNotBlank)?.let { Text(it) }
-                        androidx.compose.material3.TextButton(onClick = { onResultSelected(result) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                     }
                 }
             }

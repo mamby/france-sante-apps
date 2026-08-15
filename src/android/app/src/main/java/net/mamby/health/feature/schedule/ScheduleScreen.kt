@@ -53,6 +53,7 @@ import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -60,6 +61,7 @@ import net.mamby.health.ui.components.DropdownTrailingIcon
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
@@ -166,7 +168,7 @@ fun ScheduleDetailScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()
-            SectionCard(stringResource(R.string.schedule_details)) {
+            DetailSection(stringResource(R.string.schedule_details)) {
                 LabeledValue(stringResource(R.string.schedule_when), schedule.timing.localized(zoneId))
                 LabeledValue(stringResource(R.string.schedule_recurrence), schedule.recurrence.localized())
                 LabeledValue(stringResource(R.string.schedule_alert), schedule.alert.localized())
@@ -191,11 +193,10 @@ fun ScheduleDetailScreen(
 
 @Composable
 private fun ScheduleCard(entry: ScheduleListEntry, zoneId: ZoneId, onOpen: () -> Unit) {
-    SectionCard(entry.schedule.title) {
+    ListCard(title = entry.schedule.title, onClick = onOpen) {
         Text(entry.occurrence?.startsAt?.localizedDateTime(zoneId) ?: stringResource(R.string.completed))
         entry.schedule.people.takeIf(List<String>::isNotEmpty)?.let { Text(it.joinToString()) }
         entry.schedule.location?.let { Text(it) }
-        Button(onClick = onOpen) { Text(stringResource(R.string.common_open)) }
     }
 }
 

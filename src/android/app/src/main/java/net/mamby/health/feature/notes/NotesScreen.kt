@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,10 +32,11 @@ import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
-import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
@@ -80,12 +80,12 @@ fun NotesScreen(
                 }
             } else {
                 items(sortedNotes, key = HealthNote::id) { note ->
-                    SectionCard(note.title) {
+                    ListCard(
+                        title = note.title,
+                        onClick = { onSelected(note.id) },
+                    ) {
                         Text(note.notedAt.localizedDateTime(zoneId))
                         Text(note.body)
-                        Button(onClick = { onSelected(note.id) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                     }
                 }
             }
@@ -122,7 +122,7 @@ fun NoteDetailScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()
-            SectionCard(stringResource(R.string.health_note)) {
+            DetailSection(stringResource(R.string.health_note)) {
                 Text(note.notedAt.localizedDateTime(zoneId))
                 Text(note.body)
             }

@@ -27,6 +27,7 @@ object UiTokens {
     val FloatingNavigationShadowOffsetX = 0.dp
     val FloatingNavigationShadowOffsetY = 2.dp
     val NavigationIconSize = 24.dp
+    val DetailActionIconSize = 20.dp
     val CompactNavigationSelectionIndicatorSize = 40.dp
     val ScreenPadding = 16.dp
     val PageTopPadding = 8.dp

@@ -32,9 +32,9 @@ import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
@@ -138,16 +138,14 @@ fun VaultScreen(
             } else {
                 items(filtered, key = { "${it.profileId}:${it.value.id}" }) { owned ->
                     val document = owned.value
-                    SectionCard(document.title) {
+                    ListCard(
+                        title = document.title,
+                        onClick = { onDocumentSelected(owned.profileId, document.id.toString()) },
+                    ) {
                         if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(document.category.localizedLabel(owned.record))
                         Text(document.documentDate.localizedDate())
                         Text(document.source)
-                        androidx.compose.material3.TextButton(
-                            onClick = { onDocumentSelected(owned.profileId, document.id.toString()) },
-                        ) {
-                            Text(stringResource(R.string.common_open))
-                        }
                     }
                 }
             }

@@ -22,11 +22,12 @@ import net.mamby.health.core.model.FamilyHistoryEntry
 import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.LabeledValue
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileOwnerHeader
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedDate
@@ -80,7 +81,7 @@ fun SummaryScreen(
                 ProfileOwnerHeader(profile)
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionCard(stringResource(R.string.summary_title)) {
+                DetailSection(stringResource(R.string.summary_title)) {
                     LabeledValue(stringResource(R.string.display_name), profile.displayName)
                     LabeledValue(stringResource(R.string.blood_type), profile.bloodType.orEmpty())
                     LabeledValue(stringResource(R.string.allergies), profile.allergies.joinToString())
@@ -98,15 +99,15 @@ fun SummaryScreen(
                 Text(stringResource(R.string.family_history_title))
             }
             items(record.familyHistory, key = FamilyHistoryEntry::id) { entry ->
-                SectionCard(entry.condition) {
+                ListCard(
+                    title = entry.condition,
+                    onClick = { onFamilyHistorySelected(entry.id) },
+                ) {
                     Text(entry.relationship)
                     entry.ageAtOnsetYears?.let {
                         Text(stringResource(R.string.family_history_age_at_onset_value, it))
                     }
                     entry.notes?.let { Text(it) }
-                    OutlinedButton(onClick = { onFamilyHistorySelected(entry.id) }) {
-                        Text(stringResource(R.string.common_open))
-                    }
                     Button(onClick = { onEditFamilyHistory(entry.id) }) {
                         Text(stringResource(R.string.common_edit))
                     }
@@ -124,13 +125,13 @@ fun SummaryScreen(
                 Text(stringResource(R.string.directives_disclaimer))
             }
             items(record.directives, key = CareDirective::id) { directive ->
-                SectionCard(directive.title) {
+                ListCard(
+                    title = directive.title,
+                    onClick = { onDirectiveSelected(directive.id) },
+                ) {
                     Text(stringResource(directive.kind.labelResource()))
                     Text(directive.recordedOn.localizedDate())
                     Text(directive.text)
-                    OutlinedButton(onClick = { onDirectiveSelected(directive.id) }) {
-                        Text(stringResource(R.string.common_open))
-                    }
                     Button(onClick = { onEditDirective(directive.id) }) {
                         Text(stringResource(R.string.common_edit))
                     }
@@ -145,12 +146,12 @@ fun SummaryScreen(
                 Text(stringResource(R.string.health_identifiers_title))
             }
             items(record.healthIdentifiers, key = HealthIdentifier::id) { identifier ->
-                SectionCard(identifier.label) {
+                ListCard(
+                    title = identifier.label,
+                    onClick = { onIdentifierSelected(identifier.id) },
+                ) {
                     Text(maskIdentifier(identifier.value))
                     identifier.issuer?.let { Text(it) }
-                    OutlinedButton(onClick = { onIdentifierSelected(identifier.id) }) {
-                        Text(stringResource(R.string.common_open))
-                    }
                     Button(onClick = { onEditIdentifier(identifier.id) }) {
                         Text(stringResource(R.string.common_edit))
                     }
@@ -173,13 +174,13 @@ fun SummaryScreen(
                 }
             } else {
                 items(profile.emergencyContacts, key = { it.id }) { contact ->
-                    SectionCard(contact.name) {
+                    ListCard(
+                        title = contact.name,
+                        onClick = { onEmergencyContactSelected(contact.id) },
+                    ) {
                         Text(contact.relationship)
                         Text(contact.phoneNumber)
                         contact.notes?.let { Text(it) }
-                        OutlinedButton(onClick = { onEmergencyContactSelected(contact.id) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                         Button(onClick = { onEditEmergencyContact(contact.id) }) {
                             Text(stringResource(R.string.common_edit))
                         }
@@ -206,13 +207,13 @@ fun SummaryScreen(
                     items = record.vaccinations.sortedByDescending { it.dateAdministered },
                     key = { it.id },
                 ) { vaccination ->
-                    SectionCard(vaccination.name) {
+                    ListCard(
+                        title = vaccination.name,
+                        onClick = { onVaccinationSelected(vaccination.id) },
+                    ) {
                         Text(vaccination.dateAdministered.localizedDate())
                         vaccination.provider?.let { Text(it) }
                         vaccination.nextDueOn?.let { Text(it.localizedDate()) }
-                        OutlinedButton(onClick = { onVaccinationSelected(vaccination.id) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                         Button(onClick = { onEditVaccination(vaccination.id) }) {
                             Text(stringResource(R.string.common_edit))
                         }

@@ -20,9 +20,9 @@ import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedTimes
@@ -58,7 +58,7 @@ fun MedicationDetailScreen(
         ) {
             PageHeader()
             ProfileOwnerHeader(profile)
-            SectionCard(stringResource(R.string.medication_schedule)) {
+            DetailSection(stringResource(R.string.medication_schedule)) {
                 LabeledValue(stringResource(R.string.medication_dose), medication.dose)
                 LabeledValue(stringResource(R.string.medication_instructions), medication.instructions)
                 LabeledValue(

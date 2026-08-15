@@ -55,6 +55,7 @@ import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -65,6 +66,7 @@ import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfileOwnerHeader
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
 import net.mamby.health.ui.components.rememberEditorState
@@ -138,14 +140,14 @@ fun MeasurementsScreen(
                     key = { "${it.profileId}:${it.value.id}" },
                 ) { owned ->
                     val measurement = owned.value
-                    SectionCard(measurement.type.localizedLabel(owned.record)) {
+                    ListCard(
+                        title = measurement.type.localizedLabel(owned.record),
+                        onClick = { onSelected(owned.profileId, measurement.id) },
+                    ) {
                         if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(measurement.reading.localizedValue())
                         Text(measurement.measuredAt.localizedDateTime(zoneId))
                         measurement.notes?.let { Text(it) }
-                        Button(onClick = { onSelected(owned.profileId, measurement.id) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                     }
                 }
             }
@@ -184,7 +186,7 @@ fun MeasurementDetailScreen(
         ) {
             PageHeader()
             ProfileOwnerHeader(record.profile)
-            SectionCard(stringResource(R.string.measurement_value)) {
+            DetailSection(stringResource(R.string.measurement_value)) {
                 Text(measurement.reading.localizedValue())
                 Text(measurement.measuredAt.localizedDateTime(zoneId))
                 measurement.notes?.let { Text(it) }

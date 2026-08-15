@@ -243,6 +243,7 @@ private fun TitleBarIconButton(
             Icon(
                 painter = painterResource(icon),
                 contentDescription = label,
+                modifier = Modifier.size(UiTokens.DetailActionIconSize),
             )
         }
     }

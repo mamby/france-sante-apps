@@ -16,6 +16,7 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
@@ -86,11 +87,18 @@ private fun HubCard(
     actionLabel: String? = null,
     onOpen: () -> Unit,
 ) {
-    SectionCard(title) {
-        profile?.let { ProfileMarker(it.profile) }
-        Text(body)
-        Button(onClick = onOpen) {
-            Text(actionLabel ?: stringResource(R.string.common_open))
+    if (actionLabel == null) {
+        ListCard(title = title, onClick = onOpen) {
+            profile?.let { ProfileMarker(it.profile) }
+            Text(body)
+        }
+    } else {
+        SectionCard(title) {
+            profile?.let { ProfileMarker(it.profile) }
+            Text(body)
+            Button(onClick = onOpen) {
+                Text(actionLabel)
+            }
         }
     }
 }

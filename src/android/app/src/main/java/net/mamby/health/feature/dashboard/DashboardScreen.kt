@@ -296,7 +296,6 @@ fun DashboardScreen(
                             ProfileMarker(recent.owned.profile)
                         }
                         Text(item.updatedAt.localizedDateTime(zoneId))
-                        Text(stringResource(R.string.common_open), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

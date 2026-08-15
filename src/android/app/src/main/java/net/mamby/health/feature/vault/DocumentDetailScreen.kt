@@ -31,9 +31,9 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
@@ -97,7 +97,7 @@ fun DocumentDetailScreen(
         ) {
             PageHeader()
             ProfileOwnerHeader(profile)
-            SectionCard(stringResource(R.string.document_file)) {
+            DetailSection(stringResource(R.string.document_file)) {
                 LabeledValue(stringResource(R.string.document_category), document.category.localizedLabel(record))
                 LabeledValue(stringResource(R.string.document_date), document.documentDate.localizedDate())
                 LabeledValue(stringResource(R.string.document_source), document.source)
@@ -106,7 +106,7 @@ fun DocumentDetailScreen(
                 LabeledValue(stringResource(R.string.document_notes), document.notes.orEmpty())
                 LabeledValue(stringResource(R.string.document_tags), document.tags.joinToString())
             }
-            SectionCard(stringResource(R.string.document_preview)) {
+            DetailSection(stringResource(R.string.document_preview)) {
                 when (visiblePreview) {
                     DocumentPreviewState.Idle -> Button(onClick = { onLoadPreview(0) }) {
                         Text(stringResource(R.string.document_preview))

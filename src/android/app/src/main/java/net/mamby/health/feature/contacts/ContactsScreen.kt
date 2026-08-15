@@ -2,10 +2,12 @@ package net.mamby.health.feature.contacts
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -14,7 +16,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +37,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import java.net.URI
 import java.time.Instant
 import java.util.Locale
@@ -46,12 +48,13 @@ import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.LabeledValue
-import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.rememberEditorState
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
@@ -99,11 +102,11 @@ fun ContactsScreen(
                 }
             } else {
                 items(sortedContacts, key = VaultContact::id) { contact ->
-                    SectionCard(contact.name) {
+                    ListCard(
+                        title = contact.name,
+                        onClick = { onSelected(contact.id) },
+                    ) {
                         contact.firstContactValue()?.let { Text(it) }
-                        Button(onClick = { onSelected(contact.id) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                     }
                 }
             }
@@ -144,35 +147,37 @@ fun ContactDetailScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             PageHeader()
-            SectionCard(stringResource(R.string.contact_details)) {
-                ContactActionGroup(
-                    label = stringResource(R.string.contact_phone_numbers),
-                    values = contact.phoneNumbers,
-                    actionLabel = { stringResource(R.string.contact_phone_action, it) },
-                    onClick = onDialPhone,
-                )
-                ContactActionGroup(
-                    label = stringResource(R.string.contact_email_addresses),
-                    values = contact.emailAddresses,
-                    actionLabel = { stringResource(R.string.contact_email_action, it) },
-                    onClick = onComposeEmail,
-                )
-                ContactActionGroup(
-                    label = stringResource(R.string.contact_websites),
-                    values = contact.websites,
-                    actionLabel = { stringResource(R.string.contact_website_action, it) },
-                    onClick = onOpenWebsite,
-                )
-                ContactActionGroup(
-                    label = stringResource(R.string.contact_addresses),
-                    values = contact.addresses,
-                    actionLabel = { stringResource(R.string.contact_address_action, it) },
-                    onClick = onSearchAddress,
-                )
-                LabeledValue(
-                    label = stringResource(R.string.common_notes),
-                    value = contact.notes.orEmpty(),
-                )
+            DetailSection(stringResource(R.string.contact_details)) {
+                Column(verticalArrangement = Arrangement.spacedBy(UiTokens.SectionSpacing)) {
+                    ContactActionGroup(
+                        label = stringResource(R.string.contact_phone_numbers),
+                        values = contact.phoneNumbers,
+                        actionLabel = { stringResource(R.string.contact_phone_action, it) },
+                        onClick = onDialPhone,
+                    )
+                    ContactActionGroup(
+                        label = stringResource(R.string.contact_email_addresses),
+                        values = contact.emailAddresses,
+                        actionLabel = { stringResource(R.string.contact_email_action, it) },
+                        onClick = onComposeEmail,
+                    )
+                    ContactActionGroup(
+                        label = stringResource(R.string.contact_websites),
+                        values = contact.websites,
+                        actionLabel = { stringResource(R.string.contact_website_action, it) },
+                        onClick = onOpenWebsite,
+                    )
+                    ContactActionGroup(
+                        label = stringResource(R.string.contact_addresses),
+                        values = contact.addresses,
+                        actionLabel = { stringResource(R.string.contact_address_action, it) },
+                        onClick = onSearchAddress,
+                    )
+                    LabeledValue(
+                        label = stringResource(R.string.common_notes),
+                        value = contact.notes.orEmpty(),
+                    )
+                }
             }
         }
     }
@@ -211,6 +216,7 @@ private fun ContactActionGroup(
                     onClick = { onClick(value) },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .semantics(mergeDescendants = true) {
                             contentDescription = accessibilityLabel
                             onClick(label = accessibilityLabel, action = null)
@@ -218,6 +224,7 @@ private fun ContactActionGroup(
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.tertiary,
                     ),
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     Text(
                         text = value,

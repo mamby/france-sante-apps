@@ -52,7 +52,7 @@ import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.RemovableInputChip
-import net.mamby.health.ui.components.SectionCard
+import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.TimeField
 import net.mamby.health.ui.components.rememberEditorState
@@ -112,14 +112,14 @@ fun MedicationsScreen(
                     key = { "${it.profileId}:${it.value.id}" },
                 ) { owned ->
                     val medication = owned.value
-                    SectionCard(medication.name) {
+                    ListCard(
+                        title = medication.name,
+                        onClick = { onSelected(owned.profileId, medication.id.toString()) },
+                    ) {
                         if (filterProfileId == null && records.size > 1) ProfileMarker(owned.profile)
                         Text(medication.dose)
                         Text(stringResource(if (medication.isActive) R.string.status_active else R.string.status_inactive))
                         Text(medication.instructions)
-                        Button(onClick = { onSelected(owned.profileId, medication.id.toString()) }) {
-                            Text(stringResource(R.string.common_open))
-                        }
                     }
                 }
             }
