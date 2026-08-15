@@ -200,7 +200,6 @@
     <string name="delete_vaccination_message">This vaccination record will be removed from your health data.</string>
     <string name="empty_list_hint">Nothing added yet.</string>
     <string name="medications_title">Medications</string>
-    <string name="medications_intro">Track your own medication records and reminder schedules.</string>
     <string name="no_medications_title">No medications yet</string>
     <string name="no_medications_body">Add a medication when you are ready.</string>
     <string name="add_medication">Add medication</string>
@@ -237,7 +236,6 @@
     <string name="day_saturday">Saturday</string>
     <string name="day_sunday">Sunday</string>
     <string name="appointments_title">Appointments</string>
-    <string name="schedule_intro">Plan anything you need in one private schedule.</string>
     <string name="add_schedule">Add schedule</string>
     <string name="new_schedule">New schedule</string>
     <string name="schedules_metric">Upcoming schedules</string>
@@ -266,7 +264,6 @@
     <string name="schedule_notes">Notes</string>
     <string name="delete_schedule_title">Delete schedule?</string>
     <string name="delete_schedule_message">This schedule will be deleted.</string>
-    <string name="schedule_delivery_notice">Alerts are delivered as standard device notifications and may be delayed by system settings.</string>
     <string name="alert_at_start">At start</string>
     <string name="alert_ten_minutes_before">10 minutes before</string>
     <string name="alert_one_hour_before">1 hour before</string>

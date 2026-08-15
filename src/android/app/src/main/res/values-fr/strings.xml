@@ -200,7 +200,6 @@
     <string name="delete_vaccination_message">Ce dossier de vaccination sera supprimé de votre espace de santé.</string>
     <string name="empty_list_hint">Aucun élément ajouté.</string>
     <string name="medications_title">Médicaments</string>
-    <string name="medications_intro">Suivez vos médicaments et leurs horaires de rappel.</string>
     <string name="no_medications_title">Aucun médicament</string>
     <string name="no_medications_body">Ajoutez un médicament lorsque vous le souhaitez.</string>
     <string name="add_medication">Ajouter un médicament</string>
@@ -237,7 +236,6 @@
     <string name="day_saturday">Samedi</string>
     <string name="day_sunday">Dimanche</string>
     <string name="appointments_title">Rendez-vous</string>
-    <string name="schedule_intro">Planifiez tout ce dont vous avez besoin dans un agenda privé unique.</string>
     <string name="add_schedule">Ajouter à l’agenda</string>
     <string name="new_schedule">Nouvel élément</string>
     <string name="schedules_metric">Éléments à venir</string>
@@ -266,7 +264,6 @@
     <string name="schedule_notes">Notes</string>
     <string name="delete_schedule_title">Supprimer cet élément ?</string>
     <string name="delete_schedule_message">Cet élément sera supprimé.</string>
-    <string name="schedule_delivery_notice">Les alertes sont envoyées comme notifications de l’appareil et peuvent être retardées par les réglages système.</string>
     <string name="alert_at_start">Au début</string>
     <string name="alert_ten_minutes_before">10 minutes avant</string>
     <string name="alert_one_hour_before">1 heure avant</string>

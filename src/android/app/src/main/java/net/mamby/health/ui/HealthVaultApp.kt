@@ -955,7 +955,7 @@ private fun VaultNavigation(
                     }
                     entry<ScheduleRoute>(
                         metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { DetailPlaceholder(R.string.schedule_intro) },
+                            detailPlaceholder = { DetailPlaceholder(R.string.no_schedules_body) },
                         ),
                     ) {
                         EditorBackgroundPane(focusedFlowActive) {

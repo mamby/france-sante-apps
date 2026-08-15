@@ -299,10 +299,6 @@ fun DashboardScreen(
                     }
                 }
             }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(stringResource(R.string.health_disclaimer))
-            }
         }
     }
 }

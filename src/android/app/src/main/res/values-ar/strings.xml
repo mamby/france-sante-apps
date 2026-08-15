@@ -200,7 +200,6 @@
     <string name="delete_vaccination_message">سيُحذف سجل التطعيم هذا من بياناتك الصحية.</string>
     <string name="empty_list_hint">لم تتم إضافة أي شيء بعد.</string>
     <string name="medications_title">الأدوية</string>
-    <string name="medications_intro">تابع سجلات أدويتك وجداول تذكيرها.</string>
     <string name="no_medications_title">لا توجد أدوية بعد</string>
     <string name="no_medications_body">أضف دواءً عندما تكون مستعدًا.</string>
     <string name="add_medication">إضافة دواء</string>
@@ -237,7 +236,6 @@
     <string name="day_saturday">السبت</string>
     <string name="day_sunday">الأحد</string>
     <string name="appointments_title">المواعيد</string>
-    <string name="schedule_intro">خطّط لأي شيء تحتاج إليه في جدول خاص واحد.</string>
     <string name="add_schedule">إضافة إلى الجدول</string>
     <string name="new_schedule">عنصر جديد في الجدول</string>
     <string name="schedules_metric">الجداول القادمة</string>
@@ -266,7 +264,6 @@
     <string name="schedule_notes">ملاحظات</string>
     <string name="delete_schedule_title">حذف الجدول؟</string>
     <string name="delete_schedule_message">سيُحذف هذا الجدول.</string>
-    <string name="schedule_delivery_notice">تُرسل التنبيهات كإشعارات عادية على الجهاز وقد تتأخر بسبب إعدادات النظام.</string>
     <string name="alert_at_start">عند البدء</string>
     <string name="alert_ten_minutes_before">قبل 10 دقائق</string>
     <string name="alert_one_hour_before">قبل ساعة</string>

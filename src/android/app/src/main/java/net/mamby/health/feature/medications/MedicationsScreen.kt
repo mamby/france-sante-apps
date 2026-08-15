@@ -98,7 +98,6 @@ fun MedicationsScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
             }
-            item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.medications_intro)) }
             if (medications.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(

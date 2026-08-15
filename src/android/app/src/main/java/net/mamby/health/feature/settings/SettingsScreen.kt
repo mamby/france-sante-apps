@@ -175,6 +175,7 @@ fun SettingsScreen(
             }
             SectionCard(stringResource(R.string.privacy_title)) {
                 Text(stringResource(R.string.privacy_body))
+                Text(stringResource(R.string.health_disclaimer))
                 Text(stringResource(R.string.build_channel, stringResource(environmentLabelResource())))
             }
             SectionCard(stringResource(R.string.data_title)) {

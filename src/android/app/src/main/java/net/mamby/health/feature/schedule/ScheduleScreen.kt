@@ -108,7 +108,6 @@ fun ScheduleScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 PageHeader()
             }
-            item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.schedule_intro)) }
             if (notificationsBlocked && schedules.any { it.alert != null }) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     SectionCard(stringResource(R.string.notifications_blocked)) {
@@ -134,7 +133,6 @@ fun ScheduleScreen(
                     ScheduleCard(entry, zoneId) { onSelected(entry.schedule.id.toString()) }
                 }
             }
-            item(span = { GridItemSpan(maxLineSpan) }) { Text(stringResource(R.string.schedule_delivery_notice)) }
         }
     }
 }
