@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Personal Health Vault</string>
-    <string name="app_name_dev">Personal Health Vault — التطوير</string>
-    <string name="app_name_beta">Personal Health Vault — تجريبي</string>
-    <string name="app_name_stage">Personal Health Vault — ما قبل الإنتاج</string>
+    <string name="app_name_dev">Personal Health Vault - Dev</string>
+    <string name="app_name_beta">Personal Health Vault - Beta</string>
+    <string name="app_name_stage">Personal Health Vault - Stage</string>
     <string name="channel_dev">التطوير</string>
     <string name="channel_beta">تجريبي</string>
     <string name="channel_stage">ما قبل الإنتاج</string>
