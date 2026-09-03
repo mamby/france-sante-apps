@@ -2,11 +2,9 @@ package net.mamby.health.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,7 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import net.mamby.androidkit.compose.presentation.AndroidKitCard
+import net.mamby.androidkit.compose.theme.AndroidKitThemeTokens
 import net.mamby.health.R
 import net.mamby.health.ui.theme.UiTokens
 
@@ -26,18 +25,13 @@ fun MetricCard(
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    AndroidKitCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        contentPadding = PaddingValues(UiTokens.ScreenPadding),
+        contentSpacing = UiTokens.CompactSpacing,
     ) {
-        Column(
-            modifier = Modifier.padding(UiTokens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
-        ) {
-            Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-        }
+        Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -47,18 +41,15 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Card(
+    AndroidKitCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(
-            modifier = Modifier.padding(UiTokens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
-        ) {
+        header = {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            content()
-        }
+        },
+        contentPadding = PaddingValues(UiTokens.ScreenPadding),
+        contentSpacing = UiTokens.ContentSpacing,
+    ) {
+        content()
     }
 }
 
@@ -69,21 +60,19 @@ fun ListCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Card(
+    AndroidKitCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        header = {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        },
+        style = AndroidKitThemeTokens.cardStyle.copy(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        contentPadding = PaddingValues(UiTokens.ScreenPadding),
+        contentSpacing = UiTokens.ContentSpacing,
     ) {
-        Column(
-            modifier = Modifier.padding(UiTokens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            content()
-        }
+        content()
     }
 }
 

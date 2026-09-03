@@ -18,8 +18,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import java.text.NumberFormat
@@ -54,7 +51,7 @@ import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
@@ -70,6 +67,7 @@ import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.TimeField
 import net.mamby.health.ui.components.rememberEditorState
+import net.mamby.health.ui.components.titleBarAction
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.labelResource
 import net.mamby.health.ui.format.localizedDateTime
@@ -99,14 +97,13 @@ fun MeasurementsScreen(
     AppScreenScaffold(
         title = stringResource(R.string.measurements_title),
         onBack = onBack,
-        actions = {
-            IconButton(onClick = { onManageTypes(filterProfileId) }) {
-                Icon(
-                    painterResource(R.drawable.ic_lucide_sliders_horizontal),
-                    stringResource(R.string.manage_measurement_types),
-                )
-            }
-        },
+        actions = listOf(
+            titleBarAction(
+                label = stringResource(R.string.manage_measurement_types),
+                icon = R.drawable.ic_lucide_sliders_horizontal,
+                onClick = { onManageTypes(filterProfileId) },
+            ),
+        ),
         floatingActionButton = {
             FloatingAddButton(
                 label = stringResource(R.string.add_measurement),
@@ -121,9 +118,6 @@ fun MeasurementsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
             }
@@ -168,12 +162,10 @@ fun MeasurementDetailScreen(
     AppScreenScaffold(
         title = measurement.type.localizedLabel(record),
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(
-                onEdit = onEdit,
-                onDelete = { deleting = true },
-            )
-        },
+        actions = detailTitleBarActions(
+            onEdit = onEdit,
+            onDelete = { deleting = true },
+        ),
     ) { padding ->
         Column(
             modifier = Modifier
@@ -184,7 +176,6 @@ fun MeasurementDetailScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             ProfileOwnerHeader(record.profile)
             DetailSection(stringResource(R.string.measurement_value)) {
                 Text(measurement.reading.localizedValue())
@@ -232,9 +223,6 @@ fun ManageMeasurementTypesScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileOwnerHeader(record.profile)
             }

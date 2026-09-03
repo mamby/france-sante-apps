@@ -22,7 +22,6 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -49,7 +48,6 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsDisplayed
@@ -108,7 +106,6 @@ import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.settings.AppSettings
 import net.mamby.health.ui.components.AppScreenScaffold
-import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.ProfileFilterChip
@@ -276,9 +273,7 @@ class ComposeScreensInstrumentedTest {
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(16.dp),
-                        ) {
-                            PageHeader()
-                        }
+                        )
                     }
                 }
             }
@@ -294,7 +289,7 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun pageTitleScrollsAwayWhileFloatingBackRemainsFixedAndClickable() {
+    fun pageTitleAndBackRemainFixedWhileContentScrolls() {
         var backClicks = 0
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
@@ -310,7 +305,6 @@ class ComposeScreensInstrumentedTest {
                                 .testTag(SCROLLING_PAGE_TAG),
                             contentPadding = padding.withScreenPadding(),
                         ) {
-                            item { PageHeader() }
                             item {
                                 ProfileFilterChip(
                                     label = "All profiles",
@@ -333,7 +327,7 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithText("Scrolling title").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Scrolling title").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Page profile filter").assertIsDisplayed()
         val back = composeRule.onNodeWithContentDescription(
             composeRule.activity.getString(R.string.action_back),
@@ -342,7 +336,7 @@ class ComposeScreensInstrumentedTest {
 
         val list = composeRule.onNodeWithTag(SCROLLING_PAGE_TAG)
         list.performScrollToIndex(30)
-        composeRule.onNodeWithText("Scrolling title").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Scrolling title").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Page profile filter").assertDoesNotExist()
         assertEquals(initialBackBounds, back.fetchSemanticsNode().boundsInRoot)
 
@@ -353,13 +347,13 @@ class ComposeScreensInstrumentedTest {
                 durationMillis = 100,
             )
         }
-        composeRule.onNodeWithText("Scrolling title").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Scrolling title").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Page profile filter").assertDoesNotExist()
         back.performClick()
         composeRule.runOnIdle { assertEquals(1, backClicks) }
 
         list.performScrollToIndex(0)
-        composeRule.onNodeWithText("Scrolling title").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Scrolling title").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Page profile filter").assertIsDisplayed()
     }
 
@@ -377,7 +371,9 @@ class ComposeScreensInstrumentedTest {
         composeRule
             .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_back))
             .assertDoesNotExist()
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.settings_title)).assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription(composeRule.activity.getString(R.string.settings_title))
+            .assertIsDisplayed()
 
         composeRule.runOnIdle(showRecovery)
         composeRule
@@ -426,9 +422,7 @@ class ComposeScreensInstrumentedTest {
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(16.dp),
-                        ) {
-                            PageHeader()
-                        }
+                        )
                     }
                 }
             }
@@ -541,17 +535,16 @@ class ComposeScreensInstrumentedTest {
             ),
             TopLevelDestination.compactOverflow,
         )
-        var moreSelected = false
+        var selectedDestination: TopLevelDestination? = null
         composeRule.setContent {
-            HealthVaultTheme {
-                AppNavigationSuite(
-                    selectedDestination = TopLevelDestination.Home,
-                    layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                    isMoreSelected = false,
-                    onDestinationSelected = {},
-                    onMoreSelected = { moreSelected = true },
-                ) {
-                    Box(Modifier.fillMaxSize())
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        onDestinationSelected = { selectedDestination = it },
+                    ) {
+                        Box(Modifier.fillMaxSize())
+                    }
                 }
             }
         }
@@ -574,7 +567,13 @@ class ComposeScreensInstrumentedTest {
             .onNodeWithContentDescription(composeRule.activity.getString(R.string.action_more))
             .assertIsDisplayed()
             .performClick()
-        composeRule.runOnIdle { assertTrue(moreSelected) }
+        composeRule
+            .onNodeWithText(composeRule.activity.getString(R.string.schedule_title))
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.runOnIdle {
+            assertEquals(TopLevelDestination.Schedule, selectedDestination)
+        }
     }
 
     @Test
@@ -584,10 +583,7 @@ class ComposeScreensInstrumentedTest {
                 HealthVaultTheme {
                     AppNavigationSuite(
                         selectedDestination = TopLevelDestination.Home,
-                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                        isMoreSelected = false,
                         onDestinationSelected = {},
-                        onMoreSelected = {},
                     ) {
                         Box(Modifier.fillMaxSize().testTag(NAVIGATION_CONTENT_TAG))
                     }
@@ -617,28 +613,18 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
-    fun editorHidesCompactNavigationAndDisablesExpandedNavigation() {
+    fun editorHidesNavigation() {
         val home = composeRule.activity.getString(R.string.nav_home)
-        var layoutType by mutableStateOf(NavigationSuiteType.ShortNavigationBarCompact)
         composeRule.setContent {
             HealthVaultTheme {
                 AppNavigationSuite(
                     selectedDestination = TopLevelDestination.Contacts,
-                    layoutType = layoutType,
-                    isMoreSelected = false,
                     onDestinationSelected = {},
-                    onMoreSelected = {},
                     navigationVisible = false,
                 ) { Box(Modifier.fillMaxSize()) }
             }
         }
         composeRule.onNodeWithContentDescription(home).assertDoesNotExist()
-
-        composeRule.runOnIdle { layoutType = NavigationSuiteType.NavigationRail }
-        composeRule
-            .onNodeWithContentDescription(home, useUnmergedTree = true)
-            .assertIsDisplayed()
-            .assertIsNotEnabled()
     }
 
     @Test
@@ -646,16 +632,12 @@ class ComposeScreensInstrumentedTest {
         var pagePointerStarts = 0
         var aboveNavigationClicks = 0
         val destinationSelections = mutableListOf<TopLevelDestination>()
-        var moreNavigationClicks = 0
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
                 HealthVaultTheme {
                     AppNavigationSuite(
                         selectedDestination = TopLevelDestination.Home,
-                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                        isMoreSelected = false,
                         onDestinationSelected = { destinationSelections += it },
-                        onMoreSelected = { moreNavigationClicks++ },
                     ) {
                         Box(Modifier.fillMaxSize()) {
                             Box(
@@ -773,7 +755,6 @@ class ComposeScreensInstrumentedTest {
             assertEquals(0, pagePointerStarts)
             assertEquals(1, aboveNavigationClicks)
             assertEquals(TopLevelDestination.compactPrimary, destinationSelections)
-            assertEquals(1, moreNavigationClicks)
         }
     }
 
@@ -784,10 +765,7 @@ class ComposeScreensInstrumentedTest {
                 HealthVaultTheme(darkTheme = false) {
                     AppNavigationSuite(
                         selectedDestination = TopLevelDestination.Home,
-                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                        isMoreSelected = false,
                         onDestinationSelected = {},
-                        onMoreSelected = {},
                     ) {
                         Box(Modifier.fillMaxSize())
                     }
@@ -824,10 +802,7 @@ class ComposeScreensInstrumentedTest {
                 HealthVaultTheme {
                     AppNavigationSuite(
                         selectedDestination = TopLevelDestination.Home,
-                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                        isMoreSelected = false,
                         onDestinationSelected = {},
-                        onMoreSelected = {},
                     ) {
                         AppScreenScaffold(
                             title = "Clearance",
@@ -845,7 +820,6 @@ class ComposeScreensInstrumentedTest {
                                     .testTag(CLEARANCE_LIST_TAG),
                                 contentPadding = padding.withScreenPadding(),
                             ) {
-                                item { PageHeader() }
                                 items((0 until 30).toList()) { index ->
                                     Box(
                                         Modifier
@@ -867,7 +841,7 @@ class ComposeScreensInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(CLEARANCE_LIST_TAG).performScrollToIndex(30)
+        composeRule.onNodeWithTag(CLEARANCE_LIST_TAG).performScrollToIndex(29)
         val finalItemBounds = composeRule.onNodeWithTag(FINAL_ITEM_TAG).fetchSemanticsNode().boundsInRoot
         val floatingActionBounds = composeRule
             .onNodeWithTag(FLOATING_ACTION_TAG)
@@ -892,10 +866,7 @@ class ComposeScreensInstrumentedTest {
                 HealthVaultTheme {
                     AppNavigationSuite(
                         selectedDestination = TopLevelDestination.Home,
-                        layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                        isMoreSelected = false,
                         onDestinationSelected = {},
-                        onMoreSelected = {},
                     ) {
                         Box(Modifier.fillMaxSize()) {
                             Snackbar(
@@ -1029,15 +1000,14 @@ class ComposeScreensInstrumentedTest {
     @Test
     fun compactNavigationSelectsOnlyMoreForMoreDestinations() {
         composeRule.setContent {
-            HealthVaultTheme {
-                AppNavigationSuite(
-                    selectedDestination = TopLevelDestination.Profiles,
-                    layoutType = NavigationSuiteType.ShortNavigationBarCompact,
-                    isMoreSelected = true,
-                    onDestinationSelected = {},
-                    onMoreSelected = {},
-                ) {
-                    Box(Modifier.fillMaxSize())
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Profiles,
+                        onDestinationSelected = {},
+                    ) {
+                        Box(Modifier.fillMaxSize())
+                    }
                 }
             }
         }
@@ -1050,15 +1020,14 @@ class ComposeScreensInstrumentedTest {
     @Test
     fun expandedNavigationShowsAllRootsDirectly() {
         composeRule.setContent {
-            HealthVaultTheme {
-                AppNavigationSuite(
-                    selectedDestination = TopLevelDestination.Home,
-                    layoutType = NavigationSuiteType.NavigationRail,
-                    isMoreSelected = false,
-                    onDestinationSelected = {},
-                    onMoreSelected = {},
-                ) {
-                    Box(Modifier.fillMaxSize())
+            DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(900.dp, 1_000.dp))) {
+                HealthVaultTheme {
+                    AppNavigationSuite(
+                        selectedDestination = TopLevelDestination.Home,
+                        onDestinationSelected = {},
+                    ) {
+                        Box(Modifier.fillMaxSize())
+                    }
                 }
             }
         }
@@ -1081,10 +1050,7 @@ class ComposeScreensInstrumentedTest {
                     HealthVaultTheme {
                         AppNavigationSuite(
                             selectedDestination = TopLevelDestination.Home,
-                            layoutType = NavigationSuiteType.NavigationRail,
-                            isMoreSelected = false,
                             onDestinationSelected = {},
-                            onMoreSelected = {},
                         ) {
                             Box(Modifier.fillMaxSize().testTag(NAVIGATION_CONTENT_TAG))
                         }
@@ -1106,48 +1072,6 @@ class ComposeScreensInstrumentedTest {
             .boundsInRoot
 
         assertTrue(contentBounds.left >= homeIconBounds.right)
-    }
-
-    @Test
-    fun moreSheetShowsLocalizedDestinationsAndDispatchesActions() {
-        var selectedAction: TopLevelDestination? = null
-        lateinit var showSheet: () -> Unit
-        composeRule.setContent {
-            var visible by remember { mutableStateOf(true) }
-            showSheet = { visible = true }
-            HealthVaultTheme {
-                if (visible) {
-                    AppMoreSheet(
-                        onDismissRequest = { visible = false },
-                        onDestinationSelected = {
-                            selectedAction = it
-                            visible = false
-                        },
-                    )
-                }
-            }
-        }
-
-        TopLevelDestination.compactOverflow.forEach { destination ->
-            composeRule
-                .onNodeWithText(composeRule.activity.getString(destination.label))
-                .assertIsDisplayed()
-        }
-        val schedule = composeRule.activity.getString(R.string.schedule_title)
-        val settings = composeRule.activity.getString(R.string.settings_title)
-        val profiles = composeRule.activity.getString(R.string.profiles_title)
-        composeRule.onNodeWithText(schedule).assertIsDisplayed().performClick()
-        composeRule.runOnIdle {
-            assertEquals(TopLevelDestination.Schedule, selectedAction)
-            showSheet()
-        }
-        composeRule.onNodeWithText(settings).assertIsDisplayed().performClick()
-        composeRule.runOnIdle {
-            assertEquals(TopLevelDestination.Settings, selectedAction)
-            showSheet()
-        }
-        composeRule.onNodeWithText(profiles).assertIsDisplayed().performClick()
-        composeRule.runOnIdle { assertEquals(TopLevelDestination.Profiles, selectedAction) }
     }
 
     @Test
@@ -1284,9 +1208,7 @@ class ComposeScreensInstrumentedTest {
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(16.dp),
-                        ) {
-                            PageHeader()
-                        }
+                        )
                     }
                 }
             },

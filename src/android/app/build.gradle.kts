@@ -122,6 +122,7 @@ jacoco {
 }
 
 dependencies {
+    val androidKitVersion = providers.gradleProperty("androidKitVersion").get()
     val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
     val lifecycleVersion = "2.11.0"
     val navigation3Version = "1.1.6"
@@ -129,9 +130,12 @@ dependencies {
     val workVersion = "2.11.2"
 
     implementation(composeBom)
+    implementation(platform("net.mamby.androidkit:bom:$androidKitVersion"))
     androidTestImplementation(composeBom)
     screenshotTestImplementation(composeBom)
 
+    implementation("net.mamby.androidkit:compose")
+    implementation("net.mamby.androidkit:navigation3")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("androidx.biometric:biometric:1.1.0")

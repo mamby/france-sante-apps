@@ -7,6 +7,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,10 +43,9 @@ import net.mamby.health.backup.RestorePreview
 import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.BackupState
 import net.mamby.health.settings.ThemeMode
+import net.mamby.androidkit.compose.form.AndroidKitSettingSection
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.FormDialog
-import net.mamby.health.ui.components.LabeledValue
-import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDateTime
@@ -105,6 +105,18 @@ fun SettingsScreen(
         }
     }
 
+    val themeChoices = ThemeMode.entries.map { mode -> mode to stringResource(mode.labelResource()) }
+    val languages = localeChoices().map { (tag, label) -> tag to stringResource(label) }
+    val lockTimeouts = timeoutChoices().map { (duration, label) -> duration to stringResource(label) }
+    val backupStateLabel = stringResource(settings.backupStatus.state.labelResource())
+    val configureBackupLabel = stringResource(R.string.configure_backup)
+    val backupNowLabel = stringResource(R.string.backup_now)
+    val removeBackupLabel = stringResource(R.string.remove_backup_configuration)
+    val restoreBackupLabel = stringResource(R.string.restore_backup)
+    val appLockLabel = stringResource(R.string.app_lock)
+    val appLockBody = stringResource(R.string.app_lock_body)
+    val lockNowLabel = stringResource(R.string.lock_now)
+
     AppScreenScaffold(title = stringResource(R.string.settings_title), onBack = onBack) { innerPadding ->
         Column(
             modifier = Modifier
@@ -115,72 +127,135 @@ fun SettingsScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             message?.let { Text(it) }
-            SectionCard(stringResource(R.string.appearance_title)) {
-                Text(stringResource(R.string.theme_system))
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = settings.themeMode == mode,
-                        onClick = { onThemeChanged(mode) },
-                        label = { Text(stringResource(mode.labelResource())) },
-                    )
-                }
-            }
-            SectionCard(stringResource(R.string.language_title)) {
-                localeChoices().forEach { (tag, label) ->
-                    FilterChip(
-                        selected = selectedLocaleTag == tag,
-                        onClick = { onLocaleChanged(tag) },
-                        label = { Text(stringResource(label)) },
-                    )
-                }
-            }
-            SectionCard(stringResource(R.string.security_title)) {
-                Text(stringResource(R.string.app_lock_body))
-                SwitchField(stringResource(R.string.app_lock), settings.appLockEnabled, onAppLockChanged)
-                if (settings.appLockEnabled) {
-                    timeoutChoices().forEach { (duration, label) ->
-                        FilterChip(
-                            selected = settings.appLockTimeout == duration,
-                            onClick = { onAppLockTimeoutChanged(duration) },
-                            label = { Text(stringResource(label)) },
-                        )
+            AndroidKitSettingSection(label = stringResource(R.string.appearance_title)) {
+                item {
+                    FlowRow(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                        verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                    ) {
+                        themeChoices.forEach { (mode, label) ->
+                            FilterChip(
+                                selected = settings.themeMode == mode,
+                                onClick = { onThemeChanged(mode) },
+                                label = { Text(label) },
+                            )
+                        }
                     }
-                    OutlinedButton(onClick = onLockNow) { Text(stringResource(R.string.lock_now)) }
                 }
             }
-            SectionCard(stringResource(R.string.backup_title)) {
-                Text(stringResource(R.string.backup_body))
-                LabeledValue(
-                    stringResource(R.string.backup_title),
-                    stringResource(settings.backupStatus.state.labelResource()),
+            AndroidKitSettingSection(label = stringResource(R.string.language_title)) {
+                item {
+                    FlowRow(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                        verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                    ) {
+                        languages.forEach { (tag, label) ->
+                            FilterChip(
+                                selected = selectedLocaleTag == tag,
+                                onClick = { onLocaleChanged(tag) },
+                                label = { Text(label) },
+                            )
+                        }
+                    }
+                }
+            }
+            AndroidKitSettingSection(label = stringResource(R.string.security_title)) {
+                toggle(
+                    label = appLockLabel,
+                    supportingText = appLockBody,
+                    checked = settings.appLockEnabled,
+                    onCheckedChange = onAppLockChanged,
                 )
-                settings.backupStatus.lastSuccess?.let {
-                    Text(stringResource(R.string.backup_last_success, it.localizedDateTime(zoneId)))
+                if (settings.appLockEnabled) {
+                    item {
+                        FlowRow(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                            verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                        ) {
+                            lockTimeouts.forEach { (duration, label) ->
+                                FilterChip(
+                                    selected = settings.appLockTimeout == duration,
+                                    onClick = { onAppLockTimeoutChanged(duration) },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                    }
+                    button(label = lockNowLabel, onClick = onLockNow)
+                }
+            }
+            AndroidKitSettingSection(
+                label = stringResource(R.string.backup_title),
+                description = stringResource(R.string.backup_body),
+            ) {
+                item {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                    ) {
+                        Text(backupStateLabel, style = MaterialTheme.typography.bodyLarge)
+                        settings.backupStatus.lastSuccess?.let {
+                            Text(
+                                stringResource(R.string.backup_last_success, it.localizedDateTime(zoneId)),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
                 }
                 if (settings.backupConfiguration == null) {
-                    Button(onClick = { backupDialog = true }) { Text(stringResource(R.string.configure_backup)) }
+                    button(label = configureBackupLabel, onClick = { backupDialog = true })
                 } else {
-                    Button(onClick = onBackupNow) { Text(stringResource(R.string.backup_now)) }
-                    OutlinedButton(onClick = { backupDialog = true }) { Text(stringResource(R.string.configure_backup)) }
-                    OutlinedButton(onClick = onClearBackup) { Text(stringResource(R.string.remove_backup_configuration)) }
+                    button(label = backupNowLabel, onClick = onBackupNow)
+                    button(label = configureBackupLabel, onClick = { backupDialog = true })
+                    button(label = removeBackupLabel, onClick = onClearBackup)
                 }
-                Button(onClick = {
-                    openBackup.launch(arrayOf(PortableBackupFormat.MIME_TYPE, "application/octet-stream", "application/zip"))
-                }) { Text(stringResource(R.string.restore_backup)) }
+                button(
+                    label = restoreBackupLabel,
+                    onClick = {
+                        openBackup.launch(
+                            arrayOf(
+                                PortableBackupFormat.MIME_TYPE,
+                                "application/octet-stream",
+                                "application/zip",
+                            ),
+                        )
+                    },
+                )
             }
-            SectionCard(stringResource(R.string.recovery_title)) {
-                Text(stringResource(R.string.recovery_body))
+            AndroidKitSettingSection(label = stringResource(R.string.recovery_title)) {
+                item {
+                    Text(stringResource(R.string.recovery_body), modifier = Modifier.weight(1f))
+                }
             }
-            SectionCard(stringResource(R.string.privacy_title)) {
-                Text(stringResource(R.string.privacy_body))
-                Text(stringResource(R.string.health_disclaimer))
-                Text(stringResource(R.string.build_channel, stringResource(environmentLabelResource())))
+            AndroidKitSettingSection(label = stringResource(R.string.privacy_title)) {
+                item {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
+                    ) {
+                        Text(stringResource(R.string.privacy_body))
+                        Text(stringResource(R.string.health_disclaimer))
+                        Text(
+                            stringResource(
+                                R.string.build_channel,
+                                stringResource(environmentLabelResource()),
+                            ),
+                        )
+                    }
+                }
             }
-            SectionCard(stringResource(R.string.data_title)) {
-                OutlinedButton(onClick = { deleteDialog = true }) {
+            AndroidKitSettingSection(label = stringResource(R.string.data_title)) {
+                item {
+                    OutlinedButton(
+                        onClick = { deleteDialog = true },
+                        modifier = Modifier.weight(1f),
+                    ) {
                     Text(stringResource(R.string.delete_vault))
+                    }
                 }
             }
         }

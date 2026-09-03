@@ -47,7 +47,7 @@ import net.mamby.health.core.model.VaultContact
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.EditorFieldPair
 import net.mamby.health.ui.components.EditorSection
@@ -90,9 +90,6 @@ fun ContactsScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             if (sortedContacts.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
@@ -130,12 +127,10 @@ fun ContactDetailScreen(
     AppScreenScaffold(
         title = contact.name,
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(
-                onEdit = onEdit,
-                onDelete = { deleteVisible = true },
-            )
-        },
+        actions = detailTitleBarActions(
+            onEdit = onEdit,
+            onDelete = { deleteVisible = true },
+        ),
     ) { padding ->
         Column(
             modifier = Modifier
@@ -146,7 +141,6 @@ fun ContactDetailScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             DetailSection(stringResource(R.string.contact_details)) {
                 Column(verticalArrangement = Arrangement.spacedBy(UiTokens.SectionSpacing)) {
                     ContactActionGroup(

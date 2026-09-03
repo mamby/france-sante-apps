@@ -24,7 +24,7 @@ import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Vaccination
 import net.mamby.health.ui.components.AppScreenScaffold
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
 import net.mamby.health.ui.components.withPagePadding
@@ -125,9 +125,7 @@ private fun HealthInfoDetailScaffold(
     AppScreenScaffold(
         title = title,
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(onEdit = onEdit)
-        },
+        actions = detailTitleBarActions(onEdit = onEdit),
     ) { padding ->
         Column(
             modifier = Modifier
@@ -138,7 +136,6 @@ private fun HealthInfoDetailScaffold(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             ProfileOwnerHeader(record.profile)
             content()
         }

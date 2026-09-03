@@ -75,9 +75,6 @@ fun SummaryScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileOwnerHeader(profile)
             }
             item(span = { GridItemSpan(maxLineSpan) }) {

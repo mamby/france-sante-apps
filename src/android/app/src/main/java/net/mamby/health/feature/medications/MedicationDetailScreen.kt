@@ -19,7 +19,7 @@ import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
@@ -40,12 +40,10 @@ fun MedicationDetailScreen(
     AppScreenScaffold(
         title = medication.name,
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(
-                onEdit = onEdit,
-                onDelete = { deleteVisible = true },
-            )
-        },
+        actions = detailTitleBarActions(
+            onEdit = onEdit,
+            onDelete = { deleteVisible = true },
+        ),
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -56,7 +54,6 @@ fun MedicationDetailScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             ProfileOwnerHeader(profile)
             DetailSection(stringResource(R.string.medication_schedule)) {
                 LabeledValue(stringResource(R.string.medication_dose), medication.dose)

@@ -3,8 +3,9 @@ package net.mamby.health.feature.error
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import net.mamby.health.R
 import net.mamby.health.data.UnreadableReason
+import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 
 @Composable
@@ -30,16 +33,24 @@ fun VaultUnreadableScreen(
             UnreadableReason.IO_FAILURE -> R.string.vault_io_failure
         },
     )
-    Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+    AppScreenScaffold(title = stringResource(R.string.vault_unreadable_title)) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .withPagePadding(),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(stringResource(R.string.vault_unreadable_title), style = MaterialTheme.typography.headlineSmall)
-            Text(stringResource(R.string.vault_unreadable_body))
-            Text(reasonText)
-            Button(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
-            Button(onClick = onReset) { Text(stringResource(R.string.reset_unreadable_vault)) }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
+            ) {
+                Text(stringResource(R.string.vault_unreadable_body))
+                Text(reasonText)
+                Button(onClick = onRestore) { Text(stringResource(R.string.restore_backup)) }
+                Button(onClick = onReset) { Text(stringResource(R.string.reset_unreadable_vault)) }
+            }
         }
     }
 }

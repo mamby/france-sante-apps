@@ -89,9 +89,6 @@ fun SearchScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileFilterChip(records, effectiveProfileId, { filterProfileId = it })
             }
             item(span = { GridItemSpan(maxLineSpan) }) {

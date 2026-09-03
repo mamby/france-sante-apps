@@ -71,10 +71,7 @@ private fun ContactEditorPreviewContent(darkTheme: Boolean = false) {
         val layoutType = appNavigationSuiteType(adaptiveInfo)
         AppNavigationSuite(
             selectedDestination = TopLevelDestination.Contacts,
-            layoutType = layoutType,
-            isMoreSelected = false,
             onDestinationSelected = {},
-            onMoreSelected = {},
             navigationVisible = false,
         ) {
             if (layoutType == NavigationSuiteType.NavigationRail) {

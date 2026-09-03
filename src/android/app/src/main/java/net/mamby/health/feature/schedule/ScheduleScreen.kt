@@ -52,7 +52,7 @@ import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
@@ -105,9 +105,6 @@ fun ScheduleScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             if (notificationsBlocked && schedules.any { it.alert != null }) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     SectionCard(stringResource(R.string.notifications_blocked)) {
@@ -149,12 +146,10 @@ fun ScheduleDetailScreen(
     AppScreenScaffold(
         title = schedule.title,
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(
-                onEdit = onEdit,
-                onDelete = { deleteVisible = true },
-            )
-        },
+        actions = detailTitleBarActions(
+            onEdit = onEdit,
+            onDelete = { deleteVisible = true },
+        ),
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -165,7 +160,6 @@ fun ScheduleDetailScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             DetailSection(stringResource(R.string.schedule_details)) {
                 LabeledValue(stringResource(R.string.schedule_when), schedule.timing.localized(zoneId))
                 LabeledValue(stringResource(R.string.schedule_recurrence), schedule.recurrence.localized())

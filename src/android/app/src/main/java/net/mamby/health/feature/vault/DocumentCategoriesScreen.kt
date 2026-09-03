@@ -75,9 +75,6 @@ fun ManageDocumentCategoriesScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileOwnerHeader(record.profile)
             }
             items(BuiltInDocumentCategory.entries, key = BuiltInDocumentCategory::name) { category ->

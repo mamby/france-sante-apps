@@ -5,22 +5,17 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import net.mamby.androidkit.compose.layout.androidKitContentWindowInsets
 import net.mamby.health.ui.theme.UiTokens
-
-internal val LocalBottomTabBarInsets = staticCompositionLocalOf<WindowInsets> {
-    WindowInsets(0, 0, 0, 0)
-}
 
 @Composable
 internal fun appContentWindowInsets(): WindowInsets =
-    WindowInsets.safeDrawing.union(LocalBottomTabBarInsets.current)
+    androidKitContentWindowInsets()
 
 @Composable
 fun PaddingValues.withScreenPadding(): PaddingValues =
@@ -28,7 +23,7 @@ fun PaddingValues.withScreenPadding(): PaddingValues =
 
 @Composable
 fun PaddingValues.withPagePadding(): PaddingValues =
-    withScreenPadding(topPadding = UiTokens.PageTopPadding)
+    withScreenPadding(topPadding = 0.dp)
 
 @Composable
 private fun PaddingValues.withScreenPadding(topPadding: Dp): PaddingValues {
@@ -43,18 +38,6 @@ private fun PaddingValues.withScreenPadding(topPadding: Dp): PaddingValues {
 
 fun Modifier.withPagePadding(): Modifier = padding(
     start = UiTokens.ScreenPadding,
-    top = UiTokens.PageTopPadding,
     end = UiTokens.ScreenPadding,
     bottom = UiTokens.ScreenPadding,
 )
-
-@Composable
-internal fun PaddingValues.withAdditionalBottomPadding(additionalBottom: Dp): PaddingValues {
-    val direction = LocalLayoutDirection.current
-    return PaddingValues(
-        start = calculateStartPadding(direction),
-        top = calculateTopPadding(),
-        end = calculateEndPadding(direction),
-        bottom = calculateBottomPadding() + additionalBottom,
-    )
-}

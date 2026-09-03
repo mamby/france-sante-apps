@@ -36,6 +36,8 @@
     <string name="action_search">Search</string>
     <string name="action_lock">Lock</string>
     <string name="action_more">More options</string>
+    <string name="android_kit_hide_title_bar">Hide title bar</string>
+    <string name="android_kit_show_title_bar">Show title bar</string>
     <string name="add_item">Add item</string>
     <string name="remove_item">Remove item</string>
     <string name="field_required">Required field</string>

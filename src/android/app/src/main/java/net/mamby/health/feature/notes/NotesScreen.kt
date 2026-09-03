@@ -31,7 +31,7 @@ import net.mamby.health.core.model.HealthNote
 import net.mamby.health.ui.components.AppEditorScaffold
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.EditorSection
 import net.mamby.health.ui.components.EmptyState
@@ -68,9 +68,6 @@ fun NotesScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             if (sortedNotes.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(
@@ -105,12 +102,10 @@ fun NoteDetailScreen(
     AppScreenScaffold(
         title = note.title,
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(
-                onEdit = onEdit,
-                onDelete = { deleting = true },
-            )
-        },
+        actions = detailTitleBarActions(
+            onEdit = onEdit,
+            onDelete = { deleting = true },
+        ),
     ) { padding ->
         Column(
             modifier = Modifier
@@ -121,7 +116,6 @@ fun NoteDetailScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             DetailSection(stringResource(R.string.health_note)) {
                 Text(note.notedAt.localizedDateTime(zoneId))
                 Text(note.body)

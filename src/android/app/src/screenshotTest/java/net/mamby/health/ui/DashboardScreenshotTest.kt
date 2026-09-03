@@ -3,8 +3,6 @@ package net.mamby.health.ui
 import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.tools.screenshot.PreviewTest
 import java.time.Clock
@@ -30,7 +28,6 @@ import net.mamby.health.core.model.VaultContact
 import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.ui.components.AppNavigationSuite
-import net.mamby.health.ui.components.appNavigationSuiteType
 import net.mamby.health.ui.theme.HealthVaultTheme
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
@@ -97,19 +94,14 @@ fun freshHomeMatrix() {
 }
 
 @Composable
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 private fun DashboardPreviewContent(
     vault: HealthVault = screenshotVault(),
     darkTheme: Boolean? = null,
 ) {
     HealthVaultTheme(darkTheme = darkTheme ?: isSystemInDarkTheme()) {
-        val adaptiveInfo = currentWindowAdaptiveInfoV2()
         AppNavigationSuite(
             selectedDestination = TopLevelDestination.Home,
-            layoutType = appNavigationSuiteType(adaptiveInfo),
-            isMoreSelected = false,
             onDestinationSelected = {},
-            onMoreSelected = {},
         ) {
             DashboardScreen(
                 records = vault.profiles,

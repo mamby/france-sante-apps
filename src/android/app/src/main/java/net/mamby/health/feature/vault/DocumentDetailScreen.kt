@@ -30,7 +30,7 @@ import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.ui.components.AppScreenScaffold
 import net.mamby.health.ui.components.ConfirmDeleteDialog
-import net.mamby.health.ui.components.DetailTitleBarActions
+import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
@@ -79,12 +79,10 @@ fun DocumentDetailScreen(
     AppScreenScaffold(
         title = document.title,
         onBack = onBack,
-        actions = {
-            DetailTitleBarActions(
-                onEdit = onEdit,
-                onDelete = { deleteVisible = true },
-            )
-        },
+        actions = detailTitleBarActions(
+            onEdit = onEdit,
+            onDelete = { deleteVisible = true },
+        ),
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -95,7 +93,6 @@ fun DocumentDetailScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             ProfileOwnerHeader(profile)
             DetailSection(stringResource(R.string.document_file)) {
                 LabeledValue(stringResource(R.string.document_category), document.category.localizedLabel(record))

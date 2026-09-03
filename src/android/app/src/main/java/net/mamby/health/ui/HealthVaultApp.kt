@@ -39,7 +39,6 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -181,13 +180,11 @@ import net.mamby.health.security.AppLockState
 import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.ThemeMode
 import net.mamby.health.ui.components.AppScreenScaffold
-import net.mamby.health.ui.components.AppMoreSheet
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.EditorBackgroundPane
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
 import net.mamby.health.ui.components.SectionCard
 import net.mamby.health.ui.components.appContentWindowInsets
-import net.mamby.health.ui.components.appNavigationSuiteType
 import net.mamby.health.ui.components.disambiguatedProfileLabels
 import net.mamby.health.ui.components.listDetailAwareBack
 import net.mamby.health.ui.components.withPagePadding
@@ -416,7 +413,6 @@ private fun VaultNavigation(
     val profileLabels = disambiguatedProfileLabels(vault.profiles.map { it.profile }) { profile, ordinal, _ ->
         resources.getString(R.string.profile_disambiguated_name, profile.displayName, ordinal)
     }
-    var moreSheetVisible by rememberSaveable { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var searchFilter by remember { mutableStateOf(SearchFilter.ALL) }
     var restoreRequestId by rememberSaveable { mutableLongStateOf(0L) }
@@ -491,9 +487,6 @@ private fun VaultNavigation(
     }
 
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
-    val navigationSuiteType = remember(adaptiveInfo) { appNavigationSuiteType(adaptiveInfo) }
-    val usesMore = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact
-    val isMoreSelected = usesMore && navigation.selectedDestination in TopLevelDestination.compactOverflow
     val directive = remember(adaptiveInfo) {
         calculatePaneScaffoldDirective(adaptiveInfo).copy(horizontalPartitionSpacerSize = 0.dp)
     }
@@ -573,18 +566,11 @@ private fun VaultNavigation(
         }
     }
 
-    LaunchedEffect(usesMore) {
-        if (!usesMore) moreSheetVisible = false
-    }
-
     Box(Modifier.fillMaxSize()) {
         BackHandler(enabled = navigation.isAtSecondaryRoot, onBack = navigation::goBack)
         AppNavigationSuite(
             selectedDestination = navigation.selectedDestination,
-            layoutType = navigationSuiteType,
-            isMoreSelected = isMoreSelected,
             onDestinationSelected = navigation::selectRoot,
-            onMoreSelected = { moreSheetVisible = true },
             navigationVisible = !focusedFlowActive,
         ) {
             Box(Modifier.fillMaxSize()) {
@@ -1604,16 +1590,6 @@ private fun VaultNavigation(
         }
     }
 
-    if (moreSheetVisible) {
-        AppMoreSheet(
-            onDismissRequest = { moreSheetVisible = false },
-            onDestinationSelected = { destination ->
-                moreSheetVisible = false
-                navigation.selectRoot(destination)
-            },
-        )
-    }
-
 }
 
 private fun HealthSearchResult.toRoute(): AppRoute {
@@ -1671,7 +1647,6 @@ private fun MissingRecordScreen(onBack: (() -> Unit)?) {
                 .consumeWindowInsets(padding)
                 .withPagePadding(),
         ) {
-            PageHeader()
         }
     }
 }

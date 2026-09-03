@@ -123,9 +123,6 @@ fun DashboardScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             restorePrompt?.let { prompt ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     prompt()

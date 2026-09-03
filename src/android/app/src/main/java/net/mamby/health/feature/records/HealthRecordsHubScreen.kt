@@ -40,9 +40,6 @@ fun HealthRecordsHubScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             if (records.isEmpty()) {
                 item {
                     HubCard(

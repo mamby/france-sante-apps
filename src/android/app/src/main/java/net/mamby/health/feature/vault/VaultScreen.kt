@@ -9,8 +9,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -18,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import java.util.UUID
 import net.mamby.health.R
@@ -35,6 +32,7 @@ import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileFilterChip
 import net.mamby.health.ui.components.ProfileMarker
+import net.mamby.health.ui.components.titleBarAction
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedLabel
 import net.mamby.health.ui.format.localizedDate
@@ -79,14 +77,13 @@ fun VaultScreen(
     AppScreenScaffold(
         title = stringResource(R.string.documents_tab),
         onBack = onBack,
-        actions = {
-            IconButton(onClick = { onManageCategories(filterProfileId) }) {
-                Icon(
-                    painterResource(R.drawable.ic_lucide_sliders_horizontal),
-                    stringResource(R.string.manage_document_categories),
-                )
-            }
-        },
+        actions = listOf(
+            titleBarAction(
+                label = stringResource(R.string.manage_document_categories),
+                icon = R.drawable.ic_lucide_sliders_horizontal,
+                onClick = { onManageCategories(filterProfileId) },
+            ),
+        ),
         floatingActionButton = {
             FloatingAddButton(
                 label = stringResource(R.string.import_document),
@@ -103,9 +100,6 @@ fun VaultScreen(
             horizontalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
             }

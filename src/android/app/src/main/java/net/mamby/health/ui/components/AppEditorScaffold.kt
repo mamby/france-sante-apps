@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -23,12 +22,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +44,8 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import net.mamby.androidkit.compose.layout.AndroidKitPage
+import net.mamby.androidkit.navigation3.listDetailBackAction
 import net.mamby.health.R
 import net.mamby.health.ui.theme.UiTokens
 
@@ -91,7 +89,7 @@ fun EditorBackgroundPane(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppEditorScaffold(
     title: String,
@@ -110,16 +108,18 @@ fun AppEditorScaffold(
             if (isDirty) discardConfirmationVisible = true else onCancel()
         }
     }
+    val backAction = listDetailBackAction(requestExit)
 
     BackHandler(enabled = !discardConfirmationVisible, onBack = requestExit)
     LaunchedEffect(isSaving) {
         if (isSaving) focusManager.clearFocus(force = true)
     }
 
-    Scaffold(
-        contentWindowInsets = appContentWindowInsets(),
-        topBar = {
-            TopAppBar(
+    AndroidKitPage(
+        title = title,
+        applyImePadding = true,
+        topBar = { visible ->
+            if (visible) TopAppBar(
                 title = {
                     Text(
                         text = title,
@@ -128,8 +128,8 @@ fun AppEditorScaffold(
                     )
                 },
                 navigationIcon = {
-                    if (LocalListDetailSceneScope.current == null) {
-                        IconButton(onClick = requestExit, enabled = !isSaving) {
+                    backAction?.let { onBack ->
+                        IconButton(onClick = onBack, enabled = !isSaving) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_lucide_arrow_left),
                                 contentDescription = stringResource(R.string.action_back),
@@ -171,12 +171,8 @@ fun AppEditorScaffold(
                     .fillMaxWidth()
                     .widthIn(max = UiTokens.EditorMaxWidth)
                     .verticalScroll(rememberScrollState())
-                    .imePadding()
                     .padding(horizontal = UiTokens.ScreenPadding)
-                    .padding(
-                        top = UiTokens.PageTopPadding,
-                        bottom = UiTokens.ScreenPadding,
-                    )
+                    .padding(bottom = UiTokens.ScreenPadding)
                     .then(
                         if (isSaving) {
                             Modifier.clearAndSetSemantics {

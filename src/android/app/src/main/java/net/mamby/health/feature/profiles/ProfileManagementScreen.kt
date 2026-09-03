@@ -54,7 +54,6 @@ fun ProfileManagementScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            PageHeader()
             if (profiles.isEmpty()) {
                 EmptyState(
                     title = stringResource(R.string.people_empty_title),

@@ -61,7 +61,6 @@ fun ProfileOwnerGateScreen(
                 .withPagePadding(),
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
-            item { PageHeader() }
             item {
                 Text(
                     stringResource(

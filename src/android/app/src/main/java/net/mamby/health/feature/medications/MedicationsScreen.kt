@@ -93,9 +93,6 @@ fun MedicationsScreen(
             verticalArrangement = Arrangement.spacedBy(UiTokens.ContentSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                PageHeader()
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
                 ProfileFilterChip(records, filterProfileId, { filterProfileId = it })
             }
             if (medications.isEmpty()) {

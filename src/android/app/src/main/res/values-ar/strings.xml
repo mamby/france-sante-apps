@@ -36,6 +36,8 @@
     <string name="action_search">بحث</string>
     <string name="action_lock">قفل</string>
     <string name="action_more">خيارات إضافية</string>
+    <string name="android_kit_hide_title_bar">إخفاء شريط العنوان</string>
+    <string name="android_kit_show_title_bar">إظهار شريط العنوان</string>
     <string name="add_item">إضافة عنصر</string>
     <string name="remove_item">إزالة العنصر</string>
     <string name="field_required">حقل مطلوب</string>

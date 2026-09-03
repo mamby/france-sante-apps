@@ -36,6 +36,8 @@
     <string name="action_search">Rechercher</string>
     <string name="action_lock">Verrouiller</string>
     <string name="action_more">Plus d’options</string>
+    <string name="android_kit_hide_title_bar">Masquer la barre de titre</string>
+    <string name="android_kit_show_title_bar">Afficher la barre de titre</string>
     <string name="add_item">Ajouter un élément</string>
     <string name="remove_item">Retirer l’élément</string>
     <string name="field_required">Champ obligatoire</string>
