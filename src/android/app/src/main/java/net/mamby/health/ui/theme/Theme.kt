@@ -212,7 +212,7 @@ fun HealthVaultTheme(
                 typography = typography,
                 shapes = shapes,
                 dimensions = dimensions,
-                floatingSurfaceOpacity = UiTokens.FloatingIconButtonContainerAlpha,
+                floatingSurfaceOpacityLevel = UiTokens.FloatingSurfaceOpacityLevel,
                 cardStyle = AndroidKitCardStyle(
                     containerColor = colorScheme.surface,
                     contentColor = colorScheme.onSurface,
