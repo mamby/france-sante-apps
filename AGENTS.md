@@ -9,6 +9,27 @@
 - Do not make medical, diagnostic, emergency, regulatory, or clinical-certification claims.
 - The user-facing product name is **Personal Health Vault** in every locale and channel. Do not rename or translate the product name. Outside the product name, prefer plain UI terms such as health data, records, backup, and people. Internal types and repository documentation may retain `HealthVault` or “vault” where they describe the encrypted storage boundary.
 
+## Scope and material implications
+
+Proceed autonomously with routine implementation decisions that are necessary
+to complete the explicit request and preserve existing behavior.
+
+Before making a change whose implications are not determined by the request,
+stop and ask one concise clarification question. First explain:
+
+- The implicit decision.
+- Why it is necessary.
+- Its behavioral and technical implications.
+
+Clarification is required for changes affecting public APIs, persisted data,
+migrations, user-visible behavior, security or permissions, dependencies,
+architecture, compatibility, destructive operations, or substantial unrelated
+refactoring.
+
+Do not request confirmation for ordinary in-scope implementation, verification,
+formatting, or testing decisions. When possible, choose the option that
+preserves existing behavior and minimizes scope.
+
 ## Android stack
 
 - Kotlin, Jetpack Compose, Material 3, AndroidX, coroutines, and Flow.
