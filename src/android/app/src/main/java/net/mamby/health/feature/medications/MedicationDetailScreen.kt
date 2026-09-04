@@ -17,7 +17,7 @@ import androidx.compose.ui.res.stringResource
 import net.mamby.health.R
 import net.mamby.health.core.model.Medication
 import net.mamby.health.core.model.HealthProfile
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
@@ -37,7 +37,7 @@ fun MedicationDetailScreen(
     onDelete: () -> Unit,
 ) {
     var deleteVisible by remember(profile.id) { mutableStateOf(false) }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = medication.name,
         onBack = onBack,
         actions = detailTitleBarActions(

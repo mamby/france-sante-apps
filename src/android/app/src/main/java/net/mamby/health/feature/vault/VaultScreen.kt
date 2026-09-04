@@ -26,7 +26,7 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.asReference
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.ListCard
@@ -74,7 +74,7 @@ fun VaultScreen(
             )
         }
     }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.documents_tab),
         onBack = onBack,
         actions = listOf(

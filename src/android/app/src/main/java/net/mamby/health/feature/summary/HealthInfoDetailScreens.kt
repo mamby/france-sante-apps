@@ -23,7 +23,7 @@ import net.mamby.health.core.model.FamilyHistoryEntry
 import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Vaccination
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.LabeledValue
 import net.mamby.health.ui.components.ProfileOwnerHeader
@@ -122,7 +122,7 @@ private fun HealthInfoDetailScaffold(
     onEdit: (() -> Unit)?,
     content: @Composable () -> Unit,
 ) {
-    AppScreenScaffold(
+    AndroidKitPage(
         title = title,
         onBack = onBack,
         actions = detailTitleBarActions(onEdit = onEdit),

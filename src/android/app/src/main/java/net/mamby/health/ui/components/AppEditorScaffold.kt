@@ -11,20 +11,14 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,14 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.androidkit.navigation3.listDetailBackAction
 import net.mamby.health.R
@@ -89,7 +81,6 @@ fun EditorBackgroundPane(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppEditorScaffold(
     title: String,
@@ -102,7 +93,6 @@ fun AppEditorScaffold(
 ) {
     var discardConfirmationVisible by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    val savingLabel = stringResource(R.string.editor_saving)
     val requestExit = {
         if (!isSaving) {
             if (isDirty) discardConfirmationVisible = true else onCancel()
@@ -115,49 +105,26 @@ fun AppEditorScaffold(
         if (isSaving) focusManager.clearFocus(force = true)
     }
 
+    val cancelLabel = stringResource(R.string.common_cancel)
+    val saveLabel = stringResource(R.string.common_save)
+    val savingLabel = stringResource(R.string.editor_saving)
     AndroidKitPage(
         title = title,
-        applyImePadding = true,
-        topBar = { visible ->
-            if (visible) TopAppBar(
-                title = {
-                    Text(
-                        text = title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    backAction?.let { onBack ->
-                        IconButton(onClick = onBack, enabled = !isSaving) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_lucide_arrow_left),
-                                contentDescription = stringResource(R.string.action_back),
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    TextButton(onClick = requestExit, enabled = !isSaving) {
-                        Text(stringResource(R.string.common_cancel), maxLines = 1)
-                    }
-                    Button(
-                        onClick = onSave,
-                        enabled = saveEnabled && !isSaving,
-                    ) {
-                        if (isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(UiTokens.EditorProgressIndicatorSize),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = UiTokens.FloatingNavigationBorderWidth,
-                            )
-                        } else {
-                            Text(stringResource(R.string.common_save), maxLines = 1)
-                        }
-                    }
-                },
-            )
-        },
+        onBack = backAction,
+        actions = listOf(
+            titleBarAction(
+                label = cancelLabel,
+                icon = R.drawable.ic_lucide_x,
+                onClick = requestExit,
+                enabled = !isSaving,
+            ),
+            titleBarAction(
+                label = if (isSaving) savingLabel else saveLabel,
+                icon = R.drawable.ic_lucide_check,
+                onClick = onSave,
+                enabled = saveEnabled && !isSaving,
+            ),
+        ),
     ) { padding ->
         Box(
             modifier = Modifier

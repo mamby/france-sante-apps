@@ -25,7 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
@@ -49,7 +49,7 @@ fun ProfileOwnerGateScreen(
     val needsNewProfile = profiles.isEmpty() || state.adding
     BackHandler(enabled = state.saving) { /* Persistence must finish before leaving this flow. */ }
 
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(if (profiles.isEmpty()) R.string.profile_owner_gate_new_title else R.string.profile_owner_gate_title),
         onBack = if (state.saving) null else onBack,
     ) { innerPadding ->

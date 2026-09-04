@@ -105,7 +105,7 @@ import net.mamby.health.navigation.NotesRoute
 import net.mamby.health.navigation.TopLevelDestination
 import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.settings.AppSettings
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.RemovableInputChip
 import net.mamby.health.ui.components.ProfileFilterChip
@@ -267,7 +267,7 @@ class ComposeScreensInstrumentedTest {
         composeRule.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 HealthVaultTheme {
-                    AppScreenScaffold(title = "RTL", onBack = {}) { padding ->
+                    AndroidKitPage(title = "RTL", onBack = {}) { padding ->
                         Box(
                             Modifier
                                 .fillMaxSize()
@@ -294,7 +294,7 @@ class ComposeScreensInstrumentedTest {
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))) {
                 HealthVaultTheme {
-                    AppScreenScaffold(
+                    AndroidKitPage(
                         title = "Scrolling title",
                         onBack = { backClicks += 1 },
                     ) { padding ->
@@ -413,7 +413,7 @@ class ComposeScreensInstrumentedTest {
         composeRule.setContent {
             DeviceConfigurationOverride(DeviceConfigurationOverride.ForcedSize(DpSize(900.dp, 1_000.dp))) {
                 HealthVaultTheme {
-                    AppScreenScaffold(
+                    AndroidKitPage(
                         title = "Standalone detail",
                         onBack = listDetailAwareBack {},
                     ) { padding ->
@@ -804,7 +804,7 @@ class ComposeScreensInstrumentedTest {
                         selectedDestination = TopLevelDestination.Home,
                         onDestinationSelected = {},
                     ) {
-                        AppScreenScaffold(
+                        AndroidKitPage(
                             title = "Clearance",
                             floatingActionButton = {
                                 FloatingActionButton(
@@ -1199,7 +1199,7 @@ class ComposeScreensInstrumentedTest {
                     Text("List")
                 }
                 entry<NoteDetailRoute>(metadata = ListDetailSceneStrategy.detailPane()) {
-                    AppScreenScaffold(
+                    AndroidKitPage(
                         title = "Detail",
                         onBack = listDetailAwareBack {},
                     ) { padding ->

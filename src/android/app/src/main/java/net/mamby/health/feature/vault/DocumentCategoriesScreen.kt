@@ -34,7 +34,7 @@ import net.mamby.health.core.model.CustomDocumentCategory
 import net.mamby.health.core.model.DocumentCategoryRef
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.asReference
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.FloatingAddButton
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.FormDialog
@@ -57,7 +57,7 @@ fun ManageDocumentCategoriesScreen(
     var builtInEditor by remember { mutableStateOf<BuiltInDocumentCategory?>(null) }
     var customEditor by remember { mutableStateOf<CustomDocumentCategory?>(null) }
     var adding by remember { mutableStateOf(false) }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.manage_document_categories),
         onBack = onBack,
         floatingActionButton = {

@@ -34,7 +34,7 @@ import net.mamby.health.core.model.HealthNote
 import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.core.model.Schedule
 import net.mamby.health.core.model.VaultContact
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileFilterChip
@@ -75,7 +75,7 @@ fun SearchScreen(
         }
     }
 
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.search_title),
     ) { innerPadding ->
         LazyVerticalGrid(

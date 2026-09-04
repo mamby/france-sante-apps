@@ -45,7 +45,7 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.VaultContact
 import net.mamby.health.ui.components.AppEditorScaffold
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
@@ -72,7 +72,7 @@ fun ContactsScreen(
         )
     }
 
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.contacts_title),
         floatingActionButton = {
             FloatingAddButton(
@@ -124,7 +124,7 @@ fun ContactDetailScreen(
 ) {
     var deleteVisible by remember(contact.id) { mutableStateOf(false) }
 
-    AppScreenScaffold(
+    AndroidKitPage(
         title = contact.name,
         onBack = onBack,
         actions = detailTitleBarActions(

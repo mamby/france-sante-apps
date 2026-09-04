@@ -50,7 +50,7 @@ import net.mamby.health.core.model.ScheduleOccurrence
 import net.mamby.health.core.model.ScheduleRecurrence
 import net.mamby.health.core.model.ScheduleTiming
 import net.mamby.health.ui.components.AppEditorScaffold
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
@@ -89,7 +89,7 @@ fun ScheduleScreen(
         .sortedWith(compareBy<ScheduleListEntry> { it.occurrence?.startsAt }.thenBy { it.schedule.title })
     val completed = entries.filter { it.occurrence == null }.sortedByDescending { it.schedule.updatedAt }
 
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.schedule_title),
         floatingActionButton = {
             FloatingAddButton(
@@ -143,7 +143,7 @@ fun ScheduleDetailScreen(
     onDelete: () -> Unit,
 ) {
     var deleteVisible by remember(schedule.id) { mutableStateOf(false) }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = schedule.title,
         onBack = onBack,
         actions = detailTitleBarActions(

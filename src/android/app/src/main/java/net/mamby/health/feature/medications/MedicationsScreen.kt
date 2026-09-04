@@ -41,7 +41,7 @@ import net.mamby.health.core.model.ReminderRecurrence
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppEditorScaffold
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.DateField
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -76,7 +76,7 @@ fun MedicationsScreen(
                 .thenBy { it.profileId },
         )
     }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.medications_title),
         floatingActionButton = {
             FloatingAddButton(

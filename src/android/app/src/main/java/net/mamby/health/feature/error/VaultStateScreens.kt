@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import net.mamby.health.R
 import net.mamby.health.data.UnreadableReason
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 
@@ -33,7 +33,7 @@ fun VaultUnreadableScreen(
             UnreadableReason.IO_FAILURE -> R.string.vault_io_failure
         },
     )
-    AppScreenScaffold(title = stringResource(R.string.vault_unreadable_title)) { padding ->
+    AndroidKitPage(title = stringResource(R.string.vault_unreadable_title)) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

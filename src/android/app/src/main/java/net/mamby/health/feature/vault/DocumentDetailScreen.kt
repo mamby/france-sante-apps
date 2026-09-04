@@ -28,7 +28,7 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.MedicalDocument
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
@@ -76,7 +76,7 @@ fun DocumentDetailScreen(
                 state.profileId == profile.id && state.documentId == document.id
         }
     } ?: DocumentPreviewState.Idle
-    AppScreenScaffold(
+    AndroidKitPage(
         title = document.title,
         onBack = onBack,
         actions = detailTitleBarActions(

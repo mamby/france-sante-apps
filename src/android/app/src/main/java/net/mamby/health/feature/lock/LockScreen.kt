@@ -18,7 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import net.mamby.health.R
 import net.mamby.health.security.AppLockState
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.theme.UiTokens
 
@@ -28,7 +28,7 @@ fun LockScreen(
     message: String?,
     onUnlock: () -> Unit,
 ) {
-    AppScreenScaffold(title = stringResource(R.string.lock_title)) { padding ->
+    AndroidKitPage(title = stringResource(R.string.lock_title)) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

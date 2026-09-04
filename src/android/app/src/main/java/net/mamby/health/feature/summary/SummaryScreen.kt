@@ -21,7 +21,7 @@ import net.mamby.health.core.model.CareDirective
 import net.mamby.health.core.model.FamilyHistoryEntry
 import net.mamby.health.core.model.HealthIdentifier
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.DetailSection
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FloatingAddButton
@@ -55,7 +55,7 @@ fun SummaryScreen(
     onIdentifierSelected: (UUID) -> Unit,
 ) {
     val profile = record.profile
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.health_info_title),
         onBack = onBack,
         floatingActionButton = {

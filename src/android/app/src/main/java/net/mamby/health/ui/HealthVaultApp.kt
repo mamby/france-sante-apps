@@ -179,7 +179,7 @@ import net.mamby.health.navigation.rememberAppNavigationState
 import net.mamby.health.security.AppLockState
 import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.ThemeMode
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.EditorBackgroundPane
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
@@ -1636,7 +1636,7 @@ private fun DetailPlaceholder(messageResource: Int) {
 
 @Composable
 private fun MissingRecordScreen(onBack: (() -> Unit)?) {
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.record_unavailable),
         onBack = onBack,
     ) { padding ->

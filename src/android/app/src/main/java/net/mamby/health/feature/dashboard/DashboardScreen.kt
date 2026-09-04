@@ -39,7 +39,7 @@ import net.mamby.health.core.model.VaultContact
 import net.mamby.health.core.model.index
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.withPagePadding
 import net.mamby.health.ui.format.localizedDate
@@ -113,9 +113,7 @@ fun DashboardScreen(
     val isEmpty = notes.isEmpty() && schedules.isEmpty() && contacts.isEmpty() &&
         records.all(ProfileRecord::isHealthDataEmpty)
 
-    AppScreenScaffold(
-        title = stringResource(R.string.dashboard_title),
-    ) { innerPadding ->
+    AndroidKitPage { innerPadding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(adaptiveTileMinWidth),
             modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),

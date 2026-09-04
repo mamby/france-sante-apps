@@ -44,7 +44,7 @@ import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.BackupState
 import net.mamby.health.settings.ThemeMode
 import net.mamby.androidkit.compose.form.AndroidKitSettingSection
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.components.withPagePadding
@@ -117,7 +117,7 @@ fun SettingsScreen(
     val appLockBody = stringResource(R.string.app_lock_body)
     val lockNowLabel = stringResource(R.string.lock_now)
 
-    AppScreenScaffold(title = stringResource(R.string.settings_title), onBack = onBack) { innerPadding ->
+    AndroidKitPage(title = stringResource(R.string.settings_title), onBack = onBack) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

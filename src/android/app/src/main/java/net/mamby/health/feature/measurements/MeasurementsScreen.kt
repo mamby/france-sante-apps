@@ -49,7 +49,7 @@ import net.mamby.health.core.model.ProfileRecord
 import net.mamby.health.feature.ProfileOwned
 import net.mamby.health.feature.ownedItems
 import net.mamby.health.ui.components.AppEditorScaffold
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
@@ -94,7 +94,7 @@ fun MeasurementsScreen(
                 .thenBy { it.value.id },
         )
     }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.measurements_title),
         onBack = onBack,
         actions = listOf(
@@ -159,7 +159,7 @@ fun MeasurementDetailScreen(
     onDelete: () -> Unit,
 ) {
     var deleting by remember(measurement.id) { mutableStateOf(false) }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = measurement.type.localizedLabel(record),
         onBack = onBack,
         actions = detailTitleBarActions(
@@ -206,7 +206,7 @@ fun ManageMeasurementTypesScreen(
 ) {
     var adding by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<CustomMeasurementType?>(null) }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.manage_measurement_types),
         onBack = onBack,
         floatingActionButton = {

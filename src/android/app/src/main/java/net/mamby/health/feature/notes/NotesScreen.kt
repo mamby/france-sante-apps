@@ -29,7 +29,7 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthNote
 import net.mamby.health.ui.components.AppEditorScaffold
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ConfirmDeleteDialog
 import net.mamby.health.ui.components.detailTitleBarActions
 import net.mamby.health.ui.components.DetailSection
@@ -52,7 +52,7 @@ fun NotesScreen(
     val sortedNotes = remember(notes) {
         notes.sortedWith(compareByDescending(HealthNote::notedAt).thenBy(HealthNote::id))
     }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.health_notes_title),
         floatingActionButton = {
             FloatingAddButton(
@@ -99,7 +99,7 @@ fun NoteDetailScreen(
     onDelete: () -> Unit,
 ) {
     var deleting by remember(note.id) { mutableStateOf(false) }
-    AppScreenScaffold(
+    AndroidKitPage(
         title = note.title,
         onBack = onBack,
         actions = detailTitleBarActions(

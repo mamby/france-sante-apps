@@ -23,7 +23,7 @@ import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.HealthProfile
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.EmptyState
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
@@ -44,7 +44,7 @@ fun ProfileManagementScreen(
     var renaming by remember { mutableStateOf<HealthProfile?>(null) }
     var deleting by remember { mutableStateOf<HealthProfile?>(null) }
 
-    AppScreenScaffold(title = stringResource(R.string.profiles_title), onBack = onBack) { padding ->
+    AndroidKitPage(title = stringResource(R.string.profiles_title), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

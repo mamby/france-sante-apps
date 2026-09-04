@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import java.util.UUID
 import net.mamby.health.R
 import net.mamby.health.core.model.ProfileRecord
-import net.mamby.health.ui.components.AppScreenScaffold
+import net.mamby.androidkit.compose.layout.AndroidKitPage
 import net.mamby.health.ui.components.ListCard
 import net.mamby.health.ui.components.ProfileMarker
 import net.mamby.health.ui.components.SectionCard
@@ -30,7 +30,7 @@ fun HealthRecordsHubScreen(
     onMeasurements: () -> Unit,
     onDocuments: () -> Unit,
 ) {
-    AppScreenScaffold(
+    AndroidKitPage(
         title = stringResource(R.string.health_records_title),
     ) { padding ->
         LazyVerticalGrid(
