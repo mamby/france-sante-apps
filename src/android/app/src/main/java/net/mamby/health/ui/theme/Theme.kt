@@ -188,6 +188,7 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun HealthVaultTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    floatingSurfaceOpacityLevel: Float = net.mamby.health.settings.DefaultFloatingSurfaceOpacityLevel,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = if (darkTheme) DarkColors else LightColors
@@ -212,7 +213,7 @@ fun HealthVaultTheme(
                 typography = typography,
                 shapes = shapes,
                 dimensions = dimensions,
-                floatingSurfaceOpacityLevel = UiTokens.FloatingSurfaceOpacityLevel,
+                floatingSurfaceOpacityLevel = floatingSurfaceOpacityLevel,
                 cardStyle = AndroidKitCardStyle(
                     containerColor = colorScheme.surface,
                     contentColor = colorScheme.onSurface,

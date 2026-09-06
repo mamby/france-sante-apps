@@ -624,4 +624,10 @@
     <string name="editor_section_basic">Informations générales</string>
     <string name="editor_section_contact_channels">Coordonnées</string>
     <string name="editor_section_location_online">Adresse et présence en ligne</string>
+    <string name="settings_general">Général</string>
+    <string name="settings_floating_opacity">Opacité des surfaces flottantes</string>
+    <string name="settings_min">Min</string>
+    <string name="settings_max">Max</string>
+    <string name="settings_search_languages">Rechercher une langue</string>
+    <string name="settings_no_languages">Aucune langue correspondante</string>
 </resources>

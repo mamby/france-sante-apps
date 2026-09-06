@@ -5,6 +5,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -17,6 +18,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -32,6 +35,8 @@ class DataStoreSettingsRepository @Inject constructor(
     @ApplicationScope applicationScope: CoroutineScope,
     @MainDispatcher private val mainDispatcher: CoroutineDispatcher,
 ) : SettingsRepository {
+    private val opacityPreview = MutableStateFlow<Float?>(null)
+
     override val settings = dataStore.data
         .catch { error ->
             if (error is IOException) {
@@ -42,6 +47,9 @@ class DataStoreSettingsRepository @Inject constructor(
             }
         }
         .map(::toSettings)
+        .combine(opacityPreview) { settings, preview ->
+            settings.copy(floatingSurfaceOpacityLevel = preview ?: settings.floatingSurfaceOpacityLevel)
+        }
         .distinctUntilChanged()
 
     init {
@@ -59,6 +67,16 @@ class DataStoreSettingsRepository @Inject constructor(
                 dataStore.edit { it.remove(Keys.localeTag) }
             }
         }
+    }
+
+    override fun previewFloatingSurfaceOpacityLevel(level: Float) {
+        opacityPreview.value = normalizeFloatingSurfaceOpacityLevel(level)
+    }
+
+    override suspend fun saveFloatingSurfaceOpacityLevel() {
+        val normalized = opacityPreview.value ?: return
+        dataStore.edit { it[Keys.floatingSurfaceOpacityLevel] = normalized }
+        opacityPreview.compareAndSet(normalized, null)
     }
 
     override suspend fun setThemeMode(mode: ThemeMode) {
@@ -150,6 +168,9 @@ class DataStoreSettingsRepository @Inject constructor(
         }
 
         return AppSettings(
+            floatingSurfaceOpacityLevel = normalizeFloatingSurfaceOpacityLevel(
+                preferences[Keys.floatingSurfaceOpacityLevel] ?: DefaultFloatingSurfaceOpacityLevel,
+            ),
             themeMode = preferences[Keys.themeMode]
                 ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
@@ -184,6 +205,7 @@ class DataStoreSettingsRepository @Inject constructor(
     }
 
     private object Keys {
+        val floatingSurfaceOpacityLevel = floatPreferencesKey("floating_surface_opacity_level")
         val themeMode = stringPreferencesKey("theme_mode")
         val localeTag = stringPreferencesKey("locale_tag")
         val appLockEnabled = booleanPreferencesKey("app_lock_enabled")

@@ -46,6 +46,7 @@ data class BackupStatus(
 )
 
 data class AppSettings(
+    val floatingSurfaceOpacityLevel: Float = DefaultFloatingSurfaceOpacityLevel,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val appLockEnabled: Boolean = false,
     val appLockTimeout: Duration = Duration.ZERO,
@@ -57,3 +58,8 @@ data class AppSettings(
         val supportedLocaleTags: Set<String> = setOf(DEFAULT_LOCALE_TAG, "en", "fr", "ar")
     }
 }
+
+const val DefaultFloatingSurfaceOpacityLevel: Float = 50f
+
+internal fun normalizeFloatingSurfaceOpacityLevel(value: Float): Float =
+    if (value.isFinite()) value.coerceIn(0f, 100f) else DefaultFloatingSurfaceOpacityLevel

@@ -268,7 +268,7 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    HealthVaultTheme(darkTheme = darkTheme) {
+    HealthVaultTheme(darkTheme = darkTheme, floatingSurfaceOpacityLevel = settings.floatingSurfaceOpacityLevel) {
         Box(Modifier.fillMaxSize()) {
             Surface(
                 modifier = Modifier
@@ -380,6 +380,8 @@ private fun RecoverySettings(
         message = notice?.let { stringResource(it.resourceId) },
         onBack = onBack,
         onThemeChanged = viewModel::setThemeMode,
+        onOpacityChanged = viewModel::previewFloatingSurfaceOpacityLevel,
+        onOpacityChangeFinished = { viewModel.saveFloatingSurfaceOpacityLevel() },
         onLocaleChanged = onLocaleChanged,
         onAppLockChanged = { enabled -> activity?.let { viewModel.setAppLockEnabled(it, enabled) } },
         onAppLockTimeoutChanged = viewModel::setAppLockTimeout,
@@ -1538,6 +1540,8 @@ private fun VaultNavigation(
                             restorePreview = restorePreview,
                             message = null,
                             onThemeChanged = viewModel::setThemeMode,
+                            onOpacityChanged = viewModel::previewFloatingSurfaceOpacityLevel,
+                            onOpacityChangeFinished = { viewModel.saveFloatingSurfaceOpacityLevel() },
                             onLocaleChanged = onLocaleChanged,
                             onAppLockChanged = { enabled ->
                                 activity?.let { viewModel.setAppLockEnabled(it, enabled) }

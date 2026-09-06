@@ -468,6 +468,13 @@ class AppViewModel @Inject constructor(
         vaultRepository.updateBuiltInDocumentCategoryPreference(profileId, preference, replacement)
     }
 
+    fun previewFloatingSurfaceOpacityLevel(level: Float) =
+        settingsRepository.previewFloatingSurfaceOpacityLevel(level)
+
+    fun saveFloatingSurfaceOpacityLevel() = launchOperation {
+        settingsRepository.saveFloatingSurfaceOpacityLevel()
+    }
+
     fun setThemeMode(mode: ThemeMode) = launchOperation {
         settingsRepository.setThemeMode(mode)
     }

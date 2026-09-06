@@ -109,6 +109,10 @@ private class FakeSettingsRepository(initial: AppSettings) : SettingsRepository 
 
     override val settings = mutableSettings
 
+    override fun previewFloatingSurfaceOpacityLevel(level: Float) {}
+
+    override suspend fun saveFloatingSurfaceOpacityLevel() {}
+
     override suspend fun setThemeMode(mode: ThemeMode) {
         mutableSettings.update { it.copy(themeMode = mode) }
     }

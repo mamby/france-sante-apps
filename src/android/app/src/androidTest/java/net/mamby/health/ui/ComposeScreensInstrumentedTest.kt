@@ -1159,6 +1159,8 @@ class ComposeScreensInstrumentedTest {
             message = null,
             onBack = onBack,
             onThemeChanged = {},
+                    onOpacityChanged = {},
+                    onOpacityChangeFinished = {},
             onLocaleChanged = {},
             onAppLockChanged = {},
             onAppLockTimeoutChanged = {},

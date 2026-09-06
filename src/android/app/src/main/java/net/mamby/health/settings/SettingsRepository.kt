@@ -6,6 +6,10 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val settings: Flow<AppSettings>
 
+    fun previewFloatingSurfaceOpacityLevel(level: Float)
+
+    suspend fun saveFloatingSurfaceOpacityLevel()
+
     suspend fun setThemeMode(mode: ThemeMode)
 
     suspend fun setLocaleTag(localeTag: String)

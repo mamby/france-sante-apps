@@ -630,4 +630,10 @@
     <string name="editor_section_basic">المعلومات الأساسية</string>
     <string name="editor_section_contact_channels">قنوات الاتصال</string>
     <string name="editor_section_location_online">الموقع والإنترنت</string>
+    <string name="settings_general">عام</string>
+    <string name="settings_floating_opacity">عتامة الأسطح العائمة</string>
+    <string name="settings_min">الأدنى</string>
+    <string name="settings_max">الأقصى</string>
+    <string name="settings_search_languages">البحث عن لغة</string>
+    <string name="settings_no_languages">لا توجد لغات مطابقة</string>
 </resources>
