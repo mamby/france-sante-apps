@@ -330,11 +330,11 @@
     <string name="settings_data">البيانات المحلية</string>
     <string name="settings_about">حول التطبيق</string>
     <string name="theme_title">المظهر</string>
-    <string name="theme_system">استخدام مظهر الجهاز</string>
+    <string name="theme_system">النظام</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
     <string name="language_title">اللغة</string>
-    <string name="language_system">استخدام لغة الجهاز</string>
+    <string name="language_system">النظام</string>
     <string name="language_english">English</string>
     <string name="language_french">Français</string>
     <string name="language_arabic">العربية</string>

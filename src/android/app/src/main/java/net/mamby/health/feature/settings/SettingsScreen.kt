@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,6 +44,7 @@ import net.mamby.health.settings.ThemeMode
 import net.mamby.androidkit.compose.form.AndroidKitSettingsPage
 import net.mamby.androidkit.compose.form.AndroidKitSettingsSelection
 import net.mamby.androidkit.compose.form.AndroidKitSettingsOption
+import net.mamby.androidkit.compose.form.AndroidKitSettingsSystemOption
 import net.mamby.androidkit.compose.form.AndroidKitLanguageSetting
 import net.mamby.androidkit.compose.form.AndroidKitFloatingOpacitySetting
 import net.mamby.androidkit.compose.form.AndroidKitAppLockSetting
@@ -75,6 +78,7 @@ fun SettingsScreen(
     onRestoreRequestHandled: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
+    val context = LocalContext.current
     val selectedLocaleTag = remember(configuration) {
         AppCompatDelegate.getApplicationLocales()
             .get(0)
@@ -82,6 +86,11 @@ fun SettingsScreen(
             ?.takeIf { it in AppSettings.supportedLocaleTags }
             ?: AppSettings.DEFAULT_LOCALE_TAG
     }
+    val systemLocaleTag = androidx.core.app.LocaleManagerCompat.getSystemLocales(context)
+        .get(0)
+        ?.language
+        ?.takeIf { it in AppSettings.supportedLocaleTags && it.isNotBlank() }
+        ?: "en"
     var backupDialog by remember { mutableStateOf(false) }
     var pendingBackupPassphrase by remember { mutableStateOf<CharArray?>(null) }
     var pendingBackupScheduled by remember { mutableStateOf(true) }
@@ -108,6 +117,9 @@ fun SettingsScreen(
 
     val themeChoices = ThemeMode.entries.map { mode -> mode to stringResource(mode.labelResource()) }
     val languages = localeChoices().map { (tag, label) -> tag to stringResource(label) }
+    val languageLabels = languages.toMap()
+    val languageOptions = languages.filterNot { (tag, _) -> tag == AppSettings.DEFAULT_LOCALE_TAG }
+    val themeOptions = themeChoices.filterNot { (mode, _) -> mode == ThemeMode.SYSTEM }
     val lockTimeouts = timeoutChoices().map { (duration, label) -> duration to stringResource(label) }
     val backupStateLabel = stringResource(settings.backupStatus.state.labelResource())
     val configureBackupLabel = stringResource(R.string.configure_backup)
@@ -125,19 +137,32 @@ fun SettingsScreen(
             language = AndroidKitLanguageSetting(
                 selection = AndroidKitSettingsSelection(
                     label = stringResource(R.string.language_title),
-                    options = languages.map { (tag, label) -> AndroidKitSettingsOption(tag, label) },
-                    selectedId = selectedLocaleTag, onSelected = onLocaleChanged,
+                    options = languageOptions.map { (tag, label) -> AndroidKitSettingsOption(tag, label) },
+                    selectedId = selectedLocaleTag.ifBlank { "system" },
+                    onSelected = { tag -> onLocaleChanged(tag.takeUnless { it == "system" }.orEmpty()) },
                     closeContentDescription = stringResource(R.string.common_close),
+                    systemOption = AndroidKitSettingsSystemOption(
+                        id = "system",
+                        label = stringResource(R.string.language_system),
+                        currentValueLabel = languageLabels.getValue(systemLocaleTag),
+                    ),
                 ),
                 searchLabel = stringResource(R.string.settings_search_languages),
                 emptyResultsLabel = stringResource(R.string.settings_no_languages),
             ),
             theme = AndroidKitSettingsSelection(
                 label = stringResource(R.string.theme_title),
-                options = themeChoices.map { (mode, label) -> AndroidKitSettingsOption(mode.name, label) },
+                options = themeOptions.map { (mode, label) -> AndroidKitSettingsOption(mode.name, label) },
                 selectedId = settings.themeMode.name,
                 onSelected = { onThemeChanged(ThemeMode.valueOf(it)) },
                 closeContentDescription = stringResource(R.string.common_close),
+                systemOption = AndroidKitSettingsSystemOption(
+                    id = ThemeMode.SYSTEM.name,
+                    label = stringResource(R.string.theme_system),
+                    currentValueLabel = stringResource(
+                        if (isSystemInDarkTheme()) R.string.theme_dark else R.string.theme_light,
+                    ),
+                ),
             ),
             floatingOpacity = AndroidKitFloatingOpacitySetting(
                 label = stringResource(R.string.settings_floating_opacity), value = settings.floatingSurfaceOpacityLevel,

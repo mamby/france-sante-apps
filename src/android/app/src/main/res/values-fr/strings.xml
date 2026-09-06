@@ -330,11 +330,11 @@
     <string name="settings_data">Données locales</string>
     <string name="settings_about">À propos</string>
     <string name="theme_title">Thème</string>
-    <string name="theme_system">Utiliser le thème de l’appareil</string>
+    <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
     <string name="language_title">Langue</string>
-    <string name="language_system">Utiliser la langue de l’appareil</string>
+    <string name="language_system">Système</string>
     <string name="language_english">English</string>
     <string name="language_french">Français</string>
     <string name="language_arabic">العربية</string>
