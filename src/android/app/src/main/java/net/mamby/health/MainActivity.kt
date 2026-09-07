@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        lifecycle.addObserver(appLockManager)
         splashScreen.setKeepOnScreenCondition {
             vaultRepository.state.value is VaultState.Loading ||
                 appLockManager.state.value is AppLockState.Initializing

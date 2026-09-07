@@ -64,6 +64,13 @@ Compact windows expose Home, Search, Health records, and Notes in a fixed short 
 
 When enabled, app lock gates the root content until `BiometricPrompt` succeeds with a strong biometric or device credential. Enabling the feature requires authentication. The default background timeout is immediate; the user may choose another supported timeout. Sensitive content is hidden from recent-app previews.
 
+The manager observes the main activity lifecycle directly so quick app switches
+honor the selected timeout without process-lifecycle dispatch delay. Configuration
+changes and transitions during device authentication do not interrupt the prompt.
+Enabling or cancelling app-lock setup preserves Settings. The locked UI uses
+`AndroidKitLockPage`; locking and unlocking preserve the selected destination
+and navigation stacks instead of redirecting to Home.
+
 App lock does not wrap or replace the local data key. Local encryption remains active whether app lock is enabled or disabled.
 
 ## Portable backup and recovery

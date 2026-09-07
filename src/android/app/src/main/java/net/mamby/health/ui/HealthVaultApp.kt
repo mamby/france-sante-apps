@@ -90,7 +90,6 @@ import net.mamby.health.core.model.profileRecord
 import net.mamby.health.data.VaultState
 import net.mamby.health.feature.dashboard.DashboardScreen
 import net.mamby.health.feature.error.VaultUnreadableScreen
-import net.mamby.health.feature.lock.LockScreen
 import net.mamby.health.feature.medications.MedicationDetailScreen
 import net.mamby.health.feature.medications.MedicationEditorScreen
 import net.mamby.health.feature.medications.MedicationsScreen
@@ -132,6 +131,7 @@ import net.mamby.health.feature.vault.ManageDocumentCategoriesScreen
 import net.mamby.health.feature.vault.DocumentPreviewState
 import net.mamby.health.feature.vault.VaultScreen
 import net.mamby.health.navigation.AppRoute
+import net.mamby.health.navigation.AppNavigationState
 import net.mamby.health.navigation.DeepLinkTarget
 import net.mamby.health.navigation.DocumentDetailRoute
 import net.mamby.health.navigation.DocumentEditorRoute
@@ -180,6 +180,7 @@ import net.mamby.health.security.AppLockState
 import net.mamby.health.settings.AppSettings
 import net.mamby.health.settings.ThemeMode
 import net.mamby.androidkit.compose.layout.AndroidKitPage
+import net.mamby.androidkit.compose.layout.AndroidKitLockPage
 import net.mamby.health.ui.components.AppNavigationSuite
 import net.mamby.health.ui.components.EditorBackgroundPane
 import net.mamby.health.ui.components.LocalProfileDisplayLabels
@@ -193,6 +194,7 @@ import net.mamby.health.ui.theme.UiTokens
 
 @Composable
 fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
+    val navigation = rememberAppNavigationState()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val vaultState by viewModel.vaultState.collectAsStateWithLifecycle()
     val lockState by viewModel.lockState.collectAsStateWithLifecycle()
@@ -290,9 +292,11 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
             ) {
                 when (lockState) {
                     AppLockState.Initializing -> Unit
-                    AppLockState.Locked, AppLockState.Authenticating -> LockScreen(
-                        state = lockState,
-                        message = notice?.let { stringResource(it.resourceId) },
+                    AppLockState.Locked, AppLockState.Authenticating -> AndroidKitLockPage(
+                        message = stringResource(R.string.lock_body),
+                        unlockLabel = stringResource(R.string.unlock_action),
+                        isUnlocking = lockState == AppLockState.Authenticating,
+                        errorMessage = notice?.let { stringResource(it.resourceId) },
                         onUnlock = { activity?.let(viewModel::unlock) },
                     )
                     AppLockState.Disabled, AppLockState.Unlocked -> when (val state = vaultState) {
@@ -317,6 +321,7 @@ fun HealthVaultApp(viewModel: AppViewModel = viewModel()) {
                             )
                         }
                         is VaultState.Ready -> VaultNavigation(
+                            navigation = navigation,
                             vault = state.vault,
                             settings = settings,
                             preview = preview,
@@ -399,6 +404,7 @@ private fun RecoverySettings(
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun VaultNavigation(
+    navigation: AppNavigationState,
     vault: HealthVault,
     settings: AppSettings,
     preview: DocumentPreviewState,
@@ -408,7 +414,6 @@ private fun VaultNavigation(
     activity: FragmentActivity?,
     onLocaleChanged: (String) -> Unit,
 ) {
-    val navigation = rememberAppNavigationState()
     val currentVault by rememberUpdatedState(vault)
     val context = LocalContext.current
     val resources = LocalResources.current

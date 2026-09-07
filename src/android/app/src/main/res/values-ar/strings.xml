@@ -378,7 +378,7 @@
     <string name="vault_locked_title">البيانات الصحية مقفلة</string>
     <string name="vault_locked_body">افتح القفل لعرض سجلاتك الصحية المشفرة.</string>
     <string name="lock_title">البيانات الصحية مقفلة</string>
-    <string name="lock_body">افتح القفل لعرض سجلاتك الصحية المشفرة.</string>
+    <string name="lock_body">افتح القفل لعرض معلوماتك الصحية</string>
     <string name="unlock_action">فتح القفل</string>
     <string name="vault_corrupt">فشلت مصادقة البيانات الصحية.</string>
     <string name="vault_unsupported">إصدار البيانات الصحية هذا غير مدعوم.</string>

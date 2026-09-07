@@ -378,7 +378,7 @@
     <string name="vault_locked_title">Health data locked</string>
     <string name="vault_locked_body">Unlock to view your encrypted health records.</string>
     <string name="lock_title">Health data locked</string>
-    <string name="lock_body">Unlock to view your encrypted health records.</string>
+    <string name="lock_body">Unlock to view your health information</string>
     <string name="unlock_action">Unlock</string>
     <string name="vault_corrupt">Health data authentication failed.</string>
     <string name="vault_unsupported">This health data version is not supported.</string>

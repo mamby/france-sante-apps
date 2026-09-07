@@ -1,6 +1,7 @@
 package net.mamby.health.security
 
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.DefaultLifecycleObserver
 import kotlinx.coroutines.flow.StateFlow
 
 sealed interface AppLockState {
@@ -44,7 +45,7 @@ sealed interface AuthenticationAvailability {
         AuthenticationAvailability
 }
 
-interface AppLockManager {
+interface AppLockManager : DefaultLifecycleObserver {
     val state: StateFlow<AppLockState>
 
     suspend fun enable(activity: FragmentActivity): UnlockResult

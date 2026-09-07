@@ -1,9 +1,7 @@
 package net.mamby.health.security
 
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ProcessLifecycleOwner
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -26,7 +24,7 @@ class ProcessAppLockManager @Inject constructor(
     private val authenticator: BiometricAuthenticator,
     private val clock: Clock,
     @ApplicationScope applicationScope: CoroutineScope,
-) : AppLockManager, DefaultLifecycleObserver {
+) : AppLockManager {
     private val monitor = Any()
     private val authenticationMutex = Mutex()
     private val mutableState = MutableStateFlow<AppLockState>(AppLockState.Initializing)
@@ -38,7 +36,6 @@ class ProcessAppLockManager @Inject constructor(
     override val state: StateFlow<AppLockState> = mutableState.asStateFlow()
 
     init {
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         applicationScope.launch {
             settingsRepository.settings.collect(::onSettingsChanged)
         }
@@ -50,7 +47,7 @@ class ProcessAppLockManager @Inject constructor(
                 return@withLock authenticateAndUpdateState(activity)
             }
 
-            mutableState.value = AppLockState.Authenticating
+            // Setting up app lock is not an unlock: keep the Settings UI mounted.
             val result = authenticator.authenticate(activity)
             if (result !is UnlockResult.Success) {
                 mutableState.value = AppLockState.Disabled
@@ -90,6 +87,9 @@ class ProcessAppLockManager @Inject constructor(
 
     override fun onStart(owner: LifecycleOwner) {
         synchronized(monitor) {
+            // Device-credential authentication can stop and restart the activity.
+            // Its result, rather than that transition, determines the lock state.
+            if (authenticationMutex.isLocked) return
             val currentSettings = settings ?: return
             if (!currentSettings.appLockEnabled) {
                 authenticated = false
@@ -114,7 +114,9 @@ class ProcessAppLockManager @Inject constructor(
     }
 
     override fun onStop(owner: LifecycleOwner) {
+        if ((owner as? FragmentActivity)?.isChangingConfigurations == true) return
         synchronized(monitor) {
+            if (authenticationMutex.isLocked) return
             val currentSettings = settings ?: return
             if (!currentSettings.appLockEnabled) return
 

@@ -378,7 +378,7 @@
     <string name="vault_locked_title">Espace de santé verrouillé</string>
     <string name="vault_locked_body">Déverrouillez l’application pour voir vos dossiers de santé chiffrés.</string>
     <string name="lock_title">Espace de santé verrouillé</string>
-    <string name="lock_body">Déverrouillez l’application pour voir vos dossiers de santé chiffrés.</string>
+    <string name="lock_body">Déverrouillez l’application pour consulter vos informations de santé</string>
     <string name="unlock_action">Déverrouiller</string>
     <string name="vault_corrupt">Échec de l’authentification de l’espace de santé.</string>
     <string name="vault_unsupported">Cette version de l’espace de santé n’est pas prise en charge.</string>

@@ -4,7 +4,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Clock
@@ -13,9 +12,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
@@ -31,7 +32,72 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ProcessAppLockManagerInstrumentedTest {
     @Test
-    fun processLifecycle_locksAtTimeoutAndFailsClosedWhenTheClockMovesBackwards() = runBlocking {
+    fun enablingLock_keepsSettingsAccessibleOnSuccessAndCancellation() = runBlocking {
+        for (result in listOf(UnlockResult.Success, UnlockResult.Cancelled)) {
+            val authenticator = PendingAuthenticator()
+            val repository = FakeSettingsRepository(AppSettings())
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+            val manager = ProcessAppLockManager(repository, authenticator, Clock.systemUTC(), scope)
+            lateinit var activity: FragmentActivity
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                activity = FragmentActivity()
+            }
+            try {
+                val enabling = async(Dispatchers.Unconfined) { manager.enable(activity) }
+                assertEquals(AppLockState.Disabled, manager.state.value)
+                manager.onStop(TestLifecycleOwner())
+                manager.onStart(TestLifecycleOwner())
+                assertEquals(AppLockState.Disabled, manager.state.value)
+
+                authenticator.result.complete(result)
+                assertEquals(result, enabling.await())
+                assertEquals(result == UnlockResult.Success, repository.settings.value.appLockEnabled)
+                assertEquals(
+                    if (result == UnlockResult.Success) AppLockState.Unlocked else AppLockState.Disabled,
+                    manager.state.value,
+                )
+            } finally {
+                scope.cancel()
+            }
+        }
+    }
+
+    @Test
+    fun credentialActivityTransitions_keepUnlockPendingUntilTheAuthenticationResult() = runBlocking {
+        for (result in listOf(UnlockResult.Success, UnlockResult.Cancelled)) {
+            val authenticator = PendingAuthenticator()
+            val repository = FakeSettingsRepository(AppSettings(appLockEnabled = true))
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+            val manager = ProcessAppLockManager(repository, authenticator, Clock.systemUTC(), scope)
+            lateinit var activity: FragmentActivity
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                activity = FragmentActivity()
+            }
+            try {
+                val unlocking = async(Dispatchers.Unconfined) { manager.unlock(activity) }
+                manager.onStop(TestLifecycleOwner())
+                manager.onStart(TestLifecycleOwner())
+                assertEquals(AppLockState.Authenticating, manager.state.value)
+
+                authenticator.result.complete(result)
+                assertEquals(result, unlocking.await())
+                assertEquals(
+                    if (result == UnlockResult.Success) AppLockState.Unlocked else AppLockState.Locked,
+                    manager.state.value,
+                )
+                if (result == UnlockResult.Success) {
+                    manager.onStop(TestLifecycleOwner())
+                    manager.onStart(TestLifecycleOwner())
+                    assertEquals(AppLockState.Locked, manager.state.value)
+                }
+            } finally {
+                scope.cancel()
+            }
+        }
+    }
+
+    @Test
+    fun activityLifecycle_locksAtTimeoutAndFailsClosedWhenTheClockMovesBackwards() = runBlocking {
         val timeout = Duration.ofMinutes(5)
         val clock = MutableClock(Instant.parse("2026-07-30T10:00:00Z"))
         val settingsRepository = FakeSettingsRepository(
@@ -78,14 +144,21 @@ class ProcessAppLockManagerInstrumentedTest {
             settingsRepository.setAppLockTimeout(Duration.ZERO)
             manager.onStop(TestLifecycleOwner())
             assertEquals(AppLockState.Locked, manager.state.value)
+            manager.onStart(TestLifecycleOwner())
+            assertEquals(AppLockState.Locked, manager.state.value)
             assertEquals(3, authenticator.authenticationCount)
         } finally {
-            instrumentation.runOnMainSync {
-                ProcessLifecycleOwner.get().lifecycle.removeObserver(manager)
-            }
             scope.cancel()
         }
     }
+}
+
+private class PendingAuthenticator : BiometricAuthenticator {
+    val result = CompletableDeferred<UnlockResult>()
+
+    override fun availability(): AuthenticationAvailability = AuthenticationAvailability.Available
+
+    override suspend fun authenticate(activity: FragmentActivity): UnlockResult = result.await()
 }
 
 private class TestLifecycleOwner : LifecycleOwner {
