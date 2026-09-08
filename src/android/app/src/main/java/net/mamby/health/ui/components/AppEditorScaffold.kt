@@ -129,7 +129,6 @@ fun AppEditorScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .consumeWindowInsets(padding),
         ) {
             Column(
@@ -138,6 +137,7 @@ fun AppEditorScaffold(
                     .fillMaxWidth()
                     .widthIn(max = UiTokens.EditorMaxWidth)
                     .verticalScroll(rememberScrollState())
+                    .padding(padding)
                     .padding(horizontal = UiTokens.ScreenPadding)
                     .padding(bottom = UiTokens.ScreenPadding)
                     .then(
