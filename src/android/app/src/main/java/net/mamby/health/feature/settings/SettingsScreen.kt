@@ -1,6 +1,9 @@
 package net.mamby.health.feature.settings
 
 import android.net.Uri
+import android.icu.text.MeasureFormat
+import android.icu.util.Measure
+import android.icu.util.MeasureUnit
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -8,12 +11,10 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +49,7 @@ import net.mamby.androidkit.compose.form.AndroidKitSettingsSystemOption
 import net.mamby.androidkit.compose.form.AndroidKitLanguageSetting
 import net.mamby.androidkit.compose.form.AndroidKitFloatingOpacitySetting
 import net.mamby.androidkit.compose.form.AndroidKitAppLockSetting
+import net.mamby.androidkit.compose.form.AndroidKitAppLockTimeoutSetting
 import net.mamby.health.ui.components.FormDialog
 import net.mamby.health.ui.components.SwitchField
 import net.mamby.health.ui.format.localizedDateTime
@@ -120,7 +122,22 @@ fun SettingsScreen(
     val languageLabels = languages.toMap()
     val languageOptions = languages.filterNot { (tag, _) -> tag == AppSettings.DEFAULT_LOCALE_TAG }
     val themeOptions = themeChoices.filterNot { (mode, _) -> mode == ThemeMode.SYSTEM }
-    val lockTimeouts = timeoutChoices().map { (duration, label) -> duration to stringResource(label) }
+    val standardLockTimeouts = timeoutChoices().map { (duration, label) -> duration to stringResource(label) }
+    // Keep an existing persisted duration selectable even if it is no longer a standard choice.
+    val lockTimeouts = if (standardLockTimeouts.any { it.first == settings.appLockTimeout }) {
+        standardLockTimeouts
+    } else {
+        val duration = settings.appLockTimeout
+        val measure = if (duration.minusMinutes(duration.toMinutes()).isZero) {
+            Measure(duration.toMinutes(), MeasureUnit.MINUTE)
+        } else {
+            Measure(duration.toMillis(), MeasureUnit.MILLISECOND)
+        }
+        val label = MeasureFormat.getInstance(
+            LocalConfiguration.current.locales[0], MeasureFormat.FormatWidth.WIDE,
+        ).formatMeasures(measure)
+        standardLockTimeouts + (duration to label)
+    }
     val backupStateLabel = stringResource(settings.backupStatus.state.labelResource())
     val configureBackupLabel = stringResource(R.string.configure_backup)
     val backupNowLabel = stringResource(R.string.backup_now)
@@ -175,27 +192,18 @@ fun SettingsScreen(
             appLock = AndroidKitAppLockSetting(
                 label = appLockLabel, supportingText = appLockBody,
                 checked = settings.appLockEnabled, onCheckedChange = onAppLockChanged,
+                timeout = AndroidKitAppLockTimeoutSetting(
+                    label = stringResource(R.string.app_lock_timeout),
+                    options = lockTimeouts.map { (duration, label) ->
+                        AndroidKitSettingsOption(duration.toString(), label)
+                    },
+                    selectedId = settings.appLockTimeout.toString(),
+                    onSelected = { id -> onAppLockTimeoutChanged(lockTimeouts.first { it.first.toString() == id }.first) },
+                ),
+                lockNowLabel = lockNowLabel,
+                onLockNow = onLockNow,
             ),
-        ) {
-            if (settings.appLockEnabled) {
-                item {
-                    FlowRow(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
-                        verticalArrangement = Arrangement.spacedBy(UiTokens.CompactSpacing),
-                    ) {
-                        lockTimeouts.forEach { (duration, label) ->
-                            FilterChip(
-                                selected = settings.appLockTimeout == duration,
-                                onClick = { onAppLockTimeoutChanged(duration) },
-                                label = { Text(label) },
-                            )
-                        }
-                    }
-                }
-                button(label = lockNowLabel, onClick = onLockNow)
-            }
-        }
+        )
         section(
             key = "backup",
             label = stringResource(R.string.backup_title),

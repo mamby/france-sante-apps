@@ -54,6 +54,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -75,6 +76,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -1075,6 +1077,36 @@ class ComposeScreensInstrumentedTest {
     }
 
     @Test
+    fun settingsAppLockUsesSharedTimeoutDialogAndLockAction() {
+        var settings by mutableStateOf(AppSettings(appLockEnabled = true, appLockTimeout = Duration.ofMinutes(30)))
+        var locks = 0
+        composeRule.setContent {
+            HealthVaultTheme {
+                TestSettingsScreen(
+                    onBack = null, settings = settings,
+                    onTimeoutChange = { settings = settings.copy(appLockTimeout = it) },
+                    onLockNow = { locks++ },
+                )
+            }
+        }
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.app_lock_timeout))
+            .performScrollTo().performClick()
+        composeRule.onNode(isDialog()).assertExists()
+        composeRule.onNode(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton) and
+                SemanticsMatcher.expectValue(SemanticsProperties.Selected, true),
+        ).assertIsDisplayed()
+        val fiveMinutes = composeRule.activity.getString(R.string.timeout_five_minutes)
+        composeRule.onNodeWithText(fiveMinutes).performClick()
+        composeRule.onNode(isDialog()).assertDoesNotExist()
+        composeRule.runOnIdle { assertEquals(Duration.ofMinutes(5), settings.appLockTimeout) }
+        composeRule.onNodeWithText(fiveMinutes).assertIsDisplayed()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.lock_now))
+            .performScrollTo().performClick()
+        composeRule.runOnIdle { assertEquals(1, locks) }
+    }
+
+    @Test
     fun settingsDoesNotExposeProfileManagement() {
         composeRule.setContent {
             HealthVaultTheme { TestSettingsScreen(onBack = null) }
@@ -1151,9 +1183,14 @@ class ComposeScreensInstrumentedTest {
     )
 
     @Composable
-    private fun TestSettingsScreen(onBack: (() -> Unit)?) {
+    private fun TestSettingsScreen(
+        onBack: (() -> Unit)?,
+        settings: AppSettings = AppSettings(),
+        onTimeoutChange: (Duration) -> Unit = {},
+        onLockNow: () -> Unit = {},
+    ) {
         SettingsScreen(
-            settings = AppSettings(),
+            settings = settings,
             zoneId = ZoneOffset.UTC,
             restorePreview = null,
             message = null,
@@ -1163,8 +1200,8 @@ class ComposeScreensInstrumentedTest {
                     onOpacityChangeFinished = {},
             onLocaleChanged = {},
             onAppLockChanged = {},
-            onAppLockTimeoutChanged = {},
-            onLockNow = {},
+            onAppLockTimeoutChanged = onTimeoutChange,
+            onLockNow = onLockNow,
             onConfigureBackup = { _, _, _ -> },
             onBackupNow = {},
             onClearBackup = {},
